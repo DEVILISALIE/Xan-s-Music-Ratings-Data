@@ -1,4 +1,5 @@
-// 合并 vol sections 为年份 sections（仅用于渲染，不修改原始数据）
+// 获取所有 sections 并按年份降序排列
+// 旧版 localStorage 数据可能还有 vol sections，这里做兼容合并
 function getMergedSections() {
   const volByYear = {};
   const normalSections = [];
@@ -14,13 +15,10 @@ function getMergedSections() {
     }
   }
 
-  // 对于有 vol 的年份，生成合并后的虚拟 section
+  const result = [];
   const volYears = Object.keys(volByYear).sort((a, b) => b - a);
 
-  const result = [];
-
   for (const section of normalSections) {
-    // 浅拷贝 section 以避免修改原始数据
     const merged = { ...section, groups: section.groups.map(g => ({ ...g, entries: [...g.entries] })) };
     result.push(merged);
     const year = section.id;
@@ -39,7 +37,6 @@ function getMergedSections() {
     }
   }
 
-  // 剩余的 vol 年份（没有对应的正常 section）
   for (const year of volYears) {
     if (!volByYear[year]) continue;
     const sections = volByYear[year];
@@ -72,6 +69,53 @@ function getMergedSections() {
   });
 
   return result;
+}
+
+// 迁移旧版 vol sections 数据（合并到对应年份 section）
+function migrateVolSections() {
+  const volByYear = {};
+  const nonVol = [];
+
+  for (const section of appData.sections) {
+    const volMatch = section.id.match(/^vol(\d+)-(\d{4})$/);
+    if (volMatch) {
+      const year = volMatch[2];
+      const volNum = parseInt(volMatch[1]);
+      if (!volByYear[year]) volByYear[year] = [];
+      volByYear[year].push({ volNum, section });
+    } else {
+      nonVol.push(section);
+    }
+  }
+
+  if (Object.keys(volByYear).length === 0) return false; // 无需迁移
+
+  for (const [year, vols] of Object.entries(volByYear)) {
+    // 按 vol 编号排序
+    vols.sort((a, b) => a.volNum - b.volNum);
+
+    // 找到已有的年份 section 或创建新的
+    let target = nonVol.find(s => s.id === year);
+    if (!target) {
+      target = { id: year, title: year, groups: [{ name: "Albums", entries: [] }] };
+      nonVol.push(target);
+    }
+
+    // 合并 vol sections 的 groups
+    for (const { section } of vols) {
+      for (const vg of section.groups) {
+        let targetGroup = target.groups.find(g => g.name === vg.name);
+        if (!targetGroup) {
+          targetGroup = { name: vg.name, entries: [] };
+          target.groups.push(targetGroup);
+        }
+        targetGroup.entries.push(...vg.entries);
+      }
+    }
+  }
+
+  appData.sections = nonVol;
+  return true;
 }
 
 function renderSidebar() {
@@ -145,14 +189,12 @@ function addNewYear() {
     return;
   }
 
-  // 检查是否已存在（包括 vol sections 合并后的年份）
-  const exists = appData.sections.some(s => s.id === year || s.id.match(new RegExp(`^vol\\d+-${year}$`)));
+  const exists = appData.sections.some(s => s.id === year);
   if (exists) {
     alert(t('alert.yearExists', { year }));
     return;
   }
 
-  // 在现有sections的适当位置插入新年份
   const newSection = {
     id: year,
     title: t('content.sectionTitle', { year }),
@@ -162,17 +204,7 @@ function addNewYear() {
     ]
   };
 
-  // 插入到 vol sections 之后
-  let insertIndex = 0;
-  for (let i = 0; i < appData.sections.length; i++) {
-    if (appData.sections[i].id.startsWith('vol')) {
-      insertIndex = i + 1;
-    } else {
-      break;
-    }
-  }
-
-  appData.sections.splice(insertIndex, 0, newSection);
+  appData.sections.push(newSection);
   refreshAll();
 
   setTimeout(() => scrollToSection(year), 100);
@@ -338,14 +370,12 @@ function deleteYearSection(sectionId) {
   if (isNaN(yearNum)) return;
 
   const entryCount = appData.sections
-    .filter(s => s.id === sectionId || s.id.match(new RegExp(`^vol\\d+-${yearNum}$`)))
+    .filter(s => s.id === sectionId)
     .reduce((sum, s) => sum + s.groups.reduce((s2, g) => s2 + g.entries.length, 0), 0);
 
   if (!confirm(t('confirm.deleteYear', { year: yearNum, count: entryCount }))) return;
 
-  appData.sections = appData.sections.filter(
-    s => s.id !== sectionId && !s.id.match(new RegExp(`^vol\\d+-${yearNum}$`))
-  );
+  appData.sections = appData.sections.filter(s => s.id !== sectionId);
 
   refreshAll();
 }
@@ -378,6 +408,7 @@ document.addEventListener('DOMContentLoaded', () => {
     currentInsertTarget: null, // 当前插入目标
   };
 
+  // 找到包含指定 entry 的 group
   function findSourceGroup(entryId) {
     for (const section of appData.sections) {
       for (const group of section.groups) {
@@ -385,44 +416,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
     return null;
-  }
-
-  // 找到所有包含指定 entry 的同名 groups（用于 vol sections 合并场景）
-  function findAllRelatedGroups(entryId) {
-    const result = [];
-    let targetGroupName = null;
-    let targetYear = null;
-
-    // 找到 entry 所在的 group 名称和年份
-    for (const section of appData.sections) {
-      for (const group of section.groups) {
-        if (group.entries.some(en => en.id === entryId)) {
-          targetGroupName = group.name;
-          // 提取年份
-          const volMatch = section.id.match(/^vol\d+-(\d{4})$/);
-          targetYear = volMatch ? volMatch[1] : section.id;
-          break;
-        }
-      }
-      if (targetGroupName) break;
-    }
-
-    if (!targetGroupName || !targetYear) return result;
-
-    // 找到同一年份中所有同名的 groups
-    for (const section of appData.sections) {
-      const volMatch = section.id.match(/^vol\d+-(\d{4})$/);
-      const sectionYear = volMatch ? volMatch[1] : section.id;
-      if (sectionYear !== targetYear) continue;
-
-      for (const group of section.groups) {
-        if (group.name === targetGroupName) {
-          result.push({ group, section });
-        }
-      }
-    }
-
-    return result;
   }
 
   // ===== Auto Scroll =====
@@ -795,34 +788,10 @@ document.addEventListener('DOMContentLoaded', () => {
       : [...contentArea.querySelectorAll(`.album-card[data-group="${groupId}"]`)];
     const finalOrder = allCards.map(c => c.dataset.entryId);
 
-    // 找到所有相关的 groups（用于 vol sections 合并场景）
-    const relatedGroups = findAllRelatedGroups(dragId);
-
-    if (relatedGroups.length <= 1) {
-      // 非 vol 合并场景，直接同步
-      for (const { group } of relatedGroups) {
-        syncEntriesOrder(group, finalOrder);
-      }
-    } else {
-      // vol 合并场景：按各 group 原始容量重新分配条目
-      const entryMap = new Map();
-      for (const { group } of relatedGroups) {
-        for (const entry of group.entries) {
-          entryMap.set(entry.id, entry);
-        }
-      }
-
-      let offset = 0;
-      for (const { group } of relatedGroups) {
-        const count = group.entries.length;
-        const sliced = finalOrder.slice(offset, offset + count)
-          .map(id => entryMap.get(id))
-          .filter(e => e !== undefined);
-        group.entries = sliced;
-        offset += count;
-      }
-
-      // 如果某个 group 分配到 0 个条目，保持空数组即可
+    // 同步拖拽后的顺序到数据
+    const sourceGroup = findSourceGroup(dragId);
+    if (sourceGroup) {
+      syncEntriesOrder(sourceGroup, finalOrder);
     }
 
     // 更新序号

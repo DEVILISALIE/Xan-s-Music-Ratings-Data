@@ -68,7 +68,7 @@ const I18N = {
 
   zh: {
     // Sidebar
-    'sidebar.title': '乐评',
+    'sidebar.title': '乐评档案',
     'sidebar.subtitle': '1960年代–现在',
     'sidebar.newYear': '+ 新年份',
     'sidebar.export': '导出 JSON',

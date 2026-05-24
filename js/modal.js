@@ -70,14 +70,14 @@ function closeModal() {
 
 function renderTracks() {
   const container = document.getElementById('trackList');
-  container.innerHTML = editingTracks.map((t, i) => `
+  container.innerHTML = editingTracks.map((tr, i) => `
     <div class="track-row">
       <span class="track-num">${i + 1}</span>
       <div class="track-name">
-        <input class="form-input" placeholder="${t('modal.placeholder.track')}" value="${escapeHtml(t.name)}" onchange="editingTracks[${i}].name=this.value">
+        <input class="form-input" placeholder="${t('modal.placeholder.track')}" value="${escapeHtml(tr.name)}" onchange="editingTracks[${i}].name=this.value">
       </div>
       <div class="track-score">
-        <input class="form-input" type="number" min="0" max="100" inputmode="numeric" placeholder="—" value="${t.score != null ? t.score : ''}" onchange="editingTracks[${i}].score=this.value!==''?parseInt(this.value):null">
+        <input class="form-input" type="number" min="0" max="100" inputmode="numeric" placeholder="—" value="${tr.score != null ? tr.score : ''}" onchange="editingTracks[${i}].score=this.value!==''?parseInt(this.value):null">
       </div>
       <button type="button" class="track-remove" onclick="removeTrack(${i})">×</button>
     </div>`).join('');

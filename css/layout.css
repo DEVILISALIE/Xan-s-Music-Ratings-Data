@@ -244,6 +244,10 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
+[data-style="glass"][data-theme="dark"] .search-box input::placeholder {
+  color: var(--text-secondary);
+}
+
 .search-box input:focus-visible { background: var(--input-bg); box-shadow: 0 0 0 2px var(--accent); }
 
 .search-box .search-icon {

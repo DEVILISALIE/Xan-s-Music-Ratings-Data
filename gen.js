@@ -139,8 +139,7 @@ function fa() {
 }
 
 const hd = {
-  "Vol. 1 - 2026": "vol1-2026", "Vol. 2 - 2026": "vol2-2026",
-  "Vol. 1 - 2025": "vol1-2025", "Vol. 2 - 2025": "vol2-2025"
+  "2024: Part": "2024"
 };
 const dm2 = { "1980s": "1980s", "1979 to 1975": "1979-1975", "1974 to 1970": "1974-1970", "1960s": "1960s" };
 
@@ -157,18 +156,30 @@ for (let i = 0; i < lines.length; i++) {
   }
 
   let mt = false;
-  for (const [k, v] of Object.entries(hd)) {
-    if (s.startsWith(k)) {
-      cs = { id: v, title: s, groups: [{ name: "Albums", entries: [] }] };
-      sections.push(cs); cg = cs.groups[0]; mode = "albums"; mt = true; break;
+  // Vol headers（Vol. 1 - 2026 等）直接合并到对应年份的 section
+  const volMatch = s.match(/^Vol\.\s*\d+\s*-\s*(\d{4})/);
+  if (volMatch) {
+    const year = volMatch[1];
+    const existing = sections.find(sec => sec.id === year);
+    if (existing) {
+      cs = existing;
+      cg = cs.groups.find(g => g.name === "Albums") || cs.groups[0];
+    } else {
+      cs = { id: year, title: s, groups: [{ name: "Albums", entries: [] }] };
+      sections.push(cs); cg = cs.groups[0];
+    }
+    mode = "albums"; mt = true;
+  }
+  if (!mt) {
+    for (const [k, v] of Object.entries(hd)) {
+      if (s.startsWith(k)) {
+        cs = { id: v, title: s, groups: [{ name: "Albums", entries: [] }] };
+        sections.push(cs); cg = cs.groups[0]; mode = "albums"; mt = true; break;
+      }
     }
   }
   if (mt) continue;
 
-  if (/^2024:\s*Part/.test(s)) {
-    cs = { id: "2024", title: s, groups: [{ name: "Albums", entries: [] }] };
-    sections.push(cs); cg = cs.groups[0]; mode = "albums"; continue;
-  }
   if (s === "Before 2024: Part Albums/Mixtapes, etc. Ratings") continue;
   if (/^(19|20)\d{2}$/.test(s)) {
     cs = { id: s, title: s, groups: [{ name: "Albums", entries: [] }] };

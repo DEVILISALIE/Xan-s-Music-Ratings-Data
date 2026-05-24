@@ -33,6 +33,10 @@ async function init() {
       const resp = await fetch('data.json');
       appData = await resp.json();
     }
+    // 迁移旧版 vol sections 数据
+    if (migrateVolSections()) {
+      saveData();
+    }
   } catch (e) {
     document.getElementById("contentArea").innerHTML =
       '<div style="padding:40px;text-align:center;color:var(--text-secondary)">' +

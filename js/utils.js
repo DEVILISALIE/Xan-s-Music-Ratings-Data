@@ -1,6 +1,6 @@
 function escapeHtml(str) {
   if (!str) return '';
-  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 function getScoreClass(score) {
@@ -54,6 +54,8 @@ function populateSectionSelector(selectedEntryId) {
   const trigger = document.getElementById('editSectionTrigger');
   menu.innerHTML = '';
   let currentValue = '';
+
+  let isFirstOption = true;
   for (const section of getMergedSections()) {
     for (const group of section.groups) {
       if (group.name === 'AOTY') continue;
@@ -64,19 +66,24 @@ function populateSectionSelector(selectedEntryId) {
       opt.dataset.value = val;
       opt.textContent = label;
       menu.appendChild(opt);
+
       if (selectedEntryId && group.entries.some(e => e.id === selectedEntryId)) {
         currentValue = val;
+      } else if (!selectedEntryId && isFirstOption) {
+        currentValue = val;
+        isFirstOption = false;
       }
     }
   }
+
   selectedSectionValue = currentValue;
   if (currentValue) {
     const activeOpt = [...menu.querySelectorAll('.custom-select-option')].find(o => o.dataset.value === currentValue);
     trigger.textContent = activeOpt ? activeOpt.textContent : t('modal.placeholder.select');
+    menu.querySelectorAll('.custom-select-option').forEach(o => {
+      o.classList.toggle('active', o.dataset.value === currentValue);
+    });
   } else {
     trigger.textContent = t('modal.placeholder.select');
   }
-  menu.querySelectorAll('.custom-select-option').forEach(o => {
-    o.classList.toggle('active', o.dataset.value === currentValue);
-  });
 }
