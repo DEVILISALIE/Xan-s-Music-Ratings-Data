@@ -1,0 +1,27 @@
+# 生成的文件
+data.json
+
+# 源数据文件（可能包含个人数据）
+*.txt
+
+# 系统文件
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# 编辑器配置
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node.js
+node_modules/
+npm-debug.log*
+
+# 临时文件
+*.tmp
+*.bak
+
+# Claude Code 配置
+.claude/

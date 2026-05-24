@@ -1,0 +1,110 @@
+/* ===== CSS Reset & Base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  color-scheme: light;
+  --bg: #F2F2F7;
+  --card-bg: #FFFFFF;
+  --sidebar-bg: rgba(242, 242, 247, 0.72);
+  --text: #1C1C1E;
+  --text-secondary: #8E8E93;
+  --text-tertiary: #AEAEB2;
+  --separator: rgba(60, 60, 67, 0.12);
+  --accent: #007AFF;
+  --card-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  --modal-overlay: rgba(0,0,0,0.4);
+  --pill-bg: rgba(0,122,255,0.1);
+  --pill-active-bg: #007AFF;
+  --pill-active-text: #FFFFFF;
+  --input-bg: rgba(0,0,0,0.04);
+  --hover-bg: rgba(0,0,0,0.04);
+  --aoty-border: #FF9500;
+  --aoty-bg: rgba(255,149,0,0.06);
+  --fab-bg: #007AFF;
+  --fab-text: #FFFFFF;
+  --export-bg: rgba(0,0,0,0.04);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #000000;
+  --card-bg: #1C1C1E;
+  --sidebar-bg: #1C1C1E;
+  --text: #FFFFFF;
+  --text-secondary: #8E8E93;
+  --text-tertiary: #636366;
+  --separator: rgba(84, 84, 88, 0.65);
+  --accent: #0A84FF;
+  --card-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  --modal-overlay: rgba(0,0,0,0.6);
+  --pill-bg: rgba(10,132,255,0.15);
+  --pill-active-bg: #0A84FF;
+  --pill-active-text: #FFFFFF;
+  --input-bg: rgba(255,255,255,0.08);
+  --hover-bg: rgba(255,255,255,0.06);
+  --aoty-bg: rgba(255,149,0,0.1);
+  --fab-bg: #0A84FF;
+  --fab-text: #FFFFFF;
+  --export-bg: rgba(255,255,255,0.08);
+}
+
+html { scroll-behavior: smooth; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  transition: background-color 0.3s, color 0.3s;
+  overflow: hidden;
+  height: 100vh;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* ===== Glassmorphism Preset ===== */
+[data-style="glass"] {
+  --card-bg: rgba(255, 255, 255, 0.45);
+  --sidebar-bg: rgba(255, 255, 255, 0.35);
+  --separator: rgba(255, 255, 255, 0.3);
+  --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+  --input-bg: rgba(255, 255, 255, 0.35);
+  --hover-bg: rgba(255, 255, 255, 0.25);
+  --pill-bg: rgba(255, 255, 255, 0.3);
+  --export-bg: rgba(255, 255, 255, 0.3);
+  --aoty-bg: rgba(255, 200, 100, 0.12);
+}
+
+[data-style="glass"] body {
+  background: linear-gradient(135deg, #c1dfc4 0%, #deecdd 30%, #d4e4f7 60%, #e8dff5 100%);
+  background-attachment: fixed;
+}
+
+[data-style="glass"][data-theme="dark"] body {
+  background: linear-gradient(135deg, #0f2027 0%, #203a43 40%, #2c5364 100%);
+  background-attachment: fixed;
+}
+
+[data-style="glass"][data-theme="dark"] {
+  --card-bg: rgba(255, 255, 255, 0.08);
+  --sidebar-bg: rgba(255, 255, 255, 0.06);
+  --separator: rgba(255, 255, 255, 0.12);
+  --input-bg: rgba(255, 255, 255, 0.08);
+  --hover-bg: rgba(255, 255, 255, 0.1);
+  --pill-bg: rgba(255, 255, 255, 0.1);
+  --export-bg: rgba(255, 255, 255, 0.08);
+  --aoty-bg: rgba(255, 200, 100, 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

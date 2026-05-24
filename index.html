@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#F2F2F7">
+<title>Xan's Music Ratings</title>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/components.css">
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1 class="sidebar-title" data-i18n="sidebar.title">Xan's Music Ratings</h1>
+      <div class="sidebar-subtitle" data-i18n="sidebar.subtitle">1960s–Now</div>
+    </div>
+    <nav class="sidebar-nav" id="sidebarNav"></nav>
+    <div class="sidebar-footer">
+      <button onclick="exportJSON()" data-i18n="sidebar.export">Export JSON</button>
+      <button onclick="importJSON()" data-i18n="sidebar.import">Import JSON</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main" id="mainContent">
+    <div class="toolbar">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="Search title or artist…" data-i18n-placeholder="toolbar.search" aria-label="Search albums" autocomplete="off">
+      </div>
+      <div class="filter-pills" id="filterPills">
+        <button class="pill active" data-filter="all" data-i18n="toolbar.all">All</button>
+        <button class="pill" data-filter="EP">EP</button>
+        <button class="pill" data-filter="Mixtape">Mixtape</button>
+        <button class="pill" data-filter="Reissue">Reissue</button>
+        <button class="pill" data-filter="Soundtrack">Soundtrack</button>
+        <button class="pill" data-filter="Live">Live</button>
+        <button class="pill" data-filter="Compilation">Compilation</button>
+      </div>
+      <div class="custom-select" id="scoreFilter">
+        <button class="custom-select-trigger" id="scoreFilterTrigger" data-i18n="toolbar.allScores">All Scores</button>
+        <div class="custom-select-menu" id="scoreFilterMenu">
+          <div class="custom-select-option active" data-value="all" data-i18n="toolbar.allScores">All Scores</div>
+          <div class="custom-select-option" data-value="90">90+</div>
+          <div class="custom-select-option" data-value="80">80+</div>
+          <div class="custom-select-option" data-value="70">70+</div>
+          <div class="custom-select-option" data-value="60">60+</div>
+          <div class="custom-select-option" data-value="50">50+</div>
+          <div class="custom-select-option" data-value="low">&lt;50</div>
+          <div class="custom-select-option" data-value="nr" data-i18n="toolbar.nr">NR / No Score</div>
+        </div>
+      </div>
+      <span class="toolbar-count" id="resultCount"></span>
+      <button class="theme-toggle" id="langToggle" onclick="toggleLang()" aria-label="Switch language" title="切换语言">🌐</button>
+      <button class="theme-toggle" id="styleToggle" onclick="toggleStyle()" aria-label="Toggle glassmorphism" title="毛玻璃风格">💎</button>
+      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle dark mode">🌙</button>
+    </div>
+    <div class="content" id="contentArea"></div>
+  </main>
+</div>
+
+<!-- FAB -->
+<button class="fab" onclick="openAddModal()">+</button>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modalTitle" data-i18n="modal.editTitle">Edit Album</div>
+    <input type="hidden" id="editId">
+    <input type="hidden" id="editSectionId">
+    <div class="form-group">
+      <label class="form-label" data-i18n="modal.title">Title</label>
+      <input class="form-input" id="editTitle" name="title" autocomplete="off" placeholder="Album title…" data-i18n-placeholder="modal.placeholder.title">
+    </div>
+    <div class="form-group">
+      <label class="form-label" data-i18n="modal.artist">Artist</label>
+      <input class="form-input" id="editArtist" name="artist" autocomplete="off" placeholder="Artist name…" data-i18n-placeholder="modal.placeholder.artist">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" data-i18n="modal.score">Score</label>
+        <input class="form-input" id="editScore" name="score" type="number" min="0" max="100" inputmode="numeric" placeholder="0–100" data-i18n-placeholder="modal.placeholder.score">
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="modal.date">Date</label>
+        <input class="form-input" id="editDate" name="date" autocomplete="off" placeholder="MM.DD" data-i18n-placeholder="modal.placeholder.date">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" data-i18n="modal.scoreNote">Score Note</label>
+      <input class="form-input" id="editScoreNote" name="scoreNote" autocomplete="off" placeholder="e.g. Top1, NR…" data-i18n-placeholder="modal.placeholder.note">
+    </div>
+    <div class="form-group">
+      <label class="form-label" data-i18n="modal.tags">Tags</label>
+      <div class="form-tags" id="editTags">
+        <button type="button" class="form-tag" data-tag="EP">EP</button>
+        <button type="button" class="form-tag" data-tag="Mixtape">Mixtape</button>
+        <button type="button" class="form-tag" data-tag="Reissue">Reissue</button>
+        <button type="button" class="form-tag" data-tag="Soundtrack">Soundtrack</button>
+        <button type="button" class="form-tag" data-tag="Live">Live</button>
+        <button type="button" class="form-tag" data-tag="Compilation">Compilation</button>
+        <button type="button" class="form-tag" data-tag="Unofficial">Unofficial</button>
+        <button type="button" class="form-tag" data-tag="DJ Mix">DJ Mix</button>
+        <button type="button" class="form-tag" data-tag="Video">Video</button>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="form-row-between">
+        <label class="form-label" style="margin-bottom:0" data-i18n="modal.aoty">Album of the Year</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="editAotyToggle" aria-label="Album of the Year">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="form-group" id="editSectionGroup" style="display:none">
+      <label class="form-label" data-i18n="modal.section">Add to Section</label>
+      <div class="custom-select" id="editSectionSelect">
+        <button class="custom-select-trigger" id="editSectionTrigger"></button>
+        <div class="custom-select-menu" id="editSectionMenu"></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" data-i18n="modal.notes">Notes</label>
+      <input class="form-input" id="editNotes" name="notes" autocomplete="off" placeholder="Additional notes…" data-i18n-placeholder="modal.placeholder.notes">
+    </div>
+    <div class="form-group">
+      <label class="form-label" data-i18n="modal.trackRatings">Track Ratings</label>
+      <div class="track-list" id="trackList"></div>
+      <button type="button" class="track-add" onclick="addTrack()" data-i18n="modal.addTrack">+ Add Track</button>
+      <div class="track-summary" id="trackSummary"></div>
+    </div>
+    <div class="form-group">
+      <label class="form-label" data-i18n="modal.review">Review / AOTY Write-up</label>
+      <textarea class="form-input" id="editReview" name="review" autocomplete="off" placeholder="Write your review here…" data-i18n-placeholder="modal.placeholder.review"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" onclick="closeModal()" data-i18n="modal.cancel">Cancel</button>
+      <button class="modal-btn danger" id="deleteBtn" onclick="deleteEntry()" data-i18n="modal.delete">Delete</button>
+      <button class="modal-btn primary" onclick="saveEntry()" data-i18n="modal.save">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const __MUSIC_DATA__ = null;
+</script>
+<script src="js/state.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/filter.js"></script>
+<script src="js/modal.js"></script>
+<script src="js/render.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
