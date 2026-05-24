@@ -3,9 +3,9 @@ let searchResults = [];
 let searchIndex = -1;
 
 function matchesFilter(entry) {
-  // Type filter
-  if (currentFilter !== 'all') {
-    if (!entry.tags || !entry.tags.some(t => t.toLowerCase() === currentFilter.toLowerCase())) return false;
+  // Type filter (multi-select)
+  if (currentFilter.length > 0) {
+    if (!entry.tags || !entry.tags.some(t => currentFilter.some(f => f.toLowerCase() === t.toLowerCase()))) return false;
   }
 
   // Score filter
@@ -114,16 +114,3 @@ function updateCount(visible, total) {
   }
 }
 
-function setupFilterListeners() {
-  const pillsContainer = document.getElementById('filterPills');
-  if (pillsContainer._delegateBound) return;
-  pillsContainer._delegateBound = true;
-  pillsContainer.addEventListener('click', (e) => {
-    const pill = e.target.closest('.pill');
-    if (!pill) return;
-    pillsContainer.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
-    pill.classList.add('active');
-    currentFilter = pill.dataset.filter;
-    applyFilters();
-  });
-}

@@ -302,7 +302,6 @@ function renderContent() {
 
   area.innerHTML = html;
   updateCount(visibleCount, totalCount);
-  setupFilterListeners();
 }
 
 function renderAlbumCard(entry, idx, sectionId, groupId, groupName, visible) {
@@ -335,17 +334,27 @@ function renderAlbumCard(entry, idx, sectionId, groupId, groupName, visible) {
 function renderAotyCard(entry, sectionId, groupId, visible) {
   const hiddenClass = visible ? '' : 'hidden';
   const scoreText = entry.score != null ? entry.score + '/100' : '—';
+  const noteText = entry.scoreNote && entry.scoreNote !== 'NR' ? ` (${entry.scoreNote})` : '';
+  const tags = (entry.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('');
+  const hasReview = entry.review && entry.review.trim().length > 0;
   const reviewHtml = entry.review ? `<div class="aoty-review" id="review-${entry.id}">${escapeHtml(entry.review)}</div>
     <button class="aoty-review-toggle" onclick="toggleReview(event, '${entry.id}')">${t('content.showMore')}</button>` : '';
 
   return `<div class="aoty-card ${hiddenClass}" data-entry-id="${entry.id}" data-section="${sectionId}" data-group="${groupId}" role="button" tabindex="0" onclick="openEditModal('${entry.id}','${sectionId}','${groupId}')" onkeydown="if(event.key==='Enter')openEditModal('${entry.id}','${sectionId}','${groupId}')">
-    <div class="aoty-header">
-      <span class="aoty-badge">AOTY</span>
-      <span class="aoty-title">${escapeHtml(entry.title)}</span>
-      <span class="aoty-score">${scoreText}</span>
+    <div style="display:flex;align-items:flex-start;gap:12px">
+      <div style="flex:1;min-width:0">
+        <div class="aoty-header">
+          <span class="aoty-badge">AOTY</span>
+          <span class="aoty-title">${escapeHtml(entry.title)}${noteText ? ' <span style="font-size:12px;color:var(--text-tertiary)">' + escapeHtml(noteText) + '</span>' : ''}</span>
+        </div>
+        <div class="aoty-artist">${escapeHtml(entry.artist || '')}</div>
+        ${reviewHtml}
+      </div>
+      <div class="album-meta">
+        ${tags ? '<div class="album-tags">' + tags + '</div>' : ''}
+        <span class="aoty-score">${scoreText}</span>
+      </div>
     </div>
-    <div class="aoty-artist">${escapeHtml(entry.artist || '')}</div>
-    ${reviewHtml}
   </div>`;
 }
 

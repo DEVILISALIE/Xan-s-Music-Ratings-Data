@@ -31,14 +31,20 @@
         <span class="search-icon">🔍</span>
         <input type="text" id="searchInput" placeholder="Search title or artist…" data-i18n-placeholder="toolbar.search" aria-label="Search albums" autocomplete="off">
       </div>
-      <div class="filter-pills" id="filterPills">
-        <button class="pill active" data-filter="all" data-i18n="toolbar.all">All</button>
-        <button class="pill" data-filter="EP">EP</button>
-        <button class="pill" data-filter="Mixtape">Mixtape</button>
-        <button class="pill" data-filter="Reissue">Reissue</button>
-        <button class="pill" data-filter="Soundtrack">Soundtrack</button>
-        <button class="pill" data-filter="Live">Live</button>
-        <button class="pill" data-filter="Compilation">Compilation</button>
+      <div class="custom-select" id="tagFilter">
+        <button class="custom-select-trigger" id="tagFilterTrigger" data-i18n="toolbar.all">All</button>
+        <div class="custom-select-menu" id="tagFilterMenu">
+          <div class="custom-select-option active" data-value="all" data-i18n="toolbar.all">All</div>
+          <div class="custom-select-option" data-value="EP">EP</div>
+          <div class="custom-select-option" data-value="Mixtape">Mixtape</div>
+          <div class="custom-select-option" data-value="Reissue">Reissue</div>
+          <div class="custom-select-option" data-value="Soundtrack">Soundtrack</div>
+          <div class="custom-select-option" data-value="Live">Live</div>
+          <div class="custom-select-option" data-value="Compilation">Compilation</div>
+          <div class="custom-select-option" data-value="Unofficial">Unofficial</div>
+          <div class="custom-select-option" data-value="DJ Mix">DJ Mix</div>
+          <div class="custom-select-option" data-value="Video">Video</div>
+        </div>
       </div>
       <div class="custom-select" id="scoreFilter">
         <button class="custom-select-trigger" id="scoreFilterTrigger" data-i18n="toolbar.allScores">All Scores</button>
@@ -56,7 +62,8 @@
         </div>
       </div>
       <span class="toolbar-count" id="resultCount"></span>
-      <button class="theme-toggle" id="langToggle" onclick="toggleLang()" aria-label="Switch language" title="切换语言">🌐</button>
+      <span style="flex:1"></span>
+      <button class="theme-toggle" id="langToggle" onclick="toggleLang()" aria-label="Switch language">🌐</button>
       <button class="theme-toggle" id="styleToggle" onclick="toggleStyle()" aria-label="Toggle glassmorphism" title="毛玻璃风格">💎</button>
       <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle dark mode">🌙</button>
     </div>

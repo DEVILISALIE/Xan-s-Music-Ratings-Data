@@ -2,7 +2,7 @@
 let currentLang = 'en';
 let appData = null;
 let entryIndex = new Map();
-let currentFilter = 'all';
+let currentFilter = [];
 let currentScoreFilter = 'all';
 let searchQuery = '';
 let editingEntry = null;

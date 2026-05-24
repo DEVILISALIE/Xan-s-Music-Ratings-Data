@@ -64,6 +64,11 @@ const I18N = {
     'alert.invalidJsonGeneric': 'Invalid JSON file',
     'error.loadData': 'Could not load data',
     'error.loadDataHint': 'Make sure you are running a local server or data is embedded.',
+    'tooltip.darkMode': 'Dark Mode',
+    'tooltip.lightMode': 'Light Mode',
+    'tooltip.glass': 'Glassmorphism',
+    'tooltip.solid': 'Solid Style',
+    'tooltip.lang': '中文',
   },
 
   zh: {
@@ -130,6 +135,11 @@ const I18N = {
     'alert.invalidJsonGeneric': '无效的 JSON 文件',
     'error.loadData': '无法加载数据',
     'error.loadDataHint': '请确保正在运行本地服务器或数据已嵌入。',
+    'tooltip.darkMode': '暗色模式',
+    'tooltip.lightMode': '亮色模式',
+    'tooltip.glass': '毛玻璃风格',
+    'tooltip.solid': '纯色风格',
+    'tooltip.lang': 'English',
   }
 };
 
@@ -162,12 +172,14 @@ function applyLang() {
   document.documentElement.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
   document.documentElement.setAttribute('data-lang', currentLang);
   applyI18nToDOM();
+  document.getElementById('langToggle').title = t('tooltip.lang');
 }
 
 function toggleLang() {
   currentLang = currentLang === 'en' ? 'zh' : 'en';
   localStorage.setItem('lang', currentLang);
   applyLang();
+  applyTheme();
   // 重渲染动态内容
   renderSidebar();
   renderContent();
@@ -175,6 +187,12 @@ function toggleLang() {
   const scoreTrigger = document.getElementById('scoreFilterTrigger');
   const activeScoreOpt = document.querySelector('#scoreFilterMenu .custom-select-option.active');
   if (scoreTrigger && activeScoreOpt) scoreTrigger.textContent = activeScoreOpt.textContent;
+  // 更新标签筛选器文字
+  const tagTrigger = document.getElementById('tagFilterTrigger');
+  if (tagTrigger) {
+    const activeCount = currentFilter.length;
+    tagTrigger.textContent = activeCount === 0 ? t('toolbar.all') : activeCount + (currentLang === 'zh' ? ' 个标签' : ' tag' + (activeCount > 1 ? 's' : ''));
+  }
 }
 
 // 读取持久化语言偏好，默认英文

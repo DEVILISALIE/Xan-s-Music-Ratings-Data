@@ -53,10 +53,21 @@ async function init() {
   const scoreTrigger = document.getElementById('scoreFilterTrigger');
   const scoreMenu = document.getElementById('scoreFilterMenu');
   const scoreSelect = document.getElementById('scoreFilter');
+  const tagTrigger = document.getElementById('tagFilterTrigger');
+  const tagMenu = document.getElementById('tagFilterMenu');
+  var tagSelect = document.getElementById('tagFilter');
+
+  function closeAllDropdowns() {
+    scoreSelect.classList.remove('open');
+    tagSelect.classList.remove('open');
+    document.getElementById('editSectionSelect').classList.remove('open');
+  }
 
   scoreTrigger.addEventListener('click', (e) => {
     e.stopPropagation();
-    scoreSelect.classList.toggle('open');
+    const wasOpen = scoreSelect.classList.contains('open');
+    closeAllDropdowns();
+    if (!wasOpen) scoreSelect.classList.add('open');
   });
 
   scoreMenu.addEventListener('click', (e) => {
@@ -71,8 +82,42 @@ async function init() {
   });
 
   document.addEventListener('click', () => {
-    scoreSelect.classList.remove('open');
-    document.getElementById('editSectionSelect').classList.remove('open');
+    closeAllDropdowns();
+  });
+
+  // Tag filter multi-select dropdown
+  tagTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const wasOpen = tagSelect.classList.contains('open');
+    closeAllDropdowns();
+    if (!wasOpen) tagSelect.classList.add('open');
+  });
+
+  tagMenu.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const opt = e.target.closest('.custom-select-option');
+    if (!opt) return;
+    const val = opt.dataset.value;
+
+    if (val === 'all') {
+      tagMenu.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('active'));
+      opt.classList.add('active');
+      currentFilter = [];
+    } else {
+      tagMenu.querySelector('[data-value="all"]').classList.remove('active');
+      opt.classList.toggle('active');
+      const selected = [...tagMenu.querySelectorAll('.custom-select-option.active:not([data-value="all"])')];
+      if (selected.length === 0) {
+        tagMenu.querySelector('[data-value="all"]').classList.add('active');
+        currentFilter = [];
+      } else {
+        currentFilter = selected.map(o => o.dataset.value);
+      }
+    }
+
+    const activeCount = currentFilter.length;
+    tagTrigger.textContent = activeCount === 0 ? t('toolbar.all') : activeCount + (currentLang === 'zh' ? ' 个标签' : ' tag' + (activeCount > 1 ? 's' : ''));
+    applyFilters();
   });
 
   // Section selector custom dropdown
@@ -111,10 +156,12 @@ function applyTheme() {
   const theme = saved || (prefersDark ? 'dark' : 'light');
   document.documentElement.setAttribute('data-theme', theme);
   document.getElementById('themeToggle').textContent = theme === 'dark' ? '☀️' : '🌙';
+  document.getElementById('themeToggle').title = theme === 'dark' ? t('tooltip.lightMode') : t('tooltip.darkMode');
 
-  const savedStyle = localStorage.getItem('style') || 'solid';
+  const savedStyle = localStorage.getItem('style') || 'glass';
   document.documentElement.setAttribute('data-style', savedStyle);
   document.getElementById('styleToggle').textContent = savedStyle === 'glass' ? '💠' : '💎';
+  document.getElementById('styleToggle').title = savedStyle === 'glass' ? t('tooltip.solid') : t('tooltip.glass');
 }
 
 function toggleTheme() {
@@ -123,6 +170,7 @@ function toggleTheme() {
   document.documentElement.setAttribute('data-theme', next);
   localStorage.setItem('theme', next);
   document.getElementById('themeToggle').textContent = next === 'dark' ? '☀️' : '🌙';
+  document.getElementById('themeToggle').title = next === 'dark' ? t('tooltip.lightMode') : t('tooltip.darkMode');
   updateThemeColor();
 }
 
@@ -132,6 +180,7 @@ function toggleStyle() {
   document.documentElement.setAttribute('data-style', next);
   localStorage.setItem('style', next);
   document.getElementById('styleToggle').textContent = next === 'glass' ? '💠' : '💎';
+  document.getElementById('styleToggle').title = next === 'glass' ? t('tooltip.solid') : t('tooltip.glass');
   updateThemeColor();
 }
 
@@ -150,12 +199,20 @@ document.addEventListener('click', (e) => {
   if (tag) tag.classList.toggle('active');
 });
 
+let modalMouseDownOnOverlay = false;
+document.getElementById('editModal').addEventListener('mousedown', (e) => {
+  modalMouseDownOnOverlay = (e.target.id === 'editModal');
+});
 document.addEventListener('click', (e) => {
-  if (e.target.id === 'editModal') closeModal();
+  if (e.target.id === 'editModal' && modalMouseDownOnOverlay) closeModal();
 });
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeModal();
+  if (e.key === 'Enter' && e.shiftKey && document.getElementById('editModal').classList.contains('active')) {
+    e.preventDefault();
+    saveEntry();
+  }
 });
 
 // Export/Import
