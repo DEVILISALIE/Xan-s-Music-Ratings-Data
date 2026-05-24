@@ -81,13 +81,21 @@ body {
 }
 
 [data-style="glass"] body {
-  background: linear-gradient(135deg, #c1dfc4 0%, #deecdd 30%, #d4e4f7 60%, #e8dff5 100%);
-  background-attachment: fixed;
+  background: transparent;
+  position: relative;
 }
 
-[data-style="glass"][data-theme="dark"] body {
+[data-style="glass"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(135deg, #c1dfc4 0%, #deecdd 30%, #d4e4f7 60%, #e8dff5 100%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+[data-style="glass"][data-theme="dark"] body::before {
   background: linear-gradient(135deg, #0f2027 0%, #203a43 40%, #2c5364 100%);
-  background-attachment: fixed;
 }
 
 [data-style="glass"][data-theme="dark"] {
@@ -103,8 +111,4 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
+    animation-duratio

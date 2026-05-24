@@ -17,24 +17,14 @@
 
 [data-style="glass"] .album-card,
 [data-style="glass"] .aoty-card {
-  backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.5);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
   position: relative;
   overflow: hidden;
-}
-
-[data-style="glass"] .album-card::before,
-[data-style="glass"] .aoty-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: inherit;
-  filter: blur(12px);
-  z-index: -1;
-  border-radius: inherit;
-  opacity: 0.5;
+  will-change: transform;
+  contain: layout style paint;
 }
 
 [data-style="glass"] .album-card:hover,
@@ -73,6 +63,13 @@
 .drag-ghost {
   user-select: none;
   -webkit-user-select: none;
+}
+
+/* 拖拽期间禁用非拖拽卡片的 backdrop-filter，降低 GPU 负担 */
+[data-style="glass"] .content.is-dragging .album-card,
+[data-style="glass"] .content.is-dragging .aoty-card {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 /* 拖拽占位符样式 */
@@ -524,8 +521,8 @@ textarea.form-input::-webkit-scrollbar-corner {
 }
 
 [data-style="glass"] #editSectionGroup .custom-select-menu {
-  backdrop-filter: blur(50px) saturate(200%);
-  -webkit-backdrop-filter: blur(50px) saturate(200%);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.5);
 }
 
@@ -753,5 +750,4 @@ textarea.form-input::-webkit-scrollbar-corner {
   animation: fadeInUp 0.3s ease both;
 }
 
-.section:nth-child(2) .album-card { animation-delay: 0.02s; }
-.section:nth-child(3) .album-card { animation-delay: 0.04s; }
+.section:nth-child(2) .album-card { animation-delay: 0.

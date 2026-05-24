@@ -133,7 +133,8 @@ function saveEntry() {
     Object.assign(editingEntry, data);
 
     // 检查是否需要移动到其他年份/分组
-    const sel = JSON.parse(selectedSectionValue);
+    let sel;
+    try { sel = JSON.parse(selectedSectionValue); } catch (_) { closeModal(); return; }
     const targetGroupName = sel.groupName;
     const mergedId = sel.sectionId;
     const targetSection = findOrCreateSection(mergedId);
@@ -163,7 +164,8 @@ function saveEntry() {
     }
   } else {
     // Add new
-    const sel = JSON.parse(selectedSectionValue);
+    let sel;
+    try { sel = JSON.parse(selectedSectionValue); } catch (_) { closeModal(); return; }
     const section = findOrCreateSection(sel.sectionId);
     let group = section.groups.find(g => g.name === sel.groupName);
     if (!group) {
@@ -185,11 +187,4 @@ function deleteEntry() {
     for (const group of section.groups) {
       const idx = group.entries.findIndex(e => e.id === editingEntry.id);
       if (idx !== -1) {
-        group.entries.splice(idx, 1);
-        refreshAll();
-        closeModal();
-        return;
-      }
-    }
-  }
-}
+        group.en

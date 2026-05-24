@@ -47,6 +47,18 @@ function getSectionDisplayName(section) {
     : section.title.split(':')[0].replace(/Part \d+ /, '').trim();
 }
 
+// 确保每个 section 都有 Albums 和 Singles 两个默认分组
+function ensureDefaultGroups() {
+  for (const section of appData.sections) {
+    if (!section.groups.some(g => g.name === 'Albums')) {
+      section.groups.push({ name: 'Albums', entries: [] });
+    }
+    if (!section.groups.some(g => g.name === 'Singles')) {
+      section.groups.push({ name: 'Singles', entries: [] });
+    }
+  }
+}
+
 let selectedSectionValue = '';
 
 function populateSectionSelector(selectedEntryId) {
@@ -57,33 +69,21 @@ function populateSectionSelector(selectedEntryId) {
 
   let isFirstOption = true;
   for (const section of getMergedSections()) {
-    for (const group of section.groups) {
-      if (group.name === 'AOTY') continue;
-      const val = JSON.stringify({ sectionId: section.id, groupName: group.name });
-      const label = getSectionDisplayName(section) + ' → ' + group.name;
+    // 始终列出 Albums 和 Singles
+    const groupNames = ['Albums', 'Singles'];
+
+    for (const groupName of groupNames) {
+      const group = section.groups.find(g => g.name === groupName);
+      const val = JSON.stringify({ sectionId: section.id, groupName: groupName });
+      const label = getSectionDisplayName(section) + ' → ' + groupName;
       const opt = document.createElement('div');
       opt.className = 'custom-select-option';
       opt.dataset.value = val;
       opt.textContent = label;
       menu.appendChild(opt);
 
-      if (selectedEntryId && group.entries.some(e => e.id === selectedEntryId)) {
+      if (selectedEntryId && group && group.entries.some(e => e.id === selectedEntryId)) {
         currentValue = val;
       } else if (!selectedEntryId && isFirstOption) {
         currentValue = val;
-        isFirstOption = false;
-      }
-    }
-  }
-
-  selectedSectionValue = currentValue;
-  if (currentValue) {
-    const activeOpt = [...menu.querySelectorAll('.custom-select-option')].find(o => o.dataset.value === currentValue);
-    trigger.textContent = activeOpt ? activeOpt.textContent : t('modal.placeholder.select');
-    menu.querySelectorAll('.custom-select-option').forEach(o => {
-      o.classList.toggle('active', o.dataset.value === currentValue);
-    });
-  } else {
-    trigger.textContent = t('modal.placeholder.select');
-  }
-}
+        isFirstOptio

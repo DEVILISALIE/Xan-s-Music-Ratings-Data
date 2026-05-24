@@ -22,24 +22,9 @@
 
 [data-style="glass"] .sidebar {
   border-right: 1px solid rgba(255, 255, 255, 0.35);
-  backdrop-filter: blur(50px) saturate(200%);
-  -webkit-backdrop-filter: blur(50px) saturate(200%);
-}
-
-[data-style="glass"] .sidebar::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: inherit;
-  filter: blur(8px);
-  z-index: 0;
-  opacity: 0.4;
-  pointer-events: none;
-}
-
-[data-style="glass"] .sidebar > * {
-  position: relative;
-  z-index: 1;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  will-change: transform;
 }
 
 [data-style="glass"][data-theme="dark"] .sidebar {
@@ -75,7 +60,12 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.sidebar-nav::-webkit-scrollbar { width: 0; }
+.sidebar-nav::-webkit-scrollbar { width: 6px; }
+.sidebar-nav::-webkit-scrollbar-track { margin: 0; }
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: var(--text-tertiary);
+  border-radius: 3px;
+}
 
 .nav-group {
   margin-bottom: 4px;
@@ -222,26 +212,9 @@
 }
 
 [data-style="glass"] .toolbar {
-  backdrop-filter: blur(50px) saturate(200%);
-  -webkit-backdrop-filter: blur(50px) saturate(200%);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   position: sticky;
-}
-
-[data-style="glass"] .toolbar::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: inherit;
-  filter: blur(8px);
-  z-index: 0;
-  opacity: 0.4;
-  pointer-events: none;
-}
-
-[data-style="glass"] .toolbar > * {
-  position: relative;
-  z-index: 1;
-}
   border-bottom: 1px solid rgba(255, 255, 255, 0.3);
 }
 
@@ -414,8 +387,8 @@
 }
 
 [data-style="glass"] .custom-select-menu {
-  backdrop-filter: blur(80px) saturate(200%);
-  -webkit-backdrop-filter: blur(80px) saturate(200%);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.5);
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
 }
@@ -513,3 +486,4 @@
   .content { padding: 16px 16px 100px; }
   .album-card { padding: 10px 12px; }
 }
+                                                                                                                                                                                                                                                                                                                                                               

@@ -1,6 +1,14 @@
 // Filter and search logic
 let searchResults = [];
 let searchIndex = -1;
+let allCards = []; // 缓存所有卡片元素及其对应 entry，避免每次 applyFilters 全量查询 DOM
+
+function rebuildCardCache() {
+  allCards = [];
+  document.querySelectorAll('.album-card, .aoty-card').forEach(card => {
+    allCards.push({ card, entry: findEntry(card.dataset.entryId) });
+  });
+}
 
 function matchesFilter(entry) {
   // Type filter (multi-select)
@@ -41,12 +49,9 @@ function matchesFilter(entry) {
 
 function applyFilters() {
   let visibleCount = 0;
-  let totalCount = 0;
+  const totalCount = allCards.length;
   searchResults = [];
-  document.querySelectorAll('.album-card, .aoty-card').forEach(card => {
-    const id = card.dataset.entryId;
-    const entry = findEntry(id);
-    totalCount++;
+  for (const { card, entry } of allCards) {
     if (entry && matchesFilter(entry)) {
       card.classList.remove('hidden');
       visibleCount++;
@@ -54,7 +59,7 @@ function applyFilters() {
     } else {
       card.classList.add('hidden');
     }
-  });
+  }
   updateCount(visibleCount, totalCount);
 
   // 搜索时显示"下一个"按钮并定位到第一个结果
@@ -106,11 +111,4 @@ function findEntry(id) {
 }
 
 function updateCount(visible, total) {
-  const el = document.getElementById('resultCount');
-  if (visible === total) {
-    el.textContent = t('toolbar.count', { total });
-  } else {
-    el.textContent = t('toolbar.countFiltered', { visible, total });
-  }
-}
-
+  const el = d

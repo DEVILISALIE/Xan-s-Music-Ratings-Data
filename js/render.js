@@ -265,7 +265,7 @@ function renderContent() {
     // 预解析 AOTY 组中取消勾选的条目仍保留在 AOTY 组中作为普通条目显示
     const aotyEntries = [];
     const aotyGroupNormal = [];
-    const displayGroups = [];
+    const groupEntryMap = {}; // groupName → normalEntries
     for (const group of section.groups) {
       const normalEntries = [];
       for (const entry of group.entries) {
@@ -273,8 +273,13 @@ function renderContent() {
         else if (group.name === 'AOTY') aotyGroupNormal.push(entry);
         else normalEntries.push(entry);
       }
-      if (group.name !== 'AOTY' && normalEntries.length > 0) displayGroups.push({ name: group.name, entries: normalEntries });
+      if (group.name !== 'AOTY') groupEntryMap[group.name] = normalEntries;
     }
+
+    // 始终显示 Albums 和 Singles（即使为空）
+    const displayGroups = [];
+    displayGroups.push({ name: 'Albums', entries: groupEntryMap['Albums'] || [] });
+    displayGroups.push({ name: 'Singles', entries: groupEntryMap['Singles'] || [] });
     const aotyDisplay = [...aotyEntries, ...aotyGroupNormal];
     if (aotyDisplay.length > 0) displayGroups.unshift({ name: 'AOTY', entries: aotyDisplay });
 
@@ -301,6 +306,26 @@ function renderContent() {
   }
 
   area.innerHTML = html;
+  rebuildCardCache();
+
+  // 同步 searchResults，避免 applyFilters 重复遍历
+  searchResults = [];
+  for (const { card } of allCards) {
+    if (!card.classList.contains('hidden')) searchResults.push(card);
+  }
+
+  // 搜索状态下更新导航按钮
+  const nextBtn = document.getElementById('searchNextBtn');
+  if (searchQuery && searchResults.length > 0) {
+    nextBtn.style.display = 'flex';
+    searchIndex = 0;
+    highlightSearchResult(0);
+  } else {
+    nextBtn.style.display = 'none';
+    clearSearchHighlight();
+    searchIndex = -1;
+  }
+
   updateCount(visibleCount, totalCount);
 }
 
@@ -628,6 +653,9 @@ document.addEventListener('DOMContentLoaded', () => {
       state.lastMoveX = e.clientX;
       state.lastMoveY = e.clientY;
 
+      // 拖拽期间禁用所有卡片的 backdrop-filter，降低 GPU 负担
+      contentArea.classList.add('is-dragging');
+
       const card = state.card;
       const rect = card.getBoundingClientRect();
       const parent = card.parentNode;
@@ -814,6 +842,7 @@ document.addEventListener('DOMContentLoaded', () => {
       buildEntryIndex();
       saveData();
       state.isAnimating = false;
+      contentArea.classList.remove('is-dragging');
       resetState();
     }, 350);
   }
@@ -900,41 +929,4 @@ document.addEventListener('DOMContentLoaded', () => {
     dragCard.style.boxShadow = '';
 
     // 其他卡片回到原位
-    animateCards(oldPositions);
-
-    setTimeout(() => {
-      state.isAnimating = false;
-      resetState();
-    }, 350);
-  }
-
-  function resetState() {
-    state.active = false;
-    state.entryId = null;
-    state.group = null;
-    state.card = null;
-    state.ghost = null;
-    state.placeholder = null;
-    state.scrollAnimId = null;
-    state.isAnimating = false;
-    state.currentInsertTarget = null;
-  }
-
-  // ===== 绑定事件 =====
-
-  contentArea.addEventListener('pointerdown', onPointerDown);
-  document.addEventListener('pointermove', onPointerMove);
-  document.addEventListener('pointerup', onPointerUp);
-  document.addEventListener('pointercancel', onPointerCancel);
-
-  document.addEventListener('selectstart', (e) => {
-    if (state.card) e.preventDefault();
-  });
-
-  document.addEventListener('wheel', (e) => {
-    if (!state.active) return;
-    e.preventDefault();
-    mainEl.scrollTop += e.deltaY;
-    updateAutoScroll(state.lastClientY);
-  }, { passive: false });
-});
+    animateCard

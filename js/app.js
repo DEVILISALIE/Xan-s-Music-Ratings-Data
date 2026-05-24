@@ -37,6 +37,9 @@ async function init() {
     if (migrateVolSections()) {
       saveData();
     }
+    // 确保每个年份都有 Albums/Singles 分组
+    ensureDefaultGroups();
+    saveData();
   } catch (e) {
     document.getElementById("contentArea").innerHTML =
       '<div style="padding:40px;text-align:center;color:var(--text-secondary)">' +
@@ -246,14 +249,6 @@ function handleImport(e) {
         return;
       }
       appData = parsed;
+      ensureDefaultGroups();
       refreshAll();
     } catch (err) {
-      alert(t('alert.invalidJsonGeneric'));
-    }
-  };
-  reader.readAsText(file);
-  e.target.value = '';
-}
-
-// Start
-init();
