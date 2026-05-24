@@ -116,7 +116,7 @@ async function init() {
     }
 
     const activeCount = currentFilter.length;
-    tagTrigger.textContent = activeCount === 0 ? t('toolbar.all') : activeCount + (currentLang === 'zh' ? ' 个标签' : ' tag' + (activeCount > 1 ? 's' : ''));
+    tagTrigger.textContent = activeCount === 0 ? t('toolbar.allTags') : activeCount + (currentLang === 'zh' ? ' 个标签' : ' tag' + (activeCount > 1 ? 's' : ''));
     applyFilters();
   });
 

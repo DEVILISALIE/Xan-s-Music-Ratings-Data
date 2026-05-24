@@ -12,6 +12,7 @@ const I18N = {
     // Toolbar
     'toolbar.search': 'Search title or artist…',
     'toolbar.all': 'All',
+    'toolbar.allTags': 'All Tags',
     'toolbar.allScores': 'All Scores',
     'toolbar.count': '{total} albums',
     'toolbar.countFiltered': '{visible} / {total}',
@@ -83,6 +84,7 @@ const I18N = {
     // Toolbar
     'toolbar.search': '搜索标题或艺术家…',
     'toolbar.all': '全部',
+    'toolbar.allTags': '全部标签',
     'toolbar.allScores': '所有分数',
     'toolbar.count': '共 {total} 张',
     'toolbar.countFiltered': '{visible} / {total}',
@@ -191,7 +193,7 @@ function toggleLang() {
   const tagTrigger = document.getElementById('tagFilterTrigger');
   if (tagTrigger) {
     const activeCount = currentFilter.length;
-    tagTrigger.textContent = activeCount === 0 ? t('toolbar.all') : activeCount + (currentLang === 'zh' ? ' 个标签' : ' tag' + (activeCount > 1 ? 's' : ''));
+    tagTrigger.textContent = activeCount === 0 ? t('toolbar.allTags') : activeCount + (currentLang === 'zh' ? ' 个标签' : ' tag' + (activeCount > 1 ? 's' : ''));
   }
 }
 
