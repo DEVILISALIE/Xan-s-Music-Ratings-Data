@@ -34,6 +34,7 @@
 - **音轨评分** — 在弹窗内逐首添加曲目和分数，实时显示曲目数/已评分数/平均分
 - **添加到分组** — 下拉选择目标年份和 Albums/Singles 分组，可跨年份移动条目
 - **AOTY 开关** — 任意条目可标记为年度专辑，渲染时自动归入 AOTY 展示组
+- **必听专辑** — Albums 分组中 80 分及以上的条目自动显示 ★Must Hear Album 标记
 - Shift + Enter 快速保存，Escape 关闭弹窗
 - 新增专辑通过右下角 FAB 按钮（+）触发
 
@@ -149,4 +150,97 @@ Vol. 1 - 2025
       "groups": [
         {
           "name": "Albums",
-          "en
+          "entries": [
+            {
+              "id": "a1",
+              "title": "Album Title",
+              "artist": "Artist Name",
+              "score": 85,
+              "scoreNote": "",
+              "date": "12.15",
+              "tags": ["EP"],
+              "review": "写几句评论",
+              "isAoty": false,
+              "notes": "",
+              "tracks": [
+                { "name": "Song 1", "score": 90 },
+                { "name": "Song 2", "score": 82 }
+              ]
+            }
+          ]
+        },
+        { "name": "Singles", "entries": [] }
+      ]
+    }
+  ]
+}
+```
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `score` | `number` / `null` | 0–100 整数，`null` 表示未评分 |
+| `scoreNote` | `string` | 特殊标记，如 `"NR"`、`"Top1"` |
+| `tags` | `string[]` | 标签数组，从预设列表中选取 |
+| `isAoty` | `boolean` | 年度专辑标记，渲染时动态归入 AOTY 组 |
+| `tracks` | `array` | 可选的音轨评分数组 |
+| `review` | `string` | 乐评文本，AOTY 卡片中可展开/收起 |
+| `notes` | `string` | 附加备注 |
+
+---
+
+## 项目结构
+
+```
+├── index.html             # 入口文件，包含 __MUSIC_DATA__ 占位符
+├── css/
+│   ├── base.css           # CSS 变量、Reset、亮/暗/毛玻璃主题
+│   ├── layout.css         # 侧边栏、工具栏、下拉菜单布局
+│   └── components.css     # 卡片、弹窗、标签、按钮、拖拽占位符、动画
+├── js/
+│   ├── state.js           # 全局状态变量
+│   ├── i18n.js            # 中英文翻译字典、t() 函数
+│   ├── utils.js           # 工具函数、数据迁移、分组选择器
+│   ├── filter.js          # 多选筛选、搜索、卡片缓存
+│   ├── modal.js           # 编辑弹窗、音轨评分
+│   ├── render.js          # 侧边栏 + 内容区渲染、拖拽排序
+│   └── app.js             # 初始化、主题切换、localStorage 持久化、导入导出
+├── gen.js                 # txt → JSON 解析器，嵌入数据到 index.html
+├── data.json              # gen.js 生成的 JSON 备份
+├── README.md              # 项目说明
+└── CLAUDE.md              # Claude Code 开发指南
+```
+
+JS 加载顺序：`state.js` → `i18n.js` → `utils.js` → `filter.js` → `modal.js` → `render.js` → `app.js`
+
+---
+
+## 技术栈
+
+纯原生 HTML / CSS / JavaScript，无框架、无打包工具、无外部依赖。
+
+- **设计语言** — iOS 15（SF Pro 字体、圆角卡片、半透明层叠）
+- **持久化** — localStorage，编辑即时自动保存
+- **拖拽** — Pointer Events + FLIP 动画（`0.25s cubic-bezier(0.2, 0, 0, 1)`）
+- **毛玻璃** — `backdrop-filter: blur()` + `will-change: transform` + `contain: layout style paint` GPU 加速
+- **背景** — `position: fixed` 伪元素渐变背景，替代 `background-attachment: fixed` 提升滚动性能
+- **国际化** — `data-i18n` 属性标记 + `applyI18nToDOM()` 批量替换
+
+---
+
+## localStorage 键值
+
+| Key | 类型 | 说明 |
+|-----|------|------|
+| `musicData` | JSON 字符串 | 完整 sections 数据，编辑后自动保存 |
+| `lang` | `"en"` / `"zh"` | 界面语言偏好 |
+| `theme` | `"light"` / `"dark"` | 亮/暗模式 |
+| `style` | `"solid"` / `"glass"` | 纯色/毛玻璃风格（默认 glass） |
+
+---
+
+## 键盘快捷键
+
+| 快捷键 | 功能 |
+|--------|------|
+| Shift + Enter | 编辑弹窗内快速保存 |
+| Escape | 关闭编辑弹窗 |
