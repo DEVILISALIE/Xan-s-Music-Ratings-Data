@@ -151,6 +151,42 @@ async function init() {
       applyFilters();
     }, 200);
   });
+
+  // 必听专辑阈值弹出面板
+  const mustHearTrigger = document.getElementById('mustHearTrigger');
+  const mustHearPopover = document.getElementById('mustHearPopover');
+  const mustHearInput = document.getElementById('mustHearInput');
+  const mustHearSave = document.getElementById('mustHearSave');
+
+  function updateMustHearLabel() {
+    mustHearTrigger.textContent = t('toolbar.mustHear');
+  }
+  updateMustHearLabel();
+  mustHearInput.value = mustHearThreshold;
+
+  mustHearTrigger.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeAllDropdowns();
+    mustHearPopover.classList.toggle('open');
+  });
+
+  mustHearSave.addEventListener('click', () => {
+    const v = parseInt(mustHearInput.value);
+    if (!isNaN(v) && v >= 0 && v <= 100) {
+      mustHearThreshold = v;
+      localStorage.setItem('mustHearThreshold', v);
+      updateMustHearLabel();
+      mustHearPopover.classList.remove('open');
+      renderContent();
+      applyFilters();
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('#mustHearSelect')) {
+      mustHearPopover.classList.remove('open');
+    }
+  });
 }
 
 function applyTheme() {
@@ -212,43 +248,4 @@ document.addEventListener('click', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeModal();
-  if (e.key === 'Enter' && e.shiftKey && document.getElementById('editModal').classList.contains('active')) {
-    e.preventDefault();
-    saveEntry();
-  }
-});
-
-// Export/Import
-function exportJSON() {
-  const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'music-ratings.json';
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function importJSON() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.json';
-  input.onchange = handleImport;
-  input.click();
-}
-
-function handleImport(e) {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (ev) => {
-    try {
-      const parsed = JSON.parse(ev.target.result);
-      if (!parsed || !Array.isArray(parsed.sections)) {
-        alert(t('alert.invalidJson'));
-        return;
-      }
-      appData = parsed;
-      ensureDefaultGroups();
-      refreshAll();
-    } catch (err) {
+  if (e.key === 'Enter' && e.shiftKey && document.get

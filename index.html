@@ -61,7 +61,16 @@
           <div class="custom-select-option" data-value="aoty">AOTY</div>
         </div>
       </div>
-      <span class="toolbar-count" id="resultCount"></span>
+      <div class="custom-select" id="mustHearSelect">
+        <button class="custom-select-trigger" id="mustHearTrigger" data-i18n="toolbar.mustHear">Must Hear ≥</button>
+        <div class="must-hear-popover" id="mustHearPopover">
+          <div class="must-hear-input-row">
+            <span data-i18n="toolbar.mustHearLabel">必听阈值</span>
+            <input type="number" id="mustHearInput" min="0" max="100" class="must-hear-input">
+          </div>
+          <button class="must-hear-save" id="mustHearSave" data-i18n="toolbar.mustHearSave">保存</button>
+        </div>
+      </div>
       <span style="flex:1"></span>
       <button class="theme-toggle" id="langToggle" onclick="toggleLang()" aria-label="Switch language">🌐</button>
       <button class="theme-toggle" id="styleToggle" onclick="toggleStyle()" aria-label="Toggle glassmorphism" title="毛玻璃风格">💎</button>
@@ -150,21 +159,4 @@
     </div>
     <div class="modal-actions">
       <button class="modal-btn secondary" onclick="closeModal()" data-i18n="modal.cancel">Cancel</button>
-      <button class="modal-btn danger" id="deleteBtn" onclick="deleteEntry()" data-i18n="modal.delete">Delete</button>
-      <button class="modal-btn primary" onclick="saveEntry()" data-i18n="modal.save">Save</button>
-    </div>
-  </div>
-</div>
-
-<script>
-const __MUSIC_DATA__ = {"meta":{"title":"Xan's Music Ratings","lastUpdated":"2026-05-24"},"sections":[]};
-</script>
-<script src="js/state.js"></script>
-<script src="js/i18n.js"></script>
-<script src="js/utils.js"></script>
-<script src="js/filter.js"></script>
-<script src="js/modal.js"></script>
-<script src="js/render.js"></script>
-<script src="js/app.js"></script>
-</body>
-</html>
+      <button class="modal-btn danger" id="deleteBtn" onclick="deleteEntry()" data-i18n="modal.dele

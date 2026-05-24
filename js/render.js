@@ -325,8 +325,6 @@ function renderContent() {
     clearSearchHighlight();
     searchIndex = -1;
   }
-
-  updateCount(visibleCount, totalCount);
 }
 
 function renderAlbumCard(entry, idx, sectionId, groupId, groupName, visible) {
@@ -337,7 +335,7 @@ function renderAlbumCard(entry, idx, sectionId, groupId, groupName, visible) {
   const trackCount = entry.tracks && entry.tracks.length > 0 ? entry.tracks.length : 0;
   const hiddenClass = visible ? '' : 'hidden';
   const noteText = entry.scoreNote && entry.scoreNote !== 'NR' ? ` (${entry.scoreNote})` : '';
-  const showMustHear = groupName !== 'Singles' && entry.score != null && entry.score >= 80;
+  const showMustHear = groupName !== 'Singles' && entry.score != null && entry.score >= mustHearThreshold;
 
   return `<div class="album-card ${hiddenClass}" data-entry-id="${entry.id}" data-section="${sectionId}" data-group="${groupId}" role="button" tabindex="0" onclick="openEditModal('${entry.id}','${sectionId}','${groupId}')" onkeydown="if(event.key==='Enter')openEditModal('${entry.id}','${sectionId}','${groupId}')">
     <span class="album-index">${idx}</span>
@@ -929,4 +927,43 @@ document.addEventListener('DOMContentLoaded', () => {
     dragCard.style.boxShadow = '';
 
     // 其他卡片回到原位
-    animateCard
+    animateCards(oldPositions);
+
+    setTimeout(() => {
+      state.isAnimating = false;
+      contentArea.classList.remove('is-dragging');
+      resetState();
+    }, 350);
+  }
+
+  function resetState() {
+    state.active = false;
+    state.entryId = null;
+    state.group = null;
+    state.card = null;
+    state.ghost = null;
+    state.placeholder = null;
+    state.scrollAnimId = null;
+    state.isAnimating = false;
+    state.currentInsertTarget = null;
+  }
+
+  // ===== 绑定事件 =====
+
+  contentArea.addEventListener('pointerdown', onPointerDown);
+  document.addEventListener('pointermove', onPointerMove);
+  document.addEventListener('pointerup', onPointerUp);
+  document.addEventListener('pointercancel', onPointerCancel);
+
+  document.addEventListener('selectstart', (e) => {
+    if (state.card) e.preventDefault();
+  });
+
+  document.addEventListener('wheel', (e) => {
+    if (!state.active) return;
+    e.preventDefault();
+    mainEl.scrollTop += e.deltaY;
+    updateAutoScroll(state.lastClientY);
+  }, { passive: false });
+});
+                           

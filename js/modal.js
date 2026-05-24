@@ -187,4 +187,11 @@ function deleteEntry() {
     for (const group of section.groups) {
       const idx = group.entries.findIndex(e => e.id === editingEntry.id);
       if (idx !== -1) {
-        group.en
+        group.entries.splice(idx, 1);
+        refreshAll();
+        closeModal();
+        return;
+      }
+    }
+  }
+}

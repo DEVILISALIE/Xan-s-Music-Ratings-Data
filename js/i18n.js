@@ -14,7 +14,9 @@ const I18N = {
     'toolbar.all': 'All',
     'toolbar.allTags': 'All Tags',
     'toolbar.allScores': 'All Scores',
-    'toolbar.count': '{total} albums',
+    'toolbar.mustHear': 'Must Hear Album',
+    'toolbar.mustHearLabel': 'Threshold',
+    'toolbar.mustHearSave': 'Save',
     'toolbar.countFiltered': '{visible} / {total}',
     'toolbar.nr': 'NR / No Score',
 
@@ -86,7 +88,9 @@ const I18N = {
     'toolbar.all': '全部',
     'toolbar.allTags': '全部标签',
     'toolbar.allScores': '所有分数',
-    'toolbar.count': '共 {total} 张',
+    'toolbar.mustHear': '必听专辑',
+    'toolbar.mustHearLabel': '阈值',
+    'toolbar.mustHearSave': '保存',
     'toolbar.countFiltered': '{visible} / {total}',
     'toolbar.nr': 'NR / 无分数',
 
@@ -193,9 +197,4 @@ function toggleLang() {
   const tagTrigger = document.getElementById('tagFilterTrigger');
   if (tagTrigger) {
     const activeCount = currentFilter.length;
-    tagTrigger.textContent = activeCount === 0 ? t('toolbar.allTags') : activeCount + (currentLang === 'zh' ? ' 个标签' : ' tag' + (activeCount > 1 ? 's' : ''));
-  }
-}
-
-// 读取持久化语言偏好，默认英文
-currentLang = localStorage.getItem('lang') || 'en';
+    tagTrigger.textContent = activeCount === 0 ? t('toolbar.allTags') : activeCount + (currentLang === 'zh' ? '

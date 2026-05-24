@@ -46,6 +46,7 @@ node gen.js path/to/file.txt     # 指定文件路径
 | `lang` | `"en"` / `"zh"` | 界面语言偏好 |
 | `theme` | `"light"` / `"dark"` | 亮/暗模式 |
 | `style` | `"solid"` / `"glass"` | 纯色/毛玻璃风格（默认 glass） |
+| `mustHearThreshold` | 数字字符串 | 必听专辑分数阈值，默认 `80` |
 
 ## 关键技术细节
 
@@ -66,7 +67,7 @@ node gen.js path/to/file.txt     # 指定文件路径
 
 **AOTY 管理**：`isAoty` 标记任意条目。`renderContent()` 在渲染时动态将 `isAoty=true` 的条目归入 AOTY 展示组。编辑弹窗中的 AOTY 开关修改 `isAoty` 标记。
 
-**必听专辑**：Albums 分组中 `score >= 80` 的条目自动显示 `★Must Hear Album` 标记（Singles 不显示）。逻辑在 `renderAlbumCard()` 中通过 `showMustHear` 控制。
+**必听专辑**：Albums 分组中 `score >= mustHearThreshold` 的条目自动显示 `★Must Hear Album` 标记（Singles 不显示）。阈值默认 80，用户可通过工具栏输入框自定义（0–100），持久化到 localStorage（key: `mustHearThreshold`）。逻辑在 `renderAlbumCard()` 中通过 `showMustHear` 控制。
 
 **筛选系统**：`currentFilter` 为数组，支持多选标签。分数筛选支持 100、90+、80+、70+、60+、50+、<50、NR、AOTY。标签下拉多选（选择后保持展开），分数下拉单选（选择后关闭）。
 
@@ -82,4 +83,4 @@ node gen.js path/to/file.txt     # 指定文件路径
 
 **下拉菜单交互**：标签下拉多选，选择后保持展开，点击外部关闭；分数下拉单选，选择后关闭；切换下拉时其他已打开的自动收回。
 
-**解析器注意事项**（gen.js）：日期提取在标签移除之后执行。`psl()` 中分数提取在括号注释移除之后执行。正则 `/^\d+[\.\s]/` 同时匹配 `1. Title` 和 `1 Title` 两种格式。Vol headers 匹配 `/^Vol\.\s*\d+\s*-\s*(\d{4})/` 并合并到已有年份 section。
+**解析器注意事项**（gen.js）：日期提取在标签移除之

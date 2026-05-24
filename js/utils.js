@@ -86,4 +86,19 @@ function populateSectionSelector(selectedEntryId) {
         currentValue = val;
       } else if (!selectedEntryId && isFirstOption) {
         currentValue = val;
-        isFirstOptio
+        isFirstOption = false;
+      }
+    }
+  }
+
+  selectedSectionValue = currentValue;
+  if (currentValue) {
+    const activeOpt = [...menu.querySelectorAll('.custom-select-option')].find(o => o.dataset.value === currentValue);
+    trigger.textContent = activeOpt ? activeOpt.textContent : t('modal.placeholder.select');
+    menu.querySelectorAll('.custom-select-option').forEach(o => {
+      o.classList.toggle('active', o.dataset.value === currentValue);
+    });
+  } else {
+    trigger.textContent = t('modal.placeholder.select');
+  }
+}
