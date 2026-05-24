@@ -44,6 +44,7 @@
         <button class="custom-select-trigger" id="scoreFilterTrigger" data-i18n="toolbar.allScores">All Scores</button>
         <div class="custom-select-menu" id="scoreFilterMenu">
           <div class="custom-select-option active" data-value="all" data-i18n="toolbar.allScores">All Scores</div>
+          <div class="custom-select-option" data-value="100">100</div>
           <div class="custom-select-option" data-value="90">90+</div>
           <div class="custom-select-option" data-value="80">80+</div>
           <div class="custom-select-option" data-value="70">70+</div>
@@ -51,6 +52,7 @@
           <div class="custom-select-option" data-value="50">50+</div>
           <div class="custom-select-option" data-value="low">&lt;50</div>
           <div class="custom-select-option" data-value="nr" data-i18n="toolbar.nr">NR / No Score</div>
+          <div class="custom-select-option" data-value="aoty">AOTY</div>
         </div>
       </div>
       <span class="toolbar-count" id="resultCount"></span>
@@ -63,6 +65,7 @@
 </div>
 
 <!-- FAB -->
+<button class="fab-search-next" id="searchNextBtn" onclick="goToNextResult()" style="display:none">↓</button>
 <button class="fab" onclick="openAddModal()">+</button>
 
 <!-- Edit Modal -->
@@ -147,7 +150,7 @@
 </div>
 
 <script>
-const __MUSIC_DATA__ = null;
+const __MUSIC_DATA__ = {"meta":{"title":"Xan's Music Ratings","lastUpdated":"2026-05-24"},"sections":[]};
 </script>
 <script src="js/state.js"></script>
 <script src="js/i18n.js"></script>

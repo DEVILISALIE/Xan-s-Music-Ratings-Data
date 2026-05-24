@@ -1,4 +1,7 @@
 // Filter and search logic
+let searchResults = [];
+let searchIndex = -1;
+
 function matchesFilter(entry) {
   // Type filter
   if (currentFilter !== 'all') {
@@ -7,16 +10,20 @@ function matchesFilter(entry) {
 
   // Score filter
   if (currentScoreFilter !== 'all') {
-    const score = entry.score;
-    if (currentScoreFilter === 'nr') {
-      if (score != null) return false;
+    if (currentScoreFilter === 'aoty') {
+      if (!entry.isAoty) return false;
     } else {
-      const min = parseInt(currentScoreFilter);
-      if (score == null) return false;
-      if (currentScoreFilter === 'low') {
-        if (score >= 50) return false;
+      const score = entry.score;
+      if (currentScoreFilter === 'nr') {
+        if (score != null) return false;
       } else {
-        if (score < min) return false;
+        const min = parseInt(currentScoreFilter);
+        if (score == null) return false;
+        if (currentScoreFilter === 'low') {
+          if (score >= 50) return false;
+        } else {
+          if (score < min) return false;
+        }
       }
     }
   }
@@ -35,20 +42,52 @@ function matchesFilter(entry) {
 function applyFilters() {
   let visibleCount = 0;
   let totalCount = 0;
+  searchResults = [];
   document.querySelectorAll('.album-card, .aoty-card').forEach(card => {
     const id = card.dataset.entryId;
-    const sectionId = card.dataset.section;
-    const groupId = card.dataset.group;
     const entry = findEntry(id);
     totalCount++;
     if (entry && matchesFilter(entry)) {
       card.classList.remove('hidden');
       visibleCount++;
+      searchResults.push(card);
     } else {
       card.classList.add('hidden');
     }
   });
   updateCount(visibleCount, totalCount);
+
+  // 搜索时显示"下一个"按钮并定位到第一个结果
+  const nextBtn = document.getElementById('searchNextBtn');
+  if (searchQuery && searchResults.length > 0) {
+    nextBtn.style.display = 'flex';
+    searchIndex = 0;
+    highlightSearchResult(0);
+    searchResults[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } else {
+    nextBtn.style.display = 'none';
+    clearSearchHighlight();
+    searchIndex = -1;
+  }
+}
+
+// 跳转到下一个搜索结果（循环）
+function goToNextResult() {
+  if (searchResults.length === 0) return;
+  searchIndex = (searchIndex + 1) % searchResults.length;
+  highlightSearchResult(searchIndex);
+  searchResults[searchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function highlightSearchResult(index) {
+  clearSearchHighlight();
+  if (searchResults[index]) {
+    searchResults[index].classList.add('search-focus');
+  }
+}
+
+function clearSearchHighlight() {
+  document.querySelectorAll('.search-focus').forEach(el => el.classList.remove('search-focus'));
 }
 
 function buildEntryIndex() {
@@ -76,7 +115,6 @@ function updateCount(visible, total) {
 }
 
 function setupFilterListeners() {
-  // 事件委托：只绑定一次，通过冒泡处理子元素点击
   const pillsContainer = document.getElementById('filterPills');
   if (pillsContainer._delegateBound) return;
   pillsContainer._delegateBound = true;

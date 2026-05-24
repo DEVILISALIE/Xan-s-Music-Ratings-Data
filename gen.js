@@ -312,4 +312,19 @@ try {
 } catch (e) {
   console.error("写入文件失败:", e.message);
   process.exit(1);
+}ata.json"), JSON.stringify(data, null, 2), "utf-8");
+  fs.writeFileSync(htmlPath, html, "utf-8");
+  console.log("index.html updated with embedded data");
+  console.log("data.json written");
+} catch (e) {
+  console.error("写入文件失败:", e.message);
+  process.exit(1);
+}
+ata.json"), JSON.stringify(data, null, 2), "utf-8");
+  fs.writeFileSync(htmlPath, html, "utf-8");
+  console.log("index.html updated with embedded data");
+  console.log("data.json written");
+} catch (e) {
+  console.error("写入文件失败:", e.message);
+  process.exit(1);
 }
