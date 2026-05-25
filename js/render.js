@@ -1082,4 +1082,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!state.active) return;
     e.preventDefault();
     mainEl.scrollTop += e.deltaY;
-    updateAutoScroll(stat
+    updateAutoScroll(state.lastClientY);
+  }, { passive: false });
+});
