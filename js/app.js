@@ -141,6 +141,12 @@ async function init() {
     sectionTrigger.textContent = opt.textContent;
     selectedSectionValue = opt.dataset.value;
     sectionSelect.classList.remove('open');
+    // 根据分组切换 AOTY/SOTY 标签
+    try {
+      const sel = JSON.parse(selectedSectionValue);
+      const aotyLabel = document.querySelector('[data-i18n="modal.aoty"]');
+      if (aotyLabel) aotyLabel.textContent = sel.groupName === 'Singles' ? t('modal.soty') : t('modal.aoty');
+    } catch (_) {}
   });
 
   let searchTimer = null;
@@ -248,4 +254,52 @@ document.addEventListener('click', (e) => {
 
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeModal();
-  if (e.key === 'Enter' && e.shiftKey && document.get
+  if (e.key === 'Enter' && e.shiftKey && document.getElementById('editModal').classList.contains('active')) {
+    e.preventDefault();
+    saveEntry();
+  }
+});
+
+// Export/Import
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'music-ratings.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importJSON() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = handleImport;
+  input.click();
+}
+
+function handleImport(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const parsed = JSON.parse(ev.target.result);
+      if (!parsed || !Array.isArray(parsed.sections)) {
+        alert(t('alert.invalidJson'));
+        return;
+      }
+      appData = parsed;
+      ensureDefaultGroups();
+      refreshAll();
+    } catch (err) {
+      alert(t('alert.invalidJsonGeneric'));
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// Start
+init();

@@ -140,11 +140,13 @@
   font-weight: 500;
   background: var(--pill-bg);
   color: var(--accent);
+  border: 1.35px solid var(--accent);
 }
 
 .tag.aoty {
   background: rgba(255,149,0,0.15);
   color: #FF9500;
+  border-color: #FF9500;
 }
 
 .score-badge {
@@ -228,6 +230,10 @@
   background: #FF9500;
   color: #FFFFFF;
   letter-spacing: 0.5px;
+}
+
+.aoty-badge.soty {
+  background: #FF3B30;
 }
 
 .aoty-title {

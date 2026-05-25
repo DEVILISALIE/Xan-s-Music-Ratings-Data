@@ -22,6 +22,7 @@ function openEditModal(entryId, sectionId, groupId) {
 
   // Section selector — 定位条目所在的原始 section/group
   populateSectionSelector(entry.id);
+  updateAotyLabel();
 
   const activeTags = entry.tags || [];
   document.querySelectorAll('#editTags .form-tag').forEach(tag => {
@@ -55,6 +56,7 @@ function openAddModal() {
 
   // Section selector
   populateSectionSelector();
+  updateAotyLabel();
   document.getElementById('editSectionGroup').style.display = 'block';
 
   document.querySelectorAll('#editTags .form-tag').forEach(t => t.classList.remove('active'));
@@ -77,7 +79,7 @@ function renderTracks() {
         <input class="form-input" placeholder="${t('modal.placeholder.track')}" value="${escapeHtml(tr.name)}" onchange="editingTracks[${i}].name=this.value">
       </div>
       <div class="track-score">
-        <input class="form-input" type="number" min="0" max="100" inputmode="numeric" placeholder="—" value="${tr.score != null ? tr.score : ''}" onchange="editingTracks[${i}].score=this.value!==''?parseInt(this.value):null">
+        <input class="form-input" type="text" placeholder="—" value="${tr.score != null ? tr.score : ''}" oninput="this.value=this.value.replace(/[^0-9NR]/g,'')" onchange="var v=this.value.trim();if(v==='NR'){editingTracks[${i}].score='NR'}else if(v===''){editingTracks[${i}].score=null}else{var n=parseInt(v);editingTracks[${i}].score=(n>=0&&n<=100)?n:null;this.value=editingTracks[${i}].score!=null?editingTracks[${i}].score:''}">
       </div>
       <button type="button" class="track-remove" onclick="removeTrack(${i})">×</button>
     </div>`).join('');
@@ -99,9 +101,9 @@ function removeTrack(i) {
 function updateTrackSummary() {
   const el = document.getElementById('trackSummary');
   const len = editingTracks.length;
-  const rated = editingTracks.filter(t => t.score != null).length;
+  const rated = editingTracks.filter(t => t.score != null && t.score !== 'NR').length;
   if (len === 0) { el.textContent = ''; return; }
-  const avg = rated > 0 ? (editingTracks.reduce((s, t) => s + (t.score || 0), 0) / rated).toFixed(1) : '—';
+  const avg = rated > 0 ? (editingTracks.reduce((s, t) => s + (typeof t.score === 'number' ? t.score : 0), 0) / rated).toFixed(1) : '—';
   el.textContent = t('modal.trackSummary', { count: len, plural: len > 1 ? 's' : '', rated, avg });
 }
 
@@ -194,4 +196,12 @@ function deleteEntry() {
       }
     }
   }
+}
+
+function updateAotyLabel() {
+  try {
+    const sel = JSON.parse(selectedSectionValue);
+    const aotyLabel = document.querySelector('[data-i18n="modal.aoty"]');
+    if (aotyLabel) aotyLabel.textContent = sel.groupName === 'Singles' ? t('modal.soty') : t('modal.aoty');
+  } catch (_) {}
 }

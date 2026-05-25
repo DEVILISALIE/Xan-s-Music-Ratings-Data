@@ -143,20 +143,25 @@ function renderSidebar() {
     // Parent link (scroll to section top)
     html += `<a class="nav-item" href="#section-${section.id}" data-nav="${section.id}" onclick="scrollToSection('${section.id}', event)">${t('sidebar.overview', { count: groupCount })}</a>`;
 
-    // Sub-groups（动态包含 AOTY 分组）
-    const aotyGroup = section.groups.find(g => g.name === 'AOTY');
-    const aotyCount = section.groups.reduce((s, g) => s + g.entries.filter(e => e.isAoty).length, 0)
-      + (aotyGroup ? aotyGroup.entries.filter(e => !e.isAoty).length : 0);
+    // Sub-groups（AOTY 在 Albums 上方，SOTY 在 Singles 上方）
+    const albumsGroup = section.groups.find(g => g.name === 'Albums');
+    const singlesGroup = section.groups.find(g => g.name === 'Singles');
+    const aotyCount = albumsGroup ? albumsGroup.entries.filter(e => e.isAoty).length : 0;
+    const sotyCount = singlesGroup ? singlesGroup.entries.filter(e => e.isAoty).length : 0;
+
     if (aotyCount > 0) {
-      const gid = getGroupId(section.id, 'AOTY');
-      html += `<a class="nav-item" href="#group-${gid}" data-nav="${gid}" onclick="scrollToGroup('${gid}', event)">AOTY (${aotyCount})</a>`;
+      html += `<a class="nav-item" href="#group-${getGroupId(section.id, 'Albums')}" data-nav="${getGroupId(section.id, 'aoty')}" onclick="scrollToGroup('${getGroupId(section.id, 'Albums')}', event)">AOTY (${aotyCount})</a>`;
     }
-    for (const group of section.groups) {
-      if (group.name === 'AOTY') continue;
-      const normalCount = group.entries.filter(e => !e.isAoty).length;
-      if (normalCount === 0) continue;
-      const gid = getGroupId(section.id, group.name);
-      html += `<a class="nav-item" href="#group-${gid}" data-nav="${gid}" onclick="scrollToGroup('${gid}', event)">${group.name} (${normalCount})</a>`;
+    if (albumsGroup && albumsGroup.entries.length > 0) {
+      const gid = getGroupId(section.id, 'Albums');
+      html += `<a class="nav-item" href="#group-${gid}" data-nav="${gid}" onclick="scrollToGroup('${gid}', event)">Albums (${albumsGroup.entries.length})</a>`;
+    }
+    if (sotyCount > 0) {
+      html += `<a class="nav-item" href="#group-${getGroupId(section.id, 'Singles')}" data-nav="${getGroupId(section.id, 'soty')}" onclick="scrollToGroup('${getGroupId(section.id, 'Singles')}', event)">SOTY (${sotyCount})</a>`;
+    }
+    if (singlesGroup && singlesGroup.entries.length > 0) {
+      const gid = getGroupId(section.id, 'Singles');
+      html += `<a class="nav-item" href="#group-${gid}" data-nav="${gid}" onclick="scrollToGroup('${gid}', event)">Singles (${singlesGroup.entries.length})</a>`;
     }
 
     html += `</div></div>`;
@@ -261,27 +266,27 @@ function renderContent() {
     html += `<div class="section" id="section-${section.id}">`;
     html += `<h2 class="section-title">${escapeHtml(section.title)}</h2>`;
 
-    // 动态重组：将 isAoty 条目归入 AOTY 组，其余留在原组
-    // 预解析 AOTY 组中取消勾选的条目仍保留在 AOTY 组中作为普通条目显示
-    const aotyEntries = [];
-    const aotyGroupNormal = [];
-    const groupEntryMap = {}; // groupName → normalEntries
+    // 动态重组：AOTY 条目归入 Albums 顶部，SOTY 条目归入 Singles 顶部
+    const aotyAlbumEntries = [];
+    const aotySingleEntries = [];
+    const normalEntriesMap = {}; // groupName → normalEntries[]
     for (const group of section.groups) {
-      const normalEntries = [];
+      if (group.name === 'AOTY') continue;
+      normalEntriesMap[group.name] = [];
       for (const entry of group.entries) {
-        if (entry.isAoty) aotyEntries.push(entry);
-        else if (group.name === 'AOTY') aotyGroupNormal.push(entry);
-        else normalEntries.push(entry);
+        if (entry.isAoty) {
+          if (group.name === 'Singles') aotySingleEntries.push(entry);
+          else aotyAlbumEntries.push(entry);
+        } else {
+          normalEntriesMap[group.name].push(entry);
+        }
       }
-      if (group.name !== 'AOTY') groupEntryMap[group.name] = normalEntries;
     }
 
-    // 始终显示 Albums 和 Singles（即使为空）
+    // 始终显示 Albums 和 Singles（即使为空），AOTY/SOTY 条目置顶
     const displayGroups = [];
-    displayGroups.push({ name: 'Albums', entries: groupEntryMap['Albums'] || [] });
-    displayGroups.push({ name: 'Singles', entries: groupEntryMap['Singles'] || [] });
-    const aotyDisplay = [...aotyEntries, ...aotyGroupNormal];
-    if (aotyDisplay.length > 0) displayGroups.unshift({ name: 'AOTY', entries: aotyDisplay });
+    displayGroups.push({ name: 'Albums', entries: [...aotyAlbumEntries, ...(normalEntriesMap['Albums'] || [])] });
+    displayGroups.push({ name: 'Singles', entries: [...aotySingleEntries, ...(normalEntriesMap['Singles'] || [])] });
 
     for (const group of displayGroups) {
       const gid = getGroupId(section.id, group.name);
@@ -294,8 +299,8 @@ function renderContent() {
         const visible = matchesFilter(entry);
         if (visible) visibleCount++;
 
-        if (group.name === 'AOTY' && entry.isAoty) {
-          html += renderAotyCard(entry, section.id, gid, visible);
+        if (entry.isAoty) {
+          html += renderAotyCard(entry, section.id, gid, visible, group.name);
         } else {
           html += renderAlbumCard(entry, idx, section.id, gid, group.name, visible);
         }
@@ -308,7 +313,7 @@ function renderContent() {
   area.innerHTML = html;
   rebuildCardCache();
 
-  // 同步 searchResults，避免 applyFilters 重复遍历
+  updateToolbarStats();
   searchResults = [];
   for (const { card } of allCards) {
     if (!card.classList.contains('hidden')) searchResults.push(card);
@@ -346,7 +351,7 @@ function renderAlbumCard(entry, idx, sectionId, groupId, groupName, visible) {
     </div>
     <div class="album-meta">
       ${tags ? '<div class="album-tags">' + tags + '</div>' : ''}
-      ${trackCount > 0 ? '<span class="track-count" title="' + t('content.trackTooltip') + '">' + trackCount + 'T</span>' : ''}
+      ${trackCount > 0 ? '<span class="track-count" title="' + t('content.trackTooltip') + '">' + trackCount + t('content.trackUnit') + '</span>' : ''}
       <span class="album-date">${escapeHtml(entry.date || '')}</span>
       <span class="score-badge ${scoreClass}">${scoreText}</span>
       ${hasReview ? '<span class="review-indicator" title="' + t('content.reviewTooltip') + '"></span>' : ''}
@@ -354,12 +359,13 @@ function renderAlbumCard(entry, idx, sectionId, groupId, groupName, visible) {
   </div>`;
 }
 
-function renderAotyCard(entry, sectionId, groupId, visible) {
+function renderAotyCard(entry, sectionId, groupId, visible, groupName) {
   const hiddenClass = visible ? '' : 'hidden';
   const scoreText = entry.score != null ? entry.score + '/100' : '—';
   const noteText = entry.scoreNote && entry.scoreNote !== 'NR' ? ` (${entry.scoreNote})` : '';
   const tags = (entry.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('');
   const hasReview = entry.review && entry.review.trim().length > 0;
+  const trackCount = entry.tracks && entry.tracks.length > 0 ? entry.tracks.length : 0;
   const reviewHtml = entry.review ? `<div class="aoty-review" id="review-${entry.id}">${escapeHtml(entry.review)}</div>
     <button class="aoty-review-toggle" onclick="toggleReview(event, '${entry.id}')">${t('content.showMore')}</button>` : '';
 
@@ -367,7 +373,7 @@ function renderAotyCard(entry, sectionId, groupId, visible) {
     <div style="display:flex;align-items:flex-start;gap:12px">
       <div style="flex:1;min-width:0">
         <div class="aoty-header">
-          <span class="aoty-badge">AOTY</span>
+          <span class="aoty-badge${groupName === 'Singles' ? ' soty' : ''}">${groupName === 'Singles' ? 'SOTY' : 'AOTY'}</span>
           <span class="aoty-title">${escapeHtml(entry.title)}${noteText ? ' <span style="font-size:12px;color:var(--text-tertiary)">' + escapeHtml(noteText) + '</span>' : ''}</span>
         </div>
         <div class="aoty-artist">${escapeHtml(entry.artist || '')}</div>
@@ -375,6 +381,7 @@ function renderAotyCard(entry, sectionId, groupId, visible) {
       </div>
       <div class="album-meta">
         ${tags ? '<div class="album-tags">' + tags + '</div>' : ''}
+        ${trackCount > 0 ? '<span class="track-count" title="' + t('content.trackTooltip') + '">' + trackCount + t('content.trackUnit') + '</span>' : ''}
         <span class="aoty-score">${scoreText}</span>
       </div>
     </div>
@@ -966,4 +973,3 @@ document.addEventListener('DOMContentLoaded', () => {
     updateAutoScroll(state.lastClientY);
   }, { passive: false });
 });
-                           

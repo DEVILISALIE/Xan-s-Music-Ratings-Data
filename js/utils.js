@@ -3,6 +3,21 @@ function escapeHtml(str) {
   return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+function updateToolbarStats() {
+  let albumCount = 0;
+  let singleCount = 0;
+  for (const { card } of allCards) {
+    if (card.classList.contains('hidden')) continue;
+    const group = card.dataset.group || '';
+    if (group.includes('singles')) singleCount++;
+    else albumCount++;
+  }
+  const albumEl = document.getElementById('albumCount');
+  const singleEl = document.getElementById('singleCount');
+  if (albumEl) albumEl.textContent = t('toolbar.albums') + ': ' + albumCount;
+  if (singleEl) singleEl.textContent = t('toolbar.singles') + ': ' + singleCount;
+}
+
 function getScoreClass(score) {
   if (score == null) return 'score-null';
   if (score >= 70) return 'score-high';

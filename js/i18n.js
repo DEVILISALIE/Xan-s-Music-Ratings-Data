@@ -17,6 +17,8 @@ const I18N = {
     'toolbar.mustHear': 'Must Hear Album',
     'toolbar.mustHearLabel': 'Threshold',
     'toolbar.mustHearSave': 'Save',
+    'toolbar.albums': 'Albums',
+    'toolbar.singles': 'Singles',
     'toolbar.countFiltered': '{visible} / {total}',
     'toolbar.nr': 'NR / No Score',
 
@@ -30,6 +32,7 @@ const I18N = {
     'modal.scoreNote': 'Score Note',
     'modal.tags': 'Tags',
     'modal.aoty': 'Album of the Year',
+    'modal.soty': 'Song of the Year',
     'modal.section': 'Add to Section',
     'modal.notes': 'Notes',
     'modal.trackRatings': 'Track Ratings',
@@ -55,6 +58,7 @@ const I18N = {
     'content.showLess': 'Show less',
     'content.mustHear': '★Must Hear Album',
     'content.trackTooltip': 'Track ratings',
+    'content.trackUnit': 'T',
     'content.reviewTooltip': 'Has review',
 
     // Confirmations / Alerts
@@ -91,6 +95,8 @@ const I18N = {
     'toolbar.mustHear': '必听专辑',
     'toolbar.mustHearLabel': '阈值',
     'toolbar.mustHearSave': '保存',
+    'toolbar.albums': '专辑',
+    'toolbar.singles': '单曲',
     'toolbar.countFiltered': '{visible} / {total}',
     'toolbar.nr': 'NR / 无分数',
 
@@ -104,6 +110,7 @@ const I18N = {
     'modal.scoreNote': '分数备注',
     'modal.tags': '标签',
     'modal.aoty': '年度专辑',
+    'modal.soty': '年度单曲',
     'modal.section': '添加到分组',
     'modal.notes': '备注',
     'modal.trackRatings': '曲目评分',
@@ -129,6 +136,7 @@ const I18N = {
     'content.showLess': '收起',
     'content.mustHear': '★必听专辑',
     'content.trackTooltip': '曲目评分',
+    'content.trackUnit': '首',
     'content.reviewTooltip': '有乐评',
 
     // Confirmations / Alerts
@@ -197,4 +205,14 @@ function toggleLang() {
   const tagTrigger = document.getElementById('tagFilterTrigger');
   if (tagTrigger) {
     const activeCount = currentFilter.length;
-    tagTrigger.textContent = activeCount === 0 ? t('toolbar.allTags') : activeCount + (currentLang === 'zh' ? '
+    tagTrigger.textContent = activeCount === 0 ? t('toolbar.allTags') : activeCount + (currentLang === 'zh' ? ' 个标签' : ' tag' + (activeCount > 1 ? 's' : ''));
+  }
+  // 更新必听阈值按钮文字
+  const mustHearTrigger = document.getElementById('mustHearTrigger');
+  if (mustHearTrigger) mustHearTrigger.textContent = t('toolbar.mustHear');
+  updateToolbarStats();
+  if (typeof updateAotyLabel === 'function') updateAotyLabel();
+}
+
+// 读取持久化语言偏好，默认英文
+currentLang = localStorage.getItem('lang') || 'en';

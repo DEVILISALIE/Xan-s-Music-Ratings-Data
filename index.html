@@ -72,6 +72,11 @@
         </div>
       </div>
       <span style="flex:1"></span>
+      <span class="toolbar-stats" id="toolbarStats">
+        <span id="albumCount"></span>
+        <span class="toolbar-stats-sep">·</span>
+        <span id="singleCount"></span>
+      </span>
       <button class="theme-toggle" id="langToggle" onclick="toggleLang()" aria-label="Switch language">🌐</button>
       <button class="theme-toggle" id="styleToggle" onclick="toggleStyle()" aria-label="Toggle glassmorphism" title="毛玻璃风格">💎</button>
       <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle dark mode">🌙</button>
@@ -159,4 +164,21 @@
     </div>
     <div class="modal-actions">
       <button class="modal-btn secondary" onclick="closeModal()" data-i18n="modal.cancel">Cancel</button>
-      <button class="modal-btn danger" id="deleteBtn" onclick="deleteEntry()" data-i18n="modal.dele
+      <button class="modal-btn danger" id="deleteBtn" onclick="deleteEntry()" data-i18n="modal.delete">Delete</button>
+      <button class="modal-btn primary" onclick="saveEntry()" data-i18n="modal.save">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const __MUSIC_DATA__ = {"meta":{"title":"Xan's Music Ratings","lastUpdated":"2026-05-24"},"sections":[]};
+</script>
+<script src="js/state.js"></script>
+<script src="js/i18n.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/filter.js"></script>
+<script src="js/modal.js"></script>
+<script src="js/render.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
