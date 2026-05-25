@@ -248,7 +248,7 @@
 }
 
 .aoty-badge.soty {
-  background: #FF3B30;
+  background: #E53B2F;
 }
 
 /* ===== SOTY Card ===== */
@@ -258,7 +258,7 @@
 }
 
 .aoty-card.soty-card .aoty-score {
-  color: #FF3B30;
+  color: #E53B2F;
 }
 
 [data-style="glass"] .aoty-card.soty-card {
@@ -650,7 +650,7 @@ textarea.form-input::-webkit-scrollbar-corner {
 
 .track-remove:hover {
   background: rgba(255, 59, 48, 0.1);
-  color: #FF3B30;
+  color: #E53B2F;
 }
 
 .track-add {
@@ -714,7 +714,7 @@ textarea.form-input::-webkit-scrollbar-corner {
 
 .modal-btn.danger {
   background: rgba(255,59,48,0.1);
-  color: #FF3B30;
+  color: #E53B2F;
 }
 
 /* ===== FAB ===== */
