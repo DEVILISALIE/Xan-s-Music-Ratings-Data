@@ -19,7 +19,7 @@ function matchesFilter(entry) {
   // Score filter
   if (currentScoreFilter !== 'all') {
     if (currentScoreFilter === 'aoty') {
-      if (!entry.isAoty) return false;
+      if (!entry.isAoty && !entry.isSoty) return false;
     } else {
       const score = entry.score;
       if (currentScoreFilter === 'nr') {

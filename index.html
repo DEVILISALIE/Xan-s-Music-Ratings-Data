@@ -134,9 +134,18 @@
     </div>
     <div class="form-group">
       <div class="form-row-between">
-        <label class="form-label" style="margin-bottom:0" data-i18n="modal.aoty">Album of the Year</label>
+        <label class="form-label" style="margin-bottom:0" data-i18n="modal.aoty" id="aotyLabel">Album of the Year</label>
         <label class="toggle-switch">
           <input type="checkbox" id="editAotyToggle" aria-label="Album of the Year">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+    <div class="form-group" id="sotyGroup" style="display:none">
+      <div class="form-row-between">
+        <label class="form-label" style="margin-bottom:0" data-i18n="modal.soty">Song of the Year</label>
+        <label class="toggle-switch">
+          <input type="checkbox" id="editSotyToggle" aria-label="Song of the Year">
           <span class="toggle-slider"></span>
         </label>
       </div>

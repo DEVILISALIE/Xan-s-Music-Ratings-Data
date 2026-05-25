@@ -140,28 +140,53 @@ function renderSidebar() {
     html += `</div>`;
     html += `<div class="nav-group-items">`;
 
-    // Parent link (scroll to section top)
-    html += `<a class="nav-item" href="#section-${section.id}" data-nav="${section.id}" onclick="scrollToSection('${section.id}', event)">${t('sidebar.overview', { count: groupCount })}</a>`;
+    // 通用侧边栏点击高亮函数 - 确保只高亮当前点击的导航项
+    const navClick = `(function(self){
+      // 先移除所有导航项的 active 类
+      document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active')});
+      // 给当前点击的导航项添加 active 类
+      self.classList.add('active');
+      // 禁用滚动同步，防止后续滚动覆盖当前高亮
+      var ca=document.getElementById('contentArea');
+      ca.classList.add('overview-scroll');
+      // 持续强化 active 状态一段时间，防止异步操作覆盖
+      // 清除上一次点击的所有定时器，防止相互干扰
+      if (window._navActiveInterval) { clearInterval(window._navActiveInterval); window._navActiveInterval = null; }
+      if (window._navActiveTimeout) { clearTimeout(window._navActiveTimeout); window._navActiveTimeout = null; }
+      if (window._navScrollDelay) { clearTimeout(window._navScrollDelay); window._navScrollDelay = null; }
+      window._navActiveInterval = setInterval(function(){self.classList.add('active')},50);
+      window._navActiveTimeout = setTimeout(function(){
+        clearInterval(window._navActiveInterval);
+        window._navActiveInterval = null;
+        window._navActiveTimeout = null;
+        window._navScrollDelay = setTimeout(function(){
+          ca.classList.remove('overview-scroll');
+          window._navScrollDelay = null;
+        },200);
+      },1500);
+    })`;
 
     // Sub-groups（AOTY 在 Albums 上方，SOTY 在 Singles 上方）
     const albumsGroup = section.groups.find(g => g.name === 'Albums');
     const singlesGroup = section.groups.find(g => g.name === 'Singles');
     const aotyCount = albumsGroup ? albumsGroup.entries.filter(e => e.isAoty).length : 0;
-    const sotyCount = singlesGroup ? singlesGroup.entries.filter(e => e.isAoty).length : 0;
+    const sotyCount = singlesGroup ? singlesGroup.entries.filter(e => e.isSoty).length : 0;
 
     if (aotyCount > 0) {
-      html += `<a class="nav-item" href="#group-${getGroupId(section.id, 'Albums')}" data-nav="${getGroupId(section.id, 'aoty')}" onclick="scrollToGroup('${getGroupId(section.id, 'Albums')}', event)">AOTY (${aotyCount})</a>`;
+      const gid = getGroupId(section.id, 'aoty');
+      html += `<a class="nav-item" href="#group-${gid}" data-nav="${gid}" onclick="${navClick}(this);scrollToGroup('${gid}',event)">AOTY (${aotyCount})</a>`;
     }
     if (albumsGroup && albumsGroup.entries.length > 0) {
       const gid = getGroupId(section.id, 'Albums');
-      html += `<a class="nav-item" href="#group-${gid}" data-nav="${gid}" onclick="scrollToGroup('${gid}', event)">Albums (${albumsGroup.entries.length})</a>`;
+      html += `<a class="nav-item" href="#group-${gid}" data-nav="${gid}" onclick="${navClick}(this);scrollToGroup('${gid}',event)">Albums (${albumsGroup.entries.length})</a>`;
     }
     if (sotyCount > 0) {
-      html += `<a class="nav-item" href="#group-${getGroupId(section.id, 'Singles')}" data-nav="${getGroupId(section.id, 'soty')}" onclick="scrollToGroup('${getGroupId(section.id, 'Singles')}', event)">SOTY (${sotyCount})</a>`;
+      const gid = getGroupId(section.id, 'soty');
+      html += `<a class="nav-item" href="#group-${gid}" data-nav="${gid}" onclick="${navClick}(this);scrollToGroup('${gid}',event)">SOTY (${sotyCount})</a>`;
     }
     if (singlesGroup && singlesGroup.entries.length > 0) {
       const gid = getGroupId(section.id, 'Singles');
-      html += `<a class="nav-item" href="#group-${gid}" data-nav="${gid}" onclick="scrollToGroup('${gid}', event)">Singles (${singlesGroup.entries.length})</a>`;
+      html += `<a class="nav-item" href="#group-${gid}" data-nav="${gid}" onclick="${navClick}(this);scrollToGroup('${gid}',event)">Singles (${singlesGroup.entries.length})</a>`;
     }
 
     html += `</div></div>`;
@@ -181,10 +206,14 @@ function scrollToSection(id, e) {
   if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
-function scrollToGroup(gid, e) {
+function scrollToGroup(gid, e, offset) {
   if (e) e.preventDefault();
   const el = document.getElementById('group-' + gid);
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const main = document.getElementById('mainContent');
+  if (el && main) {
+    const y = el.getBoundingClientRect().top - main.getBoundingClientRect().top + main.scrollTop - (offset || 0);
+    main.scrollTo({ top: y, behavior: 'smooth' });
+  }
 }
 
 function addNewYear() {
@@ -225,21 +254,41 @@ function setupScrollSync() {
     if (ticking) return;
     ticking = true;
     requestAnimationFrame(() => {
-      // 每次查询最新的 DOM，避免引用悬空
+      // 点击期间完全跳过滚动同步
+      if (document.getElementById('contentArea').classList.contains('overview-scroll')) {
+        ticking = false;
+        return;
+      }
+
       const navItems = document.querySelectorAll('.nav-item[data-nav]');
-      const sectionEls = document.querySelectorAll('[id^="section-"]');
-      let current = '';
-      for (const sec of sectionEls) {
-        if (sec.getBoundingClientRect().top <= 100) {
-          current = sec.id.replace('section-', '');
+      const groupEls = document.querySelectorAll('[id^="group-"]');
+
+      let currentGroup = '';
+      for (const grp of groupEls) {
+        if (grp.getBoundingClientRect().top <= 60) {
+          currentGroup = grp.id.replace('group-', '');
         }
       }
+
+      // 找到当前激活 group 所在的 section
+      const currentSectionId = currentGroup ? currentGroup.split('-')[0] : '';
+
       navItems.forEach(item => {
-        item.classList.toggle('active', item.dataset.nav === current);
+        // 只处理当前 section 的导航项，避免跨 section 高亮
+        const itemNavId = item.dataset.nav;
+        const itemSectionId = itemNavId ? itemNavId.split('-')[0] : '';
+
+        if (itemSectionId === currentSectionId) {
+          item.classList.toggle('active', itemNavId === currentGroup);
+        } else {
+          // 清除不属于当前 section 的高亮，防止多 group 同时高亮
+          item.classList.remove('active');
+        }
       });
 
-      if (current) {
-        const group = document.querySelector(`.nav-group[data-section="${current}"]`);
+      // 自动展开当前 group 所在 section 的侧边栏
+      if (currentGroup) {
+        const group = document.querySelector(`.nav-group[data-section="${currentSectionId}"]`);
         if (group) {
           const header = group.querySelector('.nav-group-header');
           const items = group.querySelector('.nav-group-items');
@@ -266,17 +315,18 @@ function renderContent() {
     html += `<div class="section" id="section-${section.id}">`;
     html += `<h2 class="section-title">${escapeHtml(section.title)}</h2>`;
 
-    // 动态重组：AOTY 条目归入 Albums 顶部，SOTY 条目归入 Singles 顶部
+    // 动态重组：AOTY 条目(isAoty)归入 Albums 顶部，SOTY 条目(isSoty)归入 Singles 顶部
     const aotyAlbumEntries = [];
-    const aotySingleEntries = [];
+    const sotySingleEntries = [];
     const normalEntriesMap = {}; // groupName → normalEntries[]
     for (const group of section.groups) {
       if (group.name === 'AOTY') continue;
       normalEntriesMap[group.name] = [];
       for (const entry of group.entries) {
-        if (entry.isAoty) {
-          if (group.name === 'Singles') aotySingleEntries.push(entry);
-          else aotyAlbumEntries.push(entry);
+        if (group.name === 'Singles' && entry.isSoty) {
+          sotySingleEntries.push(entry);
+        } else if (group.name !== 'Singles' && entry.isAoty) {
+          aotyAlbumEntries.push(entry);
         } else {
           normalEntriesMap[group.name].push(entry);
         }
@@ -285,12 +335,34 @@ function renderContent() {
 
     // 始终显示 Albums 和 Singles（即使为空），AOTY/SOTY 条目置顶
     const displayGroups = [];
-    displayGroups.push({ name: 'Albums', entries: [...aotyAlbumEntries, ...(normalEntriesMap['Albums'] || [])] });
-    displayGroups.push({ name: 'Singles', entries: [...aotySingleEntries, ...(normalEntriesMap['Singles'] || [])] });
+    const albumEntries = [...aotyAlbumEntries, ...(normalEntriesMap['Albums'] || [])];
+    const singleEntries = [...sotySingleEntries, ...(normalEntriesMap['Singles'] || [])];
+
+    if (albumEntries.length > 0) displayGroups.push({ name: 'Albums', entries: albumEntries });
+    if (singleEntries.length > 0) displayGroups.push({ name: 'Singles', entries: singleEntries });
+
+    // AOTY/SOTY 锚点是否需要的标记
+    const hasAoty = aotyAlbumEntries.length > 0;
+    const hasSoty = sotySingleEntries.length > 0;
+
+    // AOTY 锚点放在 section 顶部，Albums 标题上方
+    if (hasAoty) {
+      html += `<div id="group-${getGroupId(section.id, 'aoty')}" style="height:1px;margin:0;padding:0;overflow:hidden"></div>`;
+    }
 
     for (const group of displayGroups) {
       const gid = getGroupId(section.id, group.name);
-      html += `<div class="group-title" id="group-${gid}">${escapeHtml(group.name)}</div>`;
+
+      // SOTY 锚点放在 Albums 下方、Singles 标题上方
+      if (group.name === 'Singles' && hasSoty) {
+        html += `<div id="group-${getGroupId(section.id, 'soty')}" style="height:1px;margin:0;padding:0;overflow:hidden"></div>`;
+      }
+
+      // 渲染分组标题
+      if (group.entries.length > 0) {
+        const singlesBottom = group.name === 'Singles' ? 'margin-bottom:40px;' : '';
+        html += `<div class="group-title" id="group-${gid}" style="${singlesBottom}">${escapeHtml(group.name)}</div>`;
+      }
 
       let idx = 0;
       for (const entry of group.entries) {
@@ -299,7 +371,8 @@ function renderContent() {
         const visible = matchesFilter(entry);
         if (visible) visibleCount++;
 
-        if (entry.isAoty) {
+        const isSpecial = (group.name === 'Singles' && entry.isSoty) || (group.name !== 'Singles' && entry.isAoty);
+        if (isSpecial) {
           html += renderAotyCard(entry, section.id, gid, visible, group.name);
         } else {
           html += renderAlbumCard(entry, idx, section.id, gid, group.name, visible);

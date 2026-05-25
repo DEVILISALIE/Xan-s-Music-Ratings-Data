@@ -43,7 +43,7 @@ function me(title, artist, score, sn, date, tags, review, isAoty, notes) {
   if (isAoty) { qc++; eid = "aoty-" + qc; }
   else if (mode === "singles") { sc++; eid = "s" + sc; }
   else { ac++; eid = "a" + ac; }
-  return { id: eid, title: title, artist: artist, score: score, scoreNote: sn, date: date, tags: tags, review: review, isAoty: isAoty, notes: notes };
+  return { id: eid, title: title, artist: artist, score: score, scoreNote: sn, date: date, tags: tags, review: review, isAoty: isAoty, isSoty: false, notes: notes };
 }
 
 function ps(text) {

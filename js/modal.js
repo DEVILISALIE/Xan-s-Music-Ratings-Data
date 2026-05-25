@@ -19,6 +19,7 @@ function openEditModal(entryId, sectionId, groupId) {
   document.getElementById('editSectionGroup').style.display = 'block';
   document.getElementById('deleteBtn').style.display = 'inline-block';
   document.getElementById('editAotyToggle').checked = !!entry.isAoty;
+  document.getElementById('editSotyToggle').checked = !!entry.isSoty;
 
   // Section selector — 定位条目所在的原始 section/group
   populateSectionSelector(entry.id);
@@ -50,6 +51,7 @@ function openAddModal() {
   document.getElementById('editNotes').value = '';
   document.getElementById('editReview').value = '';
   document.getElementById('editAotyToggle').checked = false;
+  document.getElementById('editSotyToggle').checked = false;
   document.getElementById('deleteBtn').style.display = 'none';
   editingTracks = [];
   renderTracks();
@@ -126,6 +128,7 @@ function saveEntry() {
     tags: tags,
     review: document.getElementById('editReview').value,
     isAoty: document.getElementById('editAotyToggle').checked,
+    isSoty: document.getElementById('editSotyToggle').checked,
     notes: document.getElementById('editNotes').value.trim(),
     tracks: editingTracks.filter(t => t.name.trim() !== '' || t.score != null)
   };
@@ -201,7 +204,8 @@ function deleteEntry() {
 function updateAotyLabel() {
   try {
     const sel = JSON.parse(selectedSectionValue);
-    const aotyLabel = document.querySelector('[data-i18n="modal.aoty"]');
-    if (aotyLabel) aotyLabel.textContent = sel.groupName === 'Singles' ? t('modal.soty') : t('modal.aoty');
+    const isSingles = sel.groupName === 'Singles';
+    document.getElementById('editAotyToggle').closest('.form-group').style.display = isSingles ? 'none' : '';
+    document.getElementById('sotyGroup').style.display = isSingles ? '' : 'none';
   } catch (_) {}
 }
