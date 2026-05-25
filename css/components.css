@@ -210,6 +210,7 @@
   background: rgba(110, 123, 139, 0.12);
   padding: 2px 6px;
   border-radius: 6px;
+  border: 1.35px solid #6E7B8B;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -790,4 +791,4 @@ textarea.form-input::-webkit-scrollbar-corner {
 }
 
 .section:nth-child(2) .album-card { animation-delay: 0.02s; }
-.section:nth-child(3) .album-card { animation-delay: 0.04s; }
+.section:nth-child(3) .album-c
