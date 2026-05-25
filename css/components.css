@@ -538,7 +538,8 @@ textarea.form-input::-webkit-scrollbar-corner {
 
 #editSectionGroup .custom-select-option {
   font-size: 14px;
-  padding: 10px 14px;
+  padding: 10px 14px 10px 10px;
+  text-align: left;
 }
 
 #editSectionGroup .custom-select-menu::-webkit-scrollbar { width: 6px; }
