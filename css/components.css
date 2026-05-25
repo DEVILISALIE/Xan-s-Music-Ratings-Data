@@ -29,7 +29,7 @@
 [data-style="glass"] .aoty-card {
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 2px solid var(--aoty-border);
+  border: 1.75px solid var(--aoty-border);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
   position: relative;
   overflow: hidden;
@@ -49,7 +49,7 @@
 }
 
 [data-style="glass"][data-theme="dark"] .aoty-card {
-  border: 2px solid var(--aoty-border);
+  border: 1.75px solid var(--aoty-border);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
 }
 
@@ -220,7 +220,7 @@
   padding: 20px;
   border-radius: 16px;
   background: var(--aoty-bg);
-  border: 2px solid var(--aoty-border);
+  border: 1.75px solid var(--aoty-border);
   margin-bottom: 12px;
   cursor: pointer;
   transition: transform 0.15s;
@@ -254,7 +254,7 @@
 /* ===== SOTY Card ===== */
 .aoty-card.soty-card {
   background: var(--soty-bg);
-  border: 2px solid var(--soty-border);
+  border: 1.75px solid var(--soty-border);
 }
 
 .aoty-card.soty-card .aoty-score {
@@ -262,11 +262,11 @@
 }
 
 [data-style="glass"] .aoty-card.soty-card {
-  border: 2px solid var(--soty-border);
+  border: 1.75px solid var(--soty-border);
 }
 
 [data-style="glass"][data-theme="dark"] .aoty-card.soty-card {
-  border: 2px solid var(--soty-border);
+  border: 1.75px solid var(--soty-border);
 }
 
 .aoty-title {
@@ -791,4 +791,4 @@ textarea.form-input::-webkit-scrollbar-corner {
 }
 
 .section:nth-child(2) .album-card { animation-delay: 0.02s; }
-.section:nth-child(3) .album-c
+.section:nth-child(3) .album-card { animation-delay: 0.04s; }
