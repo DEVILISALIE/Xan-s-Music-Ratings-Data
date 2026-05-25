@@ -65,6 +65,9 @@ function applyFilters() {
     searchIndex = 0;
     highlightSearchResult(0);
     searchResults[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // 同步侧边栏高亮
+    var grp = searchResults[0].dataset.group;
+    if (grp) activateNavItem(grp);
   } else {
     nextBtn.style.display = 'none';
     clearSearchHighlight();
@@ -79,6 +82,9 @@ function goToNextResult() {
   searchIndex = (searchIndex + 1) % searchResults.length;
   highlightSearchResult(searchIndex);
   searchResults[searchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
+  // 同步侧边栏高亮
+  var grp = searchResults[searchIndex].dataset.group;
+  if (grp) activateNavItem(grp);
 }
 
 function highlightSearchResult(index) {

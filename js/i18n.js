@@ -8,6 +8,8 @@ const I18N = {
     'sidebar.export': 'Export JSON',
     'sidebar.import': 'Import JSON',
     'sidebar.overview': 'Overview ({count})',
+    'sidebar.aoty': 'AOTY',
+    'sidebar.soty': 'SOTY',
 
     // Toolbar
     'toolbar.search': 'Search title or artist…',
@@ -23,7 +25,7 @@ const I18N = {
     'toolbar.nr': 'NR / No Score',
 
     // Modal
-    'modal.editTitle': 'Edit Album',
+    'modal.editTitle': 'Edit Content',
     'modal.addTitle': 'Add Album',
     'modal.title': 'Title',
     'modal.artist': 'Artist',
@@ -36,7 +38,7 @@ const I18N = {
     'modal.section': 'Add to Section',
     'modal.notes': 'Notes',
     'modal.trackRatings': 'Track Ratings',
-    'modal.review': 'Review / AOTY Write-up',
+    'modal.review': 'Written Review',
     'modal.cancel': 'Cancel',
     'modal.delete': 'Delete',
     'modal.save': 'Save',
@@ -86,6 +88,8 @@ const I18N = {
     'sidebar.export': '导出 JSON',
     'sidebar.import': '导入 JSON',
     'sidebar.overview': '概览 ({count})',
+    'sidebar.aoty': '年度专辑',
+    'sidebar.soty': '年度单曲',
 
     // Toolbar
     'toolbar.search': '搜索标题或艺术家…',
@@ -101,7 +105,7 @@ const I18N = {
     'toolbar.nr': 'NR / 无分数',
 
     // Modal
-    'modal.editTitle': '编辑专辑',
+    'modal.editTitle': '编辑内容',
     'modal.addTitle': '添加专辑',
     'modal.title': '标题',
     'modal.artist': '艺术家',
@@ -114,7 +118,7 @@ const I18N = {
     'modal.section': '添加到分组',
     'modal.notes': '备注',
     'modal.trackRatings': '曲目评分',
-    'modal.review': '乐评 / 年度专辑文章',
+    'modal.review': '文字乐评',
     'modal.cancel': '取消',
     'modal.delete': '删除',
     'modal.save': '保存',

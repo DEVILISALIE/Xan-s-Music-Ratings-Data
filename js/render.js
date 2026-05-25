@@ -174,19 +174,19 @@ function renderSidebar() {
 
     if (aotyCount > 0) {
       const gid = getGroupId(section.id, 'aoty');
-      html += `<a class="nav-item" href="#group-${gid}" data-nav="${gid}" onclick="${navClick}(this);scrollToGroup('${gid}',event)">AOTY (${aotyCount})</a>`;
+      html += `<a class="nav-item" href="#group-${gid}" data-nav="${gid}" onclick="${navClick}(this);scrollToGroup('${gid}',event)">${t('sidebar.aoty')} (${aotyCount})</a>`;
     }
     if (albumsGroup && albumsGroup.entries.length > 0) {
       const gid = getGroupId(section.id, 'Albums');
-      html += `<a class="nav-item" href="#group-${gid}" data-nav="${gid}" onclick="${navClick}(this);scrollToGroup('${gid}',event)">Albums (${albumsGroup.entries.length})</a>`;
+      html += `<a class="nav-item" href="#group-${gid}" data-nav="${gid}" onclick="${navClick}(this);scrollToGroup('${gid}',event)">${t('toolbar.albums')} (${albumsGroup.entries.length})</a>`;
     }
     if (sotyCount > 0) {
       const gid = getGroupId(section.id, 'soty');
-      html += `<a class="nav-item" href="#group-${gid}" data-nav="${gid}" onclick="${navClick}(this);scrollToGroup('${gid}',event)">SOTY (${sotyCount})</a>`;
+      html += `<a class="nav-item" href="#group-${gid}" data-nav="${gid}" onclick="${navClick}(this);scrollToGroup('${gid}',event)">${t('sidebar.soty')} (${sotyCount})</a>`;
     }
     if (singlesGroup && singlesGroup.entries.length > 0) {
       const gid = getGroupId(section.id, 'Singles');
-      html += `<a class="nav-item" href="#group-${gid}" data-nav="${gid}" onclick="${navClick}(this);scrollToGroup('${gid}',event)">Singles (${singlesGroup.entries.length})</a>`;
+      html += `<a class="nav-item" href="#group-${gid}" data-nav="${gid}" onclick="${navClick}(this);scrollToGroup('${gid}',event)">${t('toolbar.singles')} (${singlesGroup.entries.length})</a>`;
     }
 
     html += `</div></div>`;
@@ -242,6 +242,45 @@ function addNewYear() {
   refreshAll();
 
   setTimeout(() => scrollToSection(year), 100);
+}
+
+// 搜索结果跳转时激活侧边栏对应导航项
+function activateNavItem(groupId) {
+  // 移除所有 active
+  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active') });
+  // 找到目标导航项并激活
+  var target = document.querySelector('.nav-item[data-nav="' + groupId + '"]');
+  if (!target) return;
+  target.classList.add('active');
+  // 展开所属 section（如果折叠了）
+  var sectionId = groupId.split('-')[0];
+  var group = document.querySelector('.nav-group[data-section="' + sectionId + '"]');
+  if (group) {
+    var header = group.querySelector('.nav-group-header');
+    var items = group.querySelector('.nav-group-items');
+    if (header && header.classList.contains('collapsed')) {
+      header.classList.remove('collapsed');
+      items.classList.remove('collapsed');
+    }
+  }
+  // 滚动侧边栏使目标导航项可见
+  target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  // 禁用滚动同步，防止内容区滚动覆盖侧边栏高亮
+  var ca = document.getElementById('contentArea');
+  ca.classList.add('overview-scroll');
+  if (window._navActiveInterval) { clearInterval(window._navActiveInterval); window._navActiveInterval = null; }
+  if (window._navActiveTimeout) { clearTimeout(window._navActiveTimeout); window._navActiveTimeout = null; }
+  if (window._navScrollDelay) { clearTimeout(window._navScrollDelay); window._navScrollDelay = null; }
+  window._navActiveInterval = setInterval(function(){ target.classList.add('active') }, 50);
+  window._navActiveTimeout = setTimeout(function(){
+    clearInterval(window._navActiveInterval);
+    window._navActiveInterval = null;
+    window._navActiveTimeout = null;
+    window._navScrollDelay = setTimeout(function(){
+      ca.classList.remove('overview-scroll');
+      window._navScrollDelay = null;
+    }, 200);
+  }, 1500);
 }
 
 function setupScrollSync() {
