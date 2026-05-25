@@ -20,6 +20,8 @@
   --hover-bg: rgba(0,0,0,0.04);
   --aoty-border: #FF9500;
   --aoty-bg: rgba(255,149,0,0.06);
+  --soty-border: #FF3B30;
+  --soty-bg: rgba(255,59,48,0.06);
   --fab-bg: #007AFF;
   --fab-text: #FFFFFF;
   --export-bg: rgba(0,0,0,0.04);
@@ -43,6 +45,7 @@
   --input-bg: rgba(255,255,255,0.08);
   --hover-bg: rgba(255,255,255,0.06);
   --aoty-bg: rgba(255,149,0,0.1);
+  --soty-bg: rgba(255,59,48,0.1);
   --fab-bg: #0A84FF;
   --fab-text: #FFFFFF;
   --export-bg: rgba(255,255,255,0.08);
@@ -78,6 +81,7 @@ body {
   --pill-bg: rgba(255, 255, 255, 0.3);
   --export-bg: rgba(255, 255, 255, 0.3);
   --aoty-bg: rgba(255, 200, 100, 0.12);
+  --soty-bg: rgba(255, 100, 100, 0.12);
 }
 
 [data-style="glass"] body {
@@ -107,12 +111,7 @@ body {
   --pill-bg: rgba(255, 255, 255, 0.1);
   --export-bg: rgba(255, 255, 255, 0.08);
   --aoty-bg: rgba(255, 200, 100, 0.08);
+  --soty-bg: rgba(255, 100, 100, 0.08);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
+@media (prefers-reduced-motion: 

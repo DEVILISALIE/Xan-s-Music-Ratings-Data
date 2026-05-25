@@ -481,7 +481,7 @@ function renderAotyCard(entry, sectionId, groupId, visible, groupName) {
   const reviewHtml = entry.review ? `<div class="aoty-review" id="review-${entry.id}">${escapeHtml(entry.review)}</div>
     <button class="aoty-review-toggle" onclick="toggleReview(event, '${entry.id}')">${t('content.showMore')}</button>` : '';
 
-  return `<div class="aoty-card ${hiddenClass}" data-entry-id="${entry.id}" data-section="${sectionId}" data-group="${groupId}" role="button" tabindex="0" onclick="openEditModal('${entry.id}','${sectionId}','${groupId}')" onkeydown="if(event.key==='Enter')openEditModal('${entry.id}','${sectionId}','${groupId}')">
+  return `<div class="aoty-card ${groupName === 'Singles' ? 'soty-card' : ''} ${hiddenClass}" data-entry-id="${entry.id}" data-section="${sectionId}" data-group="${groupId}" role="button" tabindex="0" onclick="openEditModal('${entry.id}','${sectionId}','${groupId}')" onkeydown="if(event.key==='Enter')openEditModal('${entry.id}','${sectionId}','${groupId}')">
     <div style="display:flex;align-items:flex-start;gap:12px">
       <div style="flex:1;min-width:0">
         <div class="aoty-header">
@@ -1082,6 +1082,4 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!state.active) return;
     e.preventDefault();
     mainEl.scrollTop += e.deltaY;
-    updateAutoScroll(state.lastClientY);
-  }, { passive: false });
-});
+    updateAutoScroll(stat

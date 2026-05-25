@@ -205,7 +205,7 @@
   padding: 20px;
   border-radius: 16px;
   background: var(--aoty-bg);
-  border: 1.5px solid var(--aoty-border);
+  border: 2px solid var(--aoty-border);
   margin-bottom: 12px;
   cursor: pointer;
   transition: transform 0.15s;
@@ -234,6 +234,16 @@
 
 .aoty-badge.soty {
   background: #FF3B30;
+}
+
+/* ===== SOTY Card ===== */
+.aoty-card.soty-card {
+  background: var(--soty-bg);
+  border: 2px solid var(--soty-border);
+}
+
+.aoty-card.soty-card .aoty-score {
+  color: #FF3B30;
 }
 
 .aoty-title {
@@ -753,9 +763,4 @@ textarea.form-input::-webkit-scrollbar-corner {
   to { opacity: 1; transform: translateY(0); }
 }
 
-.album-card, .aoty-card {
-  animation: fadeInUp 0.3s ease both;
-}
-
-.section:nth-child(2) .album-card { animation-delay: 0.02s; }
-.section:nth-child(3) .album-card { animation-delay: 0.04s; }
+.album-card, 
