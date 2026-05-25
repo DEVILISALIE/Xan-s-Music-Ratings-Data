@@ -65,11 +65,15 @@ node gen.js path/to/file.txt     # 指定文件路径
 - body 背景使用 `position: fixed` 伪元素替代 `background-attachment: fixed`
 - 拖拽期间通过 `.content.is-dragging` 类临时禁用所有卡片的 backdrop-filter
 
-**AOTY 管理**：`isAoty` 标记任意条目。`renderContent()` 在渲染时动态将 `isAoty=true` 的条目归入 AOTY 展示组。编辑弹窗中的 AOTY 开关修改 `isAoty` 标记。
+**AOTY/SOTY 管理**：`isAoty` 标记年度专辑，`isSoty` 标记年度单曲。`renderContent()` 在渲染时动态将 `isAoty=true` 的条目归入 Albums 顶部的 AOTY 组，`isSoty=true` 的条目归入 Singles 顶部的 SOTY 组。编辑弹窗根据当前选择的分组动态切换 AOTY/SOTY 开关（Albums 组显示 AOTY，Singles 组显示 SOTY）。筛选系统中"AOTY"选项同时匹配 `isAoty` 和 `isSoty`。
+
+**AOTY/SOTY 锚点定位**：`renderContent()` 在每个 section 中渲染两个不可见锚点（1px div）用于侧边栏导航跳转：AOTY 锚点在 section 顶部、Albums 标题上方；SOTY 锚点在 Albums 下方、Singles 标题上方。锚点仅在对应条目存在时渲染。
+
+**侧边栏导航高亮**：滚动同步由 `setupScrollSync()` 实现，使用 `requestAnimationFrame` 节流。遍历所有 `[id^="group-"]` 元素，以 `getBoundingClientRect().top <= 60` 判断当前可视 group，精确到 group 级别（非 section 级别）。高亮只应用于当前 section 的导航项，其他 section 的 `.active` 被清除。点击导航项时通过 `navClick` 内联函数禁用滚动同步（`overview-scroll` 类，持续 1.7s），并用 `window._navActiveInterval/_navActiveTimeout/_navScrollDelay` 三个全局定时器管理强化周期，每次新点击前清除所有旧定时器，防止多 interval 累积导致多 group 同时高亮。
 
 **必听专辑**：Albums 分组中 `score >= mustHearThreshold` 的条目自动显示 `★Must Hear Album` 标记（Singles 不显示）。阈值默认 80，用户可通过工具栏输入框自定义（0–100），持久化到 localStorage（key: `mustHearThreshold`）。逻辑在 `renderAlbumCard()` 中通过 `showMustHear` 控制。
 
-**筛选系统**：`currentFilter` 为数组，支持多选标签。分数筛选支持 100、90+、80+、70+、60+、50+、<50、NR、AOTY。标签下拉多选（选择后保持展开），分数下拉单选（选择后关闭）。
+**筛选系统**：`currentFilter` 为数组，支持多选标签。分数筛选支持 100、90+、80+、70+、60+、50+、<50、NR、AOTY（同时匹配 `isAoty` 和 `isSoty`）。标签下拉多选（选择后保持展开），分数下拉单选（选择后关闭）。
 
 **搜索导航**：搜索时自动滚动到第一个结果并高亮蓝色描边，右下角"下一个"按钮循环跳转搜索结果。搜索使用 200ms debounce。
 
@@ -83,4 +87,4 @@ node gen.js path/to/file.txt     # 指定文件路径
 
 **下拉菜单交互**：标签下拉多选，选择后保持展开，点击外部关闭；分数下拉单选，选择后关闭；切换下拉时其他已打开的自动收回。
 
-**解析器注意事项**（gen.js）：日期提取在标签移除之后执行。`psl()` 中分数提取在括号注释移除之后执行。正则 `/^\d+[\.\s]/` 同时匹配 `1. Title` 和 `1 Title` 两种格式。Vol headers 匹配 `/^Vol\.\s*\d+\s*-\s*(\d{4})/` 并合并到已有年份 section。
+**解析器注意事项**（gen.js）：日期提取在标签移除之后执行。`psl()` 中分数提取在括号注释移除之后执行。正则 `/^\d+[\.\s]/` 同时匹配 `1. Title` 和 `1 Title` 两种格式。Vol headers 匹配 `/^Vol\.\s*\d+\s*-\s*(\d{4})/` 并合并到已有年份 section。`me()` 函数输出包含 `isSoty: false` 字段（SOTY 通过编辑弹窗手动标记）。

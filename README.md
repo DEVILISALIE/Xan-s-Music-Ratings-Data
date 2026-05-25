@@ -12,6 +12,7 @@
 
 - 按年份/年代分组浏览，侧边栏快速跳转到任意年份或分组
 - 侧边栏带可见滚动条，紧贴顶部底部，大量年份时可快速翻动
+- 侧边栏高亮精确到 group 级别（AOTY/Albums/SOTY/Singles），滚动同步自动跟随
 - 每个年份/年代固定显示 **Albums** 和 **Singles** 两个分区，即使为空也保留标题
 - 侧边栏年份标题 hover 显示删除按钮，一键删除整年数据（带确认弹窗）
 
@@ -24,25 +25,26 @@
 ### 多维筛选
 
 - **标签筛选** — 下拉多选，支持 EP、Mixtape、Reissue、Soundtrack、Live、Compilation、Unofficial、DJ Mix、Video，选择后保持展开
-- **分数筛选** — 下拉单选，支持 100、90+、80+、70+、60+、50+、<50、NR（无分数）、AOTY
+- **分数筛选** — 下拉单选，支持 100、90+、80+、70+、60+、50+、<50、NR（无分数）、AOTY（同时匹配年度专辑和年度单曲）
 - 两种筛选可叠加使用，结果计数实时更新
 - 切换下拉时其他已打开的自动收回
 
 ### 编辑
 
-- 点击卡片打开编辑弹窗，可修改：标题、艺术家、分数、日期、分数备注、标签、AOTY 标记、备注、音轨评分、乐评
+- 点击卡片打开编辑弹窗，可修改：标题、艺术家、分数、日期、分数备注、标签、AOTY/SOTY 标记、备注、音轨评分、乐评
 - **音轨评分** — 在弹窗内逐首添加曲目和分数，实时显示曲目数/已评分数/平均分
 - **添加到分组** — 下拉选择目标年份和 Albums/Singles 分组，可跨年份移动条目
-- **AOTY 开关** — 任意条目可标记为年度专辑，渲染时自动归入 AOTY 展示组
+- **AOTY/SOTY 开关** — Albums 组条目可标记为年度专辑（AOTY），Singles 组条目可标记为年度单曲（SOTY），编辑弹窗根据分组自动切换
 - **必听专辑** — Albums 分组中 80 分及以上的条目自动显示 ★Must Hear Album 标记
 - Shift + Enter 快速保存，Escape 关闭弹窗
 - 新增专辑通过右下角 FAB 按钮（+）触发
 
-### AOTY（年度专辑）
+### AOTY / SOTY（年度专辑 / 年度单曲）
 
-- 任意条目均可通过编辑弹窗的开关标记为 AOTY
-- AOTY 卡片使用独立大卡片样式，显示标签、分数和乐评
+- Albums 组条目可通过编辑弹窗标记为 AOTY，Singles 组条目可标记为 SOTY
+- AOTY/SOTY 卡片使用独立大卡片样式，显示标签、分数和乐评
 - 乐评支持展开/收起（超过 120px 自动截断，点击"展开更多"）
+- 侧边栏导航精确到 group 级别，点击跳转后高亮对应 AOTY/SOTY/Albums/Singles 导航项
 
 ### 拖拽排序
 
@@ -161,6 +163,7 @@ Vol. 1 - 2025
               "tags": ["EP"],
               "review": "写几句评论",
               "isAoty": false,
+              "isSoty": false,
               "notes": "",
               "tracks": [
                 { "name": "Song 1", "score": 90 },
@@ -182,6 +185,7 @@ Vol. 1 - 2025
 | `scoreNote` | `string` | 特殊标记，如 `"NR"`、`"Top1"` |
 | `tags` | `string[]` | 标签数组，从预设列表中选取 |
 | `isAoty` | `boolean` | 年度专辑标记，渲染时动态归入 AOTY 组 |
+| `isSoty` | `boolean` | 年度单曲标记，渲染时动态归入 SOTY 组 |
 | `tracks` | `array` | 可选的音轨评分数组 |
 | `review` | `string` | 乐评文本，AOTY 卡片中可展开/收起 |
 | `notes` | `string` | 附加备注 |
@@ -235,6 +239,7 @@ JS 加载顺序：`state.js` → `i18n.js` → `utils.js` → `filter.js` → `m
 | `lang` | `"en"` / `"zh"` | 界面语言偏好 |
 | `theme` | `"light"` / `"dark"` | 亮/暗模式 |
 | `style` | `"solid"` / `"glass"` | 纯色/毛玻璃风格（默认 glass） |
+| `mustHearThreshold` | 数字字符串 | 必听专辑分数阈值，默认 `80` |
 
 ---
 
