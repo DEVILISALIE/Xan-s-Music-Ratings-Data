@@ -207,5 +207,8 @@ function updateAotyLabel() {
     const isSingles = sel.groupName === 'Singles';
     document.getElementById('editAotyToggle').closest('.form-group').style.display = isSingles ? 'none' : '';
     document.getElementById('sotyGroup').style.display = isSingles ? '' : 'none';
+    // 编辑弹窗中 SOTY 标签改为 Single of the Year
+    const sotyLabel = document.getElementById('sotyGroup').querySelector('.form-label');
+    if (sotyLabel) sotyLabel.textContent = currentLang === 'zh' ? '年度单曲' : 'Single of the Year';
   } catch (_) {}
 }

@@ -305,4 +305,9 @@ function handleImport(e) {
       alert(t('alert.invalidJsonGeneric'));
     }
   };
-  reader.readAsText(file
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// Start
+init();
