@@ -35,7 +35,7 @@
 - **音轨评分** — 在弹窗内逐首添加曲目和分数，实时显示曲目数/已评分数/平均分
 - **添加到分组** — 下拉选择目标年份和 Albums/Singles 分组，可跨年份移动条目
 - **AOTY/SOTY 开关** — Albums 组条目可标记为年度专辑（AOTY），Singles 组条目可标记为年度单曲（SOTY），编辑弹窗根据分组自动切换
-- **必听专辑** — Albums 分组中高分条目自动显示 ★Must Hear Album 标记，阈值可在工具栏自定义（0–100）
+- **必听专辑** — Albums 分组中高分条目自动显示 ★Must Hear Album 标记，阈值和开关可在工具栏自定义，点击保存后生效
 - Shift + Enter 快速保存，Escape 关闭弹窗
 - 新增专辑通过右下角 FAB 按钮（+）触发
 
@@ -240,12 +240,10 @@ JS 加载顺序：`state.js` → `i18n.js` → `utils.js` → `filter.js` → `m
 | `theme` | `"light"` / `"dark"` | 亮/暗模式 |
 | `style` | `"solid"` / `"glass"` | 纯色/毛玻璃风格（默认 glass） |
 | `mustHearThreshold` | 数字字符串 | 必听专辑分数阈值，默认 `80` |
+| `mustHearEnabled` | `"true"` / `"false"` | 必听专辑功能开关，默认 `true` |
 
 ---
 
 ## 键盘快捷键
 
-| 快捷键 | 功能 |
-|--------|------|
-| Shift + Enter | 编辑弹窗内快速保存 |
-| Escape | 关闭编辑弹窗 |
+| 快捷键 |
