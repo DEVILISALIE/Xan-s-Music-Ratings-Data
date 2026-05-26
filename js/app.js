@@ -179,21 +179,21 @@ async function init() {
   });
 
   mustHearToggle.addEventListener('change', () => {
-    mustHearEnabled = mustHearToggle.checked;
-    localStorage.setItem('mustHearEnabled', mustHearEnabled);
-    renderContent();
+    // 仅切换 UI 状态，不保存，需要点击保存按钮才生效
   });
 
   mustHearSave.addEventListener('click', () => {
+    mustHearEnabled = mustHearToggle.checked;
+    localStorage.setItem('mustHearEnabled', mustHearEnabled);
     const v = parseInt(mustHearInput.value);
     if (!isNaN(v) && v >= 0 && v <= 100) {
       mustHearThreshold = v;
       localStorage.setItem('mustHearThreshold', v);
-      updateMustHearLabel();
-      mustHearPopover.classList.remove('open');
-      renderContent();
-      applyFilters();
     }
+    updateMustHearLabel();
+    mustHearPopover.classList.remove('open');
+    renderContent();
+    applyFilters();
   });
 
   document.addEventListener('click', (e) => {
@@ -305,9 +305,4 @@ function handleImport(e) {
       alert(t('alert.invalidJsonGeneric'));
     }
   };
-  reader.readAsText(file);
-  e.target.value = '';
-}
-
-// Start
-init();
+  reader.readAsText(file
