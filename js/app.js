@@ -163,17 +163,25 @@ async function init() {
   const mustHearPopover = document.getElementById('mustHearPopover');
   const mustHearInput = document.getElementById('mustHearInput');
   const mustHearSave = document.getElementById('mustHearSave');
+  const mustHearToggle = document.getElementById('mustHearToggle');
 
   function updateMustHearLabel() {
     mustHearTrigger.textContent = t('toolbar.mustHear');
   }
   updateMustHearLabel();
   mustHearInput.value = mustHearThreshold;
+  mustHearToggle.checked = mustHearEnabled;
 
   mustHearTrigger.addEventListener('click', (e) => {
     e.stopPropagation();
     closeAllDropdowns();
     mustHearPopover.classList.toggle('open');
+  });
+
+  mustHearToggle.addEventListener('change', () => {
+    mustHearEnabled = mustHearToggle.checked;
+    localStorage.setItem('mustHearEnabled', mustHearEnabled);
+    renderContent();
   });
 
   mustHearSave.addEventListener('click', () => {

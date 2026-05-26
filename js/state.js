@@ -9,3 +9,4 @@ let editingEntry = null;
 let editingGroupId = null;
 let editingTracks = [];
 let mustHearThreshold = parseInt(localStorage.getItem('mustHearThreshold')) || 80;
+let mustHearEnabled = localStorage.getItem('mustHearEnabled') !== 'false';

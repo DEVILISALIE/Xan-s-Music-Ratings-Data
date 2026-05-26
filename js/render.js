@@ -452,7 +452,7 @@ function renderAlbumCard(entry, idx, sectionId, groupId, groupName, visible) {
   const trackCount = entry.tracks && entry.tracks.length > 0 ? entry.tracks.length : 0;
   const hiddenClass = visible ? '' : 'hidden';
   const noteText = entry.scoreNote && entry.scoreNote !== 'NR' ? ` (${entry.scoreNote})` : '';
-  const showMustHear = groupName !== 'Singles' && entry.score != null && entry.score >= mustHearThreshold;
+  const showMustHear = mustHearEnabled && groupName !== 'Singles' && entry.score != null && entry.score >= mustHearThreshold;
 
   return `<div class="album-card ${hiddenClass}" data-entry-id="${entry.id}" data-section="${sectionId}" data-group="${groupId}" role="button" tabindex="0" onclick="openEditModal('${entry.id}','${sectionId}','${groupId}')" onkeydown="if(event.key==='Enter')openEditModal('${entry.id}','${sectionId}','${groupId}')">
     <span class="album-index">${idx}</span>

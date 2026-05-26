@@ -64,6 +64,13 @@
       <div class="custom-select" id="mustHearSelect">
         <button class="custom-select-trigger" id="mustHearTrigger" data-i18n="toolbar.mustHear">Must Hear ≥</button>
         <div class="must-hear-popover" id="mustHearPopover">
+          <div class="must-hear-toggle-row">
+            <span data-i18n="toolbar.mustHear">必听专辑</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="mustHearToggle" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
           <div class="must-hear-input-row">
             <span data-i18n="toolbar.mustHearLabel">必听阈值</span>
             <input type="number" id="mustHearInput" min="0" max="100" class="must-hear-input">
