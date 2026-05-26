@@ -14,6 +14,7 @@
   --card-shadow: 0 1px 3px rgba(0,0,0,0.06);
   --modal-overlay: rgba(0,0,0,0.4);
   --pill-bg: rgba(0,122,255,0.1);
+  --tag-bg: rgba(0,122,255,0.08);
   --pill-active-bg: #007AFF;
   --pill-active-text: #FFFFFF;
   --input-bg: rgba(0,0,0,0.04);
@@ -40,6 +41,7 @@
   --card-shadow: 0 1px 3px rgba(0,0,0,0.3);
   --modal-overlay: rgba(0,0,0,0.6);
   --pill-bg: rgba(10,132,255,0.15);
+  --tag-bg: rgba(10,132,255,0.1);
   --pill-active-bg: #0A84FF;
   --pill-active-text: #FFFFFF;
   --input-bg: rgba(255,255,255,0.08);
@@ -82,6 +84,7 @@ body {
   --export-bg: rgba(255, 255, 255, 0.3);
   --aoty-bg: rgba(255, 200, 100, 0.12);
   --soty-bg: rgba(229, 100, 97, 0.12);
+  --tag-bg: rgba(0, 122, 255, 0.08);
 }
 
 [data-style="glass"] body {
@@ -112,6 +115,7 @@ body {
   --export-bg: rgba(255, 255, 255, 0.08);
   --aoty-bg: rgba(255, 200, 100, 0.08);
   --soty-bg: rgba(229, 100, 97, 0.08);
+  --tag-bg: rgba(10, 132, 255, 0.1);
 }
 
 @media (prefers-reduced-motion: reduce) {

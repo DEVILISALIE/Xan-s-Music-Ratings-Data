@@ -130,7 +130,7 @@ function saveEntry() {
     isAoty: document.getElementById('editAotyToggle').checked,
     isSoty: document.getElementById('editSotyToggle').checked,
     notes: document.getElementById('editNotes').value.trim(),
-    tracks: editingTracks.filter(t => t.name.trim() !== '' || t.score != null)
+    tracks: [...editingTracks]
   };
 
   if (editingEntry) {
