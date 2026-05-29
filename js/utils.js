@@ -31,6 +31,8 @@ function generateId() {
 
 function refreshAll() {
   buildEntryIndex();
+  _lastSidebarHtml = '';
+  _lastContentHtml = '';
   renderSidebar();
   renderContent();
   saveData();

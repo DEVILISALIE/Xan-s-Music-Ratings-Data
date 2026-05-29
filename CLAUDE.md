@@ -22,7 +22,7 @@ node gen.js path/to/file.txt     # 指定文件路径
 ```
 ├── index.html             # 入口，包含 __MUSIC_DATA__ 占位
 ├── css/
-│   ├── base.css           # CSS 变量、Reset、主题（亮/暗/毛玻璃）
+│   ├── base.css           # CSS 变量、Reset、主题（亮/暗/毛玻璃），含 --tag-bg 变量
 │   ├── layout.css         # 侧边栏、工具栏、下拉菜单布局
 │   └── components.css     # 卡片、弹窗、标签、按钮、动画
 ├── js/
@@ -31,12 +31,13 @@ node gen.js path/to/file.txt     # 指定文件路径
 │   ├── utils.js           # 工具函数、ensureDefaultGroups()、populateSectionSelector()
 │   ├── filter.js          # 多选筛选、搜索、allCards 缓存
 │   ├── modal.js           # 编辑弹窗、音轨评分
-│   ├── render.js          # 侧边栏 + 内容区渲染、拖拽排序
-│   └── app.js             # 初始化、主题切换、localStorage 持久化
+│   ├── render.js          # 侧边栏 + 内容区渲染、HTML 缓存
+│   ├── drag.js            # 拖拽排序（Pointer Events + FLIP 动画）
+│   └── app.js             # 初始化、事件委托、主题切换、localStorage 持久化
 └── gen.js                 # txt → JSON 解析器，嵌入数据到 index.html
 ```
 
-**JS 加载顺序**：`state.js` → `i18n.js` → `utils.js` → `filter.js` → `modal.js` → `render.js` → `app.js`
+**JS 加载顺序**：`state.js` → `i18n.js` → `utils.js` → `filter.js` → `modal.js` → `render.js` → `drag.js` → `app.js`
 
 ## localStorage 键值
 
@@ -70,7 +71,7 @@ node gen.js path/to/file.txt     # 指定文件路径
 
 **AOTY/SOTY 锚点定位**：`renderContent()` 在每个 section 中渲染两个不可见锚点（1px div）用于侧边栏导航跳转：AOTY 锚点在 section 顶部、Albums 标题上方；SOTY 锚点在 Albums 下方、Singles 标题上方。锚点仅在对应条目存在时渲染。
 
-**侧边栏导航高亮**：滚动同步由 `setupScrollSync()` 实现，使用 `requestAnimationFrame` 节流。遍历所有 `[id^="group-"]` 元素，以 `getBoundingClientRect().top <= 60` 判断当前可视 group，精确到 group 级别（非 section 级别）。高亮只应用于当前 section 的导航项，其他 section 的 `.active` 被清除。点击导航项时通过 `navClick` 内联函数禁用滚动同步（`overview-scroll` 类，持续 1.7s），并用 `window._navActiveInterval/_navActiveTimeout/_navScrollDelay` 三个全局定时器管理强化周期，每次新点击前清除所有旧定时器，防止多 interval 累积导致多 group 同时高亮。
+**侧边栏导航高亮**：滚动同步由 `setupScrollSync()` 实现，使用 `requestAnimationFrame` 节流。遍历所有 `[id^="group-"]` 元素，以 `getBoundingClientRect().top <= 60` 判断当前可视 group，精确到 group 级别（非 section 级别）。高亮只应用于当前 section 的导航项，其他 section 的 `.active` 被清除。点击导航项时通过事件委托（`data-action="nav-click"`）禁用滚动同步（`overview-scroll` 类，持续 1.7s），并用 `window._navActiveInterval/_navActiveTimeout/_navScrollDelay` 三个全局定时器管理强化周期，每次新点击前清除所有旧定时器，防止多 interval 累积导致多 group 同时高亮。
 
 **必听专辑**：Albums 分组中 `score >= mustHearThreshold` 的条目自动显示 `★Must Hear Album` 标记（Singles 不显示）。阈值默认 80，用户可通过工具栏弹出菜单自定义（0–100），并可通过开关关闭整个功能。开关和阈值均需点击「保存」后生效，持久化到 localStorage（key: `mustHearEnabled`、`mustHearThreshold`）。逻辑在 `renderAlbumCard()` 中通过 `showMustHear` 控制。
 
@@ -84,7 +85,15 @@ node gen.js path/to/file.txt     # 指定文件路径
 
 **拖拽排序**：Pointer Events 实现，FLIP 动画技术平滑"挤开"效果。拖拽时原卡片 `opacity: 0` + `height: 0` 隐藏，占位符（`.drag-placeholder`）占据原位置，幽灵元素（`.drag-ghost`）跟随鼠标。动画参数 `0.25s cubic-bezier(0.2, 0, 0, 1)`。仅限同组内排序，AOTY 卡片不参与。
 
-**EscapeHtml**：转义 `&`、`<`、`>`、`"`、`'`，防止 HTML 注入。
+**EscapeHtml**：转义 `&`、`<`、`>`、`"`、`'`，防止 HTML 注入。所有 innerHTML 中的用户数据（data 属性值、id 属性值、显示文本）均经过 `escapeHtml()` 处理。
+
+**事件委托**：全部交互事件通过 `data-action` 属性 + 事件委托实现，无内联 `onclick`/`onkeydown`/`oninput`/`onchange`。委托层级：侧边栏 `.sidebar` → 导出/导入按钮；`#sidebarNav` → 折叠/删除/导航跳转；`#contentArea` → 卡片点击/Enter 键/乐评展开；`#editModal` → 取消/删除/保存/添加曲目；`#trackList` → 曲目输入/分数输入/删除曲目。
+
+**HTML 缓存**：`renderSidebar()` 和 `renderContent()` 各维护一份 HTML 字符串缓存（`_lastSidebarHtml`、`_lastContentHtml`），内容未变化时跳过 DOM 重建。`refreshAll()` 中清除缓存强制重建。
+
+**JSON 导入校验**：`handleImport()` 对导入数据做深度结构校验，验证每个 section/group/entry 的字段类型，自动修复缺失字段（补默认值）和类型错误（score 限制 0–100，tags/tracks 确保为数组等）。
+
+**localStorage 容量监控**：`saveData()` 在保存后检查 JSON 大小，超过 4MB 时输出 `console.warn`；捕获 `QuotaExceededError` 时弹窗提示用户导出清理。
 
 **下拉菜单交互**：标签下拉多选，选择后保持展开，点击外部关闭；分数下拉单选，选择后关闭；切换下拉时其他已打开的自动收回。
 

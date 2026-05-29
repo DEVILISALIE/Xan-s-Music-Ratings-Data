@@ -19,8 +19,8 @@
     </div>
     <nav class="sidebar-nav" id="sidebarNav"></nav>
     <div class="sidebar-footer">
-      <button onclick="exportJSON()" data-i18n="sidebar.export">Export JSON</button>
-      <button onclick="importJSON()" data-i18n="sidebar.import">Import JSON</button>
+      <button data-action="export-json" data-i18n="sidebar.export">Export JSON</button>
+      <button data-action="import-json" data-i18n="sidebar.import">Import JSON</button>
     </div>
   </aside>
 
@@ -84,17 +84,17 @@
         <span class="toolbar-stats-sep">·</span>
         <span id="singleCount"></span>
       </span>
-      <button class="theme-toggle" id="langToggle" onclick="toggleLang()" aria-label="Switch language">🌐</button>
-      <button class="theme-toggle" id="styleToggle" onclick="toggleStyle()" aria-label="Toggle glassmorphism" title="毛玻璃风格">💎</button>
-      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" aria-label="Toggle dark mode">🌙</button>
+      <button class="theme-toggle" id="langToggle" data-action="toggle-lang" aria-label="Switch language">🌐</button>
+      <button class="theme-toggle" id="styleToggle" data-action="toggle-style" aria-label="Toggle glassmorphism" title="毛玻璃风格">💎</button>
+      <button class="theme-toggle" id="themeToggle" data-action="toggle-theme" aria-label="Toggle dark mode">🌙</button>
     </div>
     <div class="content" id="contentArea"></div>
   </main>
 </div>
 
 <!-- FAB -->
-<button class="fab-search-next" id="searchNextBtn" onclick="goToNextResult()" style="display:none">↓</button>
-<button class="fab" onclick="openAddModal()">+</button>
+<button class="fab-search-next" id="searchNextBtn" data-action="go-next" style="display:none">↓</button>
+<button class="fab" data-action="add-album">+</button>
 
 <!-- Edit Modal -->
 <div class="modal-overlay" id="editModal">
@@ -171,7 +171,7 @@
     <div class="form-group">
       <label class="form-label" data-i18n="modal.trackRatings">Track Ratings</label>
       <div class="track-list" id="trackList"></div>
-      <button type="button" class="track-add" onclick="addTrack()" data-i18n="modal.addTrack">+ Add Track</button>
+      <button type="button" class="track-add" data-action="add-track" data-i18n="modal.addTrack">+ Add Track</button>
       <div class="track-summary" id="trackSummary"></div>
     </div>
     <div class="form-group">
@@ -179,9 +179,9 @@
       <textarea class="form-input" id="editReview" name="review" autocomplete="off" placeholder="Write your review here…" data-i18n-placeholder="modal.placeholder.review"></textarea>
     </div>
     <div class="modal-actions">
-      <button class="modal-btn secondary" onclick="closeModal()" data-i18n="modal.cancel">Cancel</button>
-      <button class="modal-btn danger" id="deleteBtn" onclick="deleteEntry()" data-i18n="modal.delete">Delete</button>
-      <button class="modal-btn primary" onclick="saveEntry()" data-i18n="modal.save">Save</button>
+      <button class="modal-btn secondary" data-action="modal-cancel" data-i18n="modal.cancel">Cancel</button>
+      <button class="modal-btn danger" id="deleteBtn" data-action="modal-delete" data-i18n="modal.delete">Delete</button>
+      <button class="modal-btn primary" data-action="modal-save" data-i18n="modal.save">Save</button>
     </div>
   </div>
 </div>
@@ -195,6 +195,7 @@ const __MUSIC_DATA__ = {"meta":{"title":"Xan's Music Ratings","lastUpdated":"202
 <script src="js/filter.js"></script>
 <script src="js/modal.js"></script>
 <script src="js/render.js"></script>
+<script src="js/drag.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

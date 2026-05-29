@@ -1,9 +1,18 @@
 // Data persistence
 function saveData() {
   try {
-    localStorage.setItem('musicData', JSON.stringify(appData));
+    const json = JSON.stringify(appData);
+    localStorage.setItem('musicData', json);
+    // 容量监控：超过 4MB 时警告
+    if (json.length > 4 * 1024 * 1024) {
+      console.warn('localStorage 数据量较大 (' + (json.length / 1024 / 1024).toFixed(1) + 'MB)，接近浏览器存储上限');
+    }
   } catch (e) {
-    console.error('Failed to save data:', e);
+    if (e.name === 'QuotaExceededError' || e.code === 22) {
+      alert('存储空间已满，请导出数据后清理部分年份。');
+    } else {
+      console.error('Failed to save data:', e);
+    }
   }
 }
 
@@ -51,6 +60,19 @@ async function init() {
   renderSidebar();
   renderContent();
   setupScrollSync();
+
+  // 静态元素事件绑定（替代原内联 onclick）
+  document.querySelector('[data-action="export-json"]').addEventListener('click', exportJSON);
+  document.querySelector('[data-action="import-json"]').addEventListener('click', importJSON);
+  document.getElementById('langToggle').addEventListener('click', toggleLang);
+  document.getElementById('styleToggle').addEventListener('click', toggleStyle);
+  document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+  document.getElementById('searchNextBtn').addEventListener('click', goToNextResult);
+  document.querySelector('[data-action="add-album"]').addEventListener('click', openAddModal);
+  document.querySelector('[data-action="add-track"]').addEventListener('click', addTrack);
+  document.querySelector('[data-action="modal-cancel"]').addEventListener('click', closeModal);
+  document.getElementById('deleteBtn').addEventListener('click', deleteEntry);
+  document.querySelector('[data-action="modal-save"]').addEventListener('click', saveEntry);
 
   // Static element listeners — bound once, not destroyed by innerHTML
   const scoreTrigger = document.getElementById('scoreFilterTrigger');
@@ -201,6 +223,120 @@ async function init() {
       mustHearPopover.classList.remove('open');
     }
   });
+
+  // 侧边栏事件委托
+  const sidebarNav = document.getElementById('sidebarNav');
+  sidebarNav.addEventListener('click', (e) => {
+    // 删除年份
+    const deleteBtn = e.target.closest('[data-action="delete-year"]');
+    if (deleteBtn) {
+      e.stopPropagation();
+      deleteYearSection(deleteBtn.dataset.sectionId);
+      return;
+    }
+    // 导航项点击
+    const navItem = e.target.closest('[data-action="nav-click"]');
+    if (navItem) {
+      e.preventDefault();
+      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+      navItem.classList.add('active');
+      const ca = document.getElementById('contentArea');
+      ca.classList.add('overview-scroll');
+      if (window._navActiveInterval) { clearInterval(window._navActiveInterval); window._navActiveInterval = null; }
+      if (window._navActiveTimeout) { clearTimeout(window._navActiveTimeout); window._navActiveTimeout = null; }
+      if (window._navScrollDelay) { clearTimeout(window._navScrollDelay); window._navScrollDelay = null; }
+      window._navActiveInterval = setInterval(() => navItem.classList.add('active'), 50);
+      window._navActiveTimeout = setTimeout(() => {
+        clearInterval(window._navActiveInterval);
+        window._navActiveInterval = null;
+        window._navActiveTimeout = null;
+        window._navScrollDelay = setTimeout(() => {
+          ca.classList.remove('overview-scroll');
+          window._navScrollDelay = null;
+        }, 200);
+      }, 1500);
+      scrollToGroup(navItem.dataset.nav, e);
+      return;
+    }
+    // 折叠/展开分组
+    const groupHeader = e.target.closest('[data-action="toggle-nav-group"]');
+    if (groupHeader) {
+      toggleNavGroup(groupHeader);
+    }
+  });
+  // 分组头部键盘支持
+  sidebarNav.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const groupHeader = e.target.closest('[data-action="toggle-nav-group"]');
+    if (groupHeader) {
+      e.preventDefault();
+      toggleNavGroup(groupHeader);
+    }
+  });
+  // 新年份按钮（在 sidebarNav 外部）
+  document.querySelector('.sidebar').addEventListener('click', (e) => {
+    if (e.target.closest('[data-action="add-new-year"]')) addNewYear();
+  });
+
+  // 曲目列表事件委托
+  const trackList = document.getElementById('trackList');
+  trackList.addEventListener('input', (e) => {
+    const row = e.target.closest('.track-row');
+    if (!row) return;
+    const idx = parseInt(row.dataset.trackIndex);
+    if (e.target.classList.contains('track-name-input')) {
+      editingTracks[idx].name = e.target.value;
+    } else if (e.target.classList.contains('track-score-input')) {
+      e.target.value = e.target.value.replace(/[^0-9NR]/g, '');
+      updateTrackSummary();
+    }
+  });
+  trackList.addEventListener('change', (e) => {
+    const row = e.target.closest('.track-row');
+    if (!row) return;
+    const idx = parseInt(row.dataset.trackIndex);
+    if (e.target.classList.contains('track-name-input')) {
+      editingTracks[idx].name = e.target.value;
+    } else if (e.target.classList.contains('track-score-input')) {
+      const v = e.target.value.trim();
+      if (v === 'NR') { editingTracks[idx].score = 'NR'; }
+      else if (v === '') { editingTracks[idx].score = null; }
+      else {
+        const n = parseInt(v);
+        editingTracks[idx].score = (n >= 0 && n <= 100) ? n : null;
+        e.target.value = editingTracks[idx].score != null ? editingTracks[idx].score : '';
+      }
+      updateTrackSummary();
+    }
+  });
+  trackList.addEventListener('click', (e) => {
+    const removeBtn = e.target.closest('[data-action="remove-track"]');
+    if (removeBtn) removeTrack(parseInt(removeBtn.dataset.trackIndex));
+  });
+
+  // 内容区事件委托
+  const contentArea = document.getElementById('contentArea');
+  contentArea.addEventListener('click', (e) => {
+    // 乐评展开/收起
+    const reviewToggle = e.target.closest('[data-action="toggle-review"]');
+    if (reviewToggle) {
+      e.stopPropagation();
+      toggleReview(reviewToggle);
+      return;
+    }
+    // 打开编辑弹窗
+    const card = e.target.closest('[data-action="open-edit"]');
+    if (card) {
+      openEditModal(card.dataset.entryId, card.dataset.section, card.dataset.group);
+    }
+  });
+  contentArea.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const card = e.target.closest('[data-action="open-edit"]');
+    if (card) {
+      openEditModal(card.dataset.entryId, card.dataset.section, card.dataset.group);
+    }
+  });
 }
 
 function applyTheme() {
@@ -297,6 +433,33 @@ function handleImport(e) {
       if (!parsed || !Array.isArray(parsed.sections)) {
         alert(t('alert.invalidJson'));
         return;
+      }
+      // 深度校验：确保每个 section 结构正确
+      for (const section of parsed.sections) {
+        if (!section.id || !Array.isArray(section.groups)) {
+          alert(t('alert.invalidJson'));
+          return;
+        }
+        for (const group of section.groups) {
+          if (!group.name || !Array.isArray(group.entries)) {
+            alert(t('alert.invalidJson'));
+            return;
+          }
+          for (const entry of group.entries) {
+            if (!entry.id) entry.id = generateId();
+            if (typeof entry.title !== 'string') entry.title = String(entry.title || '');
+            if (typeof entry.artist !== 'string') entry.artist = String(entry.artist || '');
+            if (entry.score != null) entry.score = Math.max(0, Math.min(100, parseInt(entry.score) || 0));
+            if (!Array.isArray(entry.tags)) entry.tags = [];
+            if (!Array.isArray(entry.tracks)) entry.tracks = [];
+            if (typeof entry.review !== 'string') entry.review = String(entry.review || '');
+            if (typeof entry.scoreNote !== 'string') entry.scoreNote = String(entry.scoreNote || '');
+            if (typeof entry.date !== 'string') entry.date = String(entry.date || '');
+            if (typeof entry.notes !== 'string') entry.notes = String(entry.notes || '');
+            if (typeof entry.isAoty !== 'boolean') entry.isAoty = false;
+            if (typeof entry.isSoty !== 'boolean') entry.isSoty = false;
+          }
+        }
       }
       appData = parsed;
       ensureDefaultGroups();

@@ -206,15 +206,16 @@ Vol. 1 - 2025
 │   ├── utils.js           # 工具函数、数据迁移、分组选择器
 │   ├── filter.js          # 多选筛选、搜索、卡片缓存
 │   ├── modal.js           # 编辑弹窗、音轨评分
-│   ├── render.js          # 侧边栏 + 内容区渲染、拖拽排序
-│   └── app.js             # 初始化、主题切换、localStorage 持久化、导入导出
+│   ├── render.js          # 侧边栏 + 内容区渲染、HTML 缓存
+│   ├── drag.js            # 拖拽排序（Pointer Events + FLIP 动画）
+│   └── app.js             # 初始化、事件委托、主题切换、localStorage 持久化、导入导出
 ├── gen.js                 # txt → JSON 解析器，嵌入数据到 index.html
 ├── data.json              # gen.js 生成的 JSON 备份
 ├── README.md              # 项目说明
 └── CLAUDE.md              # Claude Code 开发指南
 ```
 
-JS 加载顺序：`state.js` → `i18n.js` → `utils.js` → `filter.js` → `modal.js` → `render.js` → `app.js`
+JS 加载顺序：`state.js` → `i18n.js` → `utils.js` → `filter.js` → `modal.js` → `render.js` → `drag.js` → `app.js`
 
 ---
 
@@ -228,6 +229,9 @@ JS 加载顺序：`state.js` → `i18n.js` → `utils.js` → `filter.js` → `m
 - **毛玻璃** — `backdrop-filter: blur()` + `will-change: transform` + `contain: layout style paint` GPU 加速
 - **背景** — `position: fixed` 伪元素渐变背景，替代 `background-attachment: fixed` 提升滚动性能
 - **国际化** — `data-i18n` 属性标记 + `applyI18nToDOM()` 批量替换
+- **事件委托** — 全部交互通过 `data-action` 属性 + 事件委托，零内联处理器
+- **安全** — innerHTML 中所有用户数据经过 `escapeHtml()` 转义；JSON 导入深度校验；localStorage 容量监控
+- **性能** — 侧边栏和内容区 HTML 缓存，未变化时跳过 DOM 重建
 
 ---
 
