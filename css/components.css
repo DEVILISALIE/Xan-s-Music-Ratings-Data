@@ -780,6 +780,218 @@ textarea.form-input::-webkit-scrollbar-corner {
   border-radius: 12px;
 }
 
+/* ===== Batch Mode ===== */
+.batch-toggle.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.batch-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--card-bg);
+  border-top: 1px solid var(--separator);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
+  z-index: 50;
+  transform: translateY(100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.3s;
+}
+
+[data-style="glass"] .batch-bar {
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-top: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+[data-style="glass"][data-theme="dark"] .batch-bar {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.batch-bar.active {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.batch-bar-left,
+.batch-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.batch-bar-center {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.batch-bar-btn {
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: 1.5px solid var(--separator);
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.batch-bar-btn:hover {
+  background: var(--hover-bg);
+}
+
+.batch-bar-btn.batch-bar-delete {
+  background: rgba(255, 59, 48, 0.1);
+  color: #E53B2F;
+  border-color: rgba(255, 59, 48, 0.3);
+}
+
+.batch-bar-btn.batch-bar-delete:hover {
+  background: rgba(255, 59, 48, 0.2);
+}
+
+.batch-bar-btn.batch-bar-cancel {
+  font-weight: 600;
+}
+
+.batch-bar-selectall,
+.batch-bar-deselectall {
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+/* Batch Dropdown */
+.batch-dropdown {
+  position: relative;
+}
+
+.batch-dropdown-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--card-bg);
+  border: 1px solid var(--separator);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  min-width: 140px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 6px;
+  display: none;
+  z-index: 100;
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.batch-dropdown-menu.active {
+  display: block;
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+[data-style="glass"] .batch-dropdown-menu {
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+[data-style="glass"][data-theme="dark"] .batch-dropdown-menu {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.batch-dropdown-item {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.batch-dropdown-item:hover {
+  background: var(--hover-bg);
+}
+
+.batch-move-menu {
+  min-width: 180px;
+}
+
+/* Card checkbox in batch mode */
+.batch-checkbox {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--separator);
+  background: transparent;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.batch-mode .batch-checkbox {
+  display: flex;
+}
+
+.batch-checkbox.checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.batch-checkbox.checked::after {
+  content: '✓';
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.batch-mode .album-card,
+.batch-mode .aoty-card {
+  cursor: pointer;
+}
+
+.batch-mode .album-card:hover,
+.batch-mode .aoty-card:hover {
+  transform: none;
+}
+
+.batch-mode .album-card.batch-selected,
+.batch-mode .aoty-card.batch-selected {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  background: rgba(0, 122, 255, 0.08);
+}
+
+[data-style="glass"] .batch-mode .album-card.batch-selected,
+[data-style="glass"] .batch-mode .aoty-card.batch-selected {
+  background: rgba(0, 122, 255, 0.15);
+  backdrop-filter: blur(16px) saturate(180%);
+}
+
+/* 为批量操作栏预留底部空间 */
+.batch-mode {
+  padding-bottom: 80px;
+}
+
 /* ===== Animations ===== */
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(8px); }

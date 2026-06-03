@@ -452,8 +452,11 @@ function renderAlbumCard(entry, idx, sectionId, groupId, groupName, visible) {
   const hiddenClass = visible ? '' : 'hidden';
   const hasReview = entry.review && entry.review.trim().length > 0;
   const showMustHear = mustHearEnabled && groupName !== 'Singles' && entry.score != null && entry.score >= mustHearThreshold;
+  const selectedClass = batchSelectedIds.has(entry.id) ? 'batch-selected' : '';
+  const checkedClass = batchSelectedIds.has(entry.id) ? 'checked' : '';
 
-  return `<div class="album-card ${hiddenClass}" data-entry-id="${escapeHtml(entry.id)}" data-section="${escapeHtml(sectionId)}" data-group="${escapeHtml(groupId)}" data-action="open-edit" role="button" tabindex="0">
+  return `<div class="album-card ${hiddenClass} ${selectedClass}" data-entry-id="${escapeHtml(entry.id)}" data-section="${escapeHtml(sectionId)}" data-group="${escapeHtml(groupId)}" data-action="open-edit" role="button" tabindex="0">
+    <div class="batch-checkbox ${checkedClass}" data-action="batch-toggle-entry" data-entry-id="${escapeHtml(entry.id)}"></div>
     <span class="album-index">${idx}</span>
     <div class="album-info">
       <div class="album-title">${escapeHtml(entry.title)}${noteHtml}</div>
@@ -476,9 +479,12 @@ function renderAotyCard(entry, sectionId, groupId, visible, groupName) {
   const { noteHtml, tagsBlock, trackHtml } = buildCardMeta(entry);
   const reviewHtml = entry.review ? `<div class="aoty-review" id="review-${escapeHtml(entry.id)}">${escapeHtml(entry.review)}</div>
     <button class="aoty-review-toggle" data-action="toggle-review" data-entry-id="${escapeHtml(entry.id)}">${t('content.showMore')}</button>` : '';
+  const selectedClass = batchSelectedIds.has(entry.id) ? 'batch-selected' : '';
+  const checkedClass = batchSelectedIds.has(entry.id) ? 'checked' : '';
 
-  return `<div class="aoty-card ${groupName === 'Singles' ? 'soty-card' : ''} ${hiddenClass}" data-entry-id="${escapeHtml(entry.id)}" data-section="${escapeHtml(sectionId)}" data-group="${escapeHtml(groupId)}" data-action="open-edit" role="button" tabindex="0">
+  return `<div class="aoty-card ${groupName === 'Singles' ? 'soty-card' : ''} ${hiddenClass} ${selectedClass}" data-entry-id="${escapeHtml(entry.id)}" data-section="${escapeHtml(sectionId)}" data-group="${escapeHtml(groupId)}" data-action="open-edit" role="button" tabindex="0">
     <div style="display:flex;align-items:flex-start;gap:12px">
+      <div class="batch-checkbox ${checkedClass}" data-action="batch-toggle-entry" data-entry-id="${escapeHtml(entry.id)}"></div>
       <div style="flex:1;min-width:0">
         <div class="aoty-header">
           <span class="aoty-badge${groupName === 'Singles' ? ' soty' : ''}">${groupName === 'Singles' ? 'SOTY' : 'AOTY'}</span>

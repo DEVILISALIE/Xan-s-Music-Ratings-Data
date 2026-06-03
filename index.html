@@ -85,6 +85,7 @@
         <span class="toolbar-stats-sep">·</span>
         <span id="singleCount"></span>
       </span>
+      <button class="theme-toggle" id="batchToggleBtn" data-action="toggle-batch" title="Batch Select">☑</button>
       <button class="theme-toggle" id="langToggle" data-action="toggle-lang" aria-label="Switch language">🌐</button>
       <button class="theme-toggle" id="styleToggle" data-action="toggle-style" aria-label="Toggle glassmorphism" title="毛玻璃风格">💎</button>
       <button class="theme-toggle" id="themeToggle" data-action="toggle-theme" aria-label="Toggle dark mode">🌙</button>
@@ -96,6 +97,62 @@
 <!-- FAB -->
 <button class="fab-search-next" id="searchNextBtn" data-action="go-next" style="display:none">↓</button>
 <button class="fab" data-action="add-album">+</button>
+
+<!-- Batch Action Bar -->
+<div class="batch-bar" id="batchBar">
+  <div class="batch-bar-left">
+    <button class="batch-bar-btn batch-bar-selectall" data-action="batch-select-all" data-i18n="batch.selectAll">Select All</button>
+    <button class="batch-bar-btn batch-bar-deselectall" data-action="batch-deselect-all" data-i18n="batch.deselectAll">Deselect All</button>
+  </div>
+  <div class="batch-bar-center">
+    <span class="batch-bar-count" id="batchCount">0 selected</span>
+  </div>
+  <div class="batch-bar-right">
+    <button class="batch-bar-btn batch-bar-delete" data-action="batch-delete" data-i18n="batch.delete">Delete</button>
+
+    <!-- 批量添加标签下拉 -->
+    <div class="batch-dropdown" id="batchTagAddDropdown">
+      <button class="batch-bar-btn batch-bar-tag" data-action="batch-toggle-tag-add" data-i18n="batch.addTag">Add Tag</button>
+      <div class="batch-dropdown-menu" id="batchTagAddMenu">
+        <div class="batch-dropdown-item" data-tag="EP">EP</div>
+        <div class="batch-dropdown-item" data-tag="Mixtape">Mixtape</div>
+        <div class="batch-dropdown-item" data-tag="Reissue">Reissue</div>
+        <div class="batch-dropdown-item" data-tag="Soundtrack">Soundtrack</div>
+        <div class="batch-dropdown-item" data-tag="Live">Live</div>
+        <div class="batch-dropdown-item" data-tag="Compilation">Compilation</div>
+        <div class="batch-dropdown-item" data-tag="Unofficial">Unofficial</div>
+        <div class="batch-dropdown-item" data-tag="DJ Mix">DJ Mix</div>
+        <div class="batch-dropdown-item" data-tag="Video">Video</div>
+      </div>
+    </div>
+
+    <!-- 批量移除标签下拉 -->
+    <div class="batch-dropdown" id="batchTagRemoveDropdown">
+      <button class="batch-bar-btn batch-bar-tag" data-action="batch-toggle-tag-remove" data-i18n="batch.removeTag">Remove Tag</button>
+      <div class="batch-dropdown-menu" id="batchTagRemoveMenu">
+        <div class="batch-dropdown-item" data-tag="EP">EP</div>
+        <div class="batch-dropdown-item" data-tag="Mixtape">Mixtape</div>
+        <div class="batch-dropdown-item" data-tag="Reissue">Reissue</div>
+        <div class="batch-dropdown-item" data-tag="Soundtrack">Soundtrack</div>
+        <div class="batch-dropdown-item" data-tag="Live">Live</div>
+        <div class="batch-dropdown-item" data-tag="Compilation">Compilation</div>
+        <div class="batch-dropdown-item" data-tag="Unofficial">Unofficial</div>
+        <div class="batch-dropdown-item" data-tag="DJ Mix">DJ Mix</div>
+        <div class="batch-dropdown-item" data-tag="Video">Video</div>
+      </div>
+    </div>
+
+    <!-- 批量移动下拉 -->
+    <div class="batch-dropdown" id="batchMoveDropdown">
+      <button class="batch-bar-btn batch-bar-move" data-action="batch-toggle-move" data-i18n="batch.move">Move</button>
+      <div class="batch-dropdown-menu batch-move-menu" id="batchMoveMenu">
+        <!-- 动态填充年份选项 -->
+      </div>
+    </div>
+
+    <button class="batch-bar-btn batch-bar-cancel" data-action="cancel-batch" data-i18n="batch.cancel">Cancel</button>
+  </div>
+</div>
 
 <!-- Edit Modal -->
 <div class="modal-overlay" id="editModal">
