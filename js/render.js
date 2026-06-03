@@ -196,16 +196,17 @@ function scrollToGroup(gid, e, offset) {
   }
 }
 
-function addNewYear() {
-  const year = prompt(t('alert.yearPrompt'));
-  if (!year || !/^\d{4}$/.test(year)) {
-    if (year) alert(t('alert.invalidYear'));
+async function addNewYear() {
+  const year = await showPrompt(t('dialog.yearPrompt'), t('dialog.yearPromptHint'));
+  if (!year) return;
+  if (!/^\d{4}$/.test(year)) {
+    showAlert(t('dialog.invalidYear'));
     return;
   }
 
   const exists = appData.sections.some(s => s.id === year);
   if (exists) {
-    alert(t('alert.yearExists', { year }));
+    showAlert(t('dialog.yearExists', { year }));
     return;
   }
 
@@ -248,9 +249,7 @@ function activateNavItem(groupId) {
   // 禁用滚动同步，防止内容区滚动覆盖侧边栏高亮
   var ca = document.getElementById('contentArea');
   ca.classList.add('overview-scroll');
-  if (window._navActiveInterval) { clearInterval(window._navActiveInterval); window._navActiveInterval = null; }
-  if (window._navActiveTimeout) { clearTimeout(window._navActiveTimeout); window._navActiveTimeout = null; }
-  if (window._navScrollDelay) { clearTimeout(window._navScrollDelay); window._navScrollDelay = null; }
+  resetNavScrollLock();
   window._navActiveInterval = setInterval(function(){ target.classList.add('active') }, 50);
   window._navActiveTimeout = setTimeout(function(){
     clearInterval(window._navActiveInterval);
@@ -503,7 +502,7 @@ function toggleReview(btn) {
 }
 
 // ===== Delete Year Section =====
-function deleteYearSection(sectionId) {
+async function deleteYearSection(sectionId) {
   const yearNum = parseInt(sectionId);
   if (isNaN(yearNum)) return;
 
@@ -511,7 +510,11 @@ function deleteYearSection(sectionId) {
     .filter(s => s.id === sectionId)
     .reduce((sum, s) => sum + s.groups.reduce((s2, g) => s2 + g.entries.length, 0), 0);
 
-  if (!confirm(t('confirm.deleteYear', { year: yearNum, count: entryCount }))) return;
+  const confirmed = await showConfirm(
+    t('dialog.deleteYear'),
+    t('dialog.deleteYearMsg', { year: yearNum, count: entryCount })
+  );
+  if (!confirmed) return;
 
   appData.sections = appData.sections.filter(s => s.id !== sectionId);
 

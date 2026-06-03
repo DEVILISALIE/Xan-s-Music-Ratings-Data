@@ -326,13 +326,13 @@
 }
 
 [data-style="glass"] .modal-overlay {
-  backdrop-filter: blur(15px) saturate(180%);
-  -webkit-backdrop-filter: blur(15px) saturate(180%);
+  backdrop-filter: blur(8px) saturate(150%);
+  -webkit-backdrop-filter: blur(8px) saturate(150%);
 }
 
 [data-style="glass"][data-theme="dark"] .modal-overlay {
-  backdrop-filter: blur(15px) saturate(180%);
-  -webkit-backdrop-filter: blur(15px) saturate(180%);
+  backdrop-filter: blur(8px) saturate(150%);
+  -webkit-backdrop-filter: blur(8px) saturate(150%);
 }
 
 .modal-overlay.active {
@@ -792,3 +792,149 @@ textarea.form-input::-webkit-scrollbar-corner {
 
 .section:nth-child(2) .album-card { animation-delay: 0.02s; }
 .section:nth-child(3) .album-card { animation-delay: 0.04s; }
+
+/* ===== Custom Dialog (iOS Action Sheet) ===== */
+.dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--modal-overlay);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+.dialog-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+[data-style="glass"] .dialog-overlay {
+  backdrop-filter: blur(15px) saturate(180%);
+  -webkit-backdrop-filter: blur(15px) saturate(180%);
+}
+
+.dialog-sheet {
+  width: 270px;
+  max-width: calc(100vw - 48px);
+  background: var(--card-bg);
+  border-radius: 14px;
+  overflow: hidden;
+  text-align: center;
+  transform: scale(0.9);
+  opacity: 0;
+  transition: transform 0.2s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.15s ease;
+}
+
+.dialog-overlay.active .dialog-sheet {
+  transform: scale(1);
+  opacity: 1;
+}
+
+[data-style="glass"] .dialog-sheet {
+  backdrop-filter: blur(50px) saturate(200%);
+  -webkit-backdrop-filter: blur(50px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.15);
+}
+
+[data-style="glass"][data-theme="dark"] .dialog-sheet {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.4);
+}
+
+.dialog-title {
+  font-size: 17px;
+  font-weight: 600;
+  padding: 20px 16px 4px;
+  letter-spacing: -0.2px;
+}
+
+.dialog-message {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 6px 16px 18px;
+  line-height: 1.45;
+}
+
+.dialog-input {
+  display: block;
+  width: calc(100% - 32px);
+  margin: 4px 16px 18px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: var(--input-bg);
+  color: var(--text);
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  text-align: center;
+  transition: box-shadow 0.2s;
+}
+
+[data-style="glass"] .dialog-input {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+[data-style="glass"][data-theme="dark"] .dialog-input {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dialog-input:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.dialog-buttons {
+  display: flex;
+  border-top: 0.5px solid var(--separator);
+}
+
+[data-style="glass"] .dialog-buttons {
+  border-top-color: rgba(255, 255, 255, 0.25);
+}
+
+[data-style="glass"][data-theme="dark"] .dialog-buttons {
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.dialog-btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 17px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s;
+  min-height: 44px;
+}
+
+.dialog-btn:hover { background: var(--hover-bg); }
+.dialog-btn:active { background: var(--hover-bg); opacity: 0.7; }
+
+.dialog-btn + .dialog-btn {
+  border-left: 0.5px solid var(--separator);
+}
+
+[data-style="glass"] .dialog-btn + .dialog-btn {
+  border-left-color: rgba(255, 255, 255, 0.25);
+}
+
+[data-style="glass"][data-theme="dark"] .dialog-btn + .dialog-btn {
+  border-left-color: rgba(255, 255, 255, 0.1);
+}
+
+.dialog-btn.cancel {
+  font-weight: 400;
+}
+
+.dialog-btn.confirm {
+  font-weight: 600;
+}

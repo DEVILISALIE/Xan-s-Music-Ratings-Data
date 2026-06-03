@@ -184,9 +184,10 @@ function saveEntry() {
   closeModal();
 }
 
-function deleteEntry() {
+async function deleteEntry() {
   if (!editingEntry) return;
-  if (!confirm(t('confirm.deleteEntry'))) return;
+  const confirmed = await showConfirm(t('dialog.deleteEntry'), t('dialog.deleteEntryMsg'));
+  if (!confirmed) return;
 
   for (const section of appData.sections) {
     for (const group of section.groups) {
