@@ -2,6 +2,15 @@
 let _lastSidebarHtml = '';
 let _lastContentHtml = '';
 
+// 滚动同步用的元素缓存（renderContent / renderSidebar 后刷新，避免每帧 querySelectorAll）
+let _cachedNavItems = [];
+let _cachedGroupEls = [];
+
+function rebuildScrollCache() {
+  _cachedNavItems = [...document.querySelectorAll('.nav-item[data-nav]')];
+  _cachedGroupEls = [...document.querySelectorAll('[id^="group-"]')];
+}
+
 // 获取所有 sections 并按年份降序排列
 // 旧版 localStorage 数据可能还有 vol sections，这里做兼容合并
 function getMergedSections() {
@@ -180,12 +189,6 @@ function toggleNavGroup(el) {
   items.classList.toggle('collapsed');
 }
 
-function scrollToSection(id, e) {
-  if (e) e.preventDefault();
-  const el = document.getElementById('section-' + id);
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
 function scrollToGroup(gid, e, offset) {
   if (e) e.preventDefault();
   const el = document.getElementById('group-' + gid);
@@ -222,7 +225,7 @@ async function addNewYear() {
   appData.sections.push(newSection);
   refreshAll();
 
-  setTimeout(() => scrollToSection(year), 100);
+  setTimeout(() => scrollToGroup(getGroupId(year, 'Albums')), 100);
 }
 
 // 搜索结果跳转时激活侧边栏对应导航项
@@ -278,8 +281,8 @@ function setupScrollSync() {
         return;
       }
 
-      const navItems = document.querySelectorAll('.nav-item[data-nav]');
-      const groupEls = document.querySelectorAll('[id^="group-"]');
+      const navItems = _cachedNavItems;
+      const groupEls = _cachedGroupEls;
 
       let currentGroup = '';
       for (const grp of groupEls) {
@@ -410,6 +413,7 @@ function renderContent() {
 
   area.innerHTML = html;
   rebuildCardCache();
+  rebuildScrollCache();
 
   updateToolbarStats();
   searchResults = [];
@@ -430,26 +434,35 @@ function renderContent() {
   }
 }
 
+// 卡片元数据渲染（标签、曲目数、备注文字）— 供 renderAlbumCard / renderAotyCard 共用
+function buildCardMeta(entry) {
+  const noteText = entry.scoreNote && entry.scoreNote !== 'NR' ? ` (${entry.scoreNote})` : '';
+  const noteHtml = noteText ? ' <span style="font-size:12px;color:var(--text-tertiary)">' + escapeHtml(noteText) + '</span>' : '';
+  const tagsHtml = (entry.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('');
+  const trackCount = entry.tracks && entry.tracks.length > 0 ? entry.tracks.length : 0;
+  const trackHtml = trackCount > 0 ? '<span class="track-count" title="' + t('content.trackTooltip') + '">' + trackCount + t('content.trackUnit') + '</span>' : '';
+  const tagsBlock = tagsHtml ? '<div class="album-tags">' + tagsHtml + '</div>' : '';
+  return { noteHtml, tagsBlock, trackHtml };
+}
+
 function renderAlbumCard(entry, idx, sectionId, groupId, groupName, visible) {
   const scoreClass = getScoreClass(entry.score);
   const scoreText = entry.score != null ? entry.score : (entry.scoreNote === 'NR' ? 'NR' : '—');
-  const tags = (entry.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('');
-  const hasReview = entry.review && entry.review.trim().length > 0;
-  const trackCount = entry.tracks && entry.tracks.length > 0 ? entry.tracks.length : 0;
+  const { noteHtml, tagsBlock, trackHtml } = buildCardMeta(entry);
   const hiddenClass = visible ? '' : 'hidden';
-  const noteText = entry.scoreNote && entry.scoreNote !== 'NR' ? ` (${entry.scoreNote})` : '';
+  const hasReview = entry.review && entry.review.trim().length > 0;
   const showMustHear = mustHearEnabled && groupName !== 'Singles' && entry.score != null && entry.score >= mustHearThreshold;
 
   return `<div class="album-card ${hiddenClass}" data-entry-id="${escapeHtml(entry.id)}" data-section="${escapeHtml(sectionId)}" data-group="${escapeHtml(groupId)}" data-action="open-edit" role="button" tabindex="0">
     <span class="album-index">${idx}</span>
     <div class="album-info">
-      <div class="album-title">${escapeHtml(entry.title)}${noteText ? ' <span style="font-size:12px;color:var(--text-tertiary)">' + escapeHtml(noteText) + '</span>' : ''}</div>
+      <div class="album-title">${escapeHtml(entry.title)}${noteHtml}</div>
       <div class="album-artist">${escapeHtml(entry.artist || '')}</div>
       ${showMustHear ? '<span class="must-hear">' + t('content.mustHear') + '</span>' : ''}
     </div>
     <div class="album-meta">
-      ${tags ? '<div class="album-tags">' + tags + '</div>' : ''}
-      ${trackCount > 0 ? '<span class="track-count" title="' + t('content.trackTooltip') + '">' + trackCount + t('content.trackUnit') + '</span>' : ''}
+      ${tagsBlock}
+      ${trackHtml}
       <span class="album-date">${escapeHtml(entry.date || '')}</span>
       <span class="score-badge ${scoreClass}">${scoreText}</span>
       ${hasReview ? '<span class="review-indicator" title="' + t('content.reviewTooltip') + '"></span>' : ''}
@@ -460,10 +473,7 @@ function renderAlbumCard(entry, idx, sectionId, groupId, groupName, visible) {
 function renderAotyCard(entry, sectionId, groupId, visible, groupName) {
   const hiddenClass = visible ? '' : 'hidden';
   const scoreText = entry.score != null ? entry.score + '/100' : '—';
-  const noteText = entry.scoreNote && entry.scoreNote !== 'NR' ? ` (${entry.scoreNote})` : '';
-  const tags = (entry.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('');
-  const hasReview = entry.review && entry.review.trim().length > 0;
-  const trackCount = entry.tracks && entry.tracks.length > 0 ? entry.tracks.length : 0;
+  const { noteHtml, tagsBlock, trackHtml } = buildCardMeta(entry);
   const reviewHtml = entry.review ? `<div class="aoty-review" id="review-${escapeHtml(entry.id)}">${escapeHtml(entry.review)}</div>
     <button class="aoty-review-toggle" data-action="toggle-review" data-entry-id="${escapeHtml(entry.id)}">${t('content.showMore')}</button>` : '';
 
@@ -472,14 +482,14 @@ function renderAotyCard(entry, sectionId, groupId, visible, groupName) {
       <div style="flex:1;min-width:0">
         <div class="aoty-header">
           <span class="aoty-badge${groupName === 'Singles' ? ' soty' : ''}">${groupName === 'Singles' ? 'SOTY' : 'AOTY'}</span>
-          <span class="aoty-title">${escapeHtml(entry.title)}${noteText ? ' <span style="font-size:12px;color:var(--text-tertiary)">' + escapeHtml(noteText) + '</span>' : ''}</span>
+          <span class="aoty-title">${escapeHtml(entry.title)}${noteHtml}</span>
         </div>
         <div class="aoty-artist">${escapeHtml(entry.artist || '')}</div>
         ${reviewHtml}
       </div>
       <div class="album-meta">
-        ${tags ? '<div class="album-tags">' + tags + '</div>' : ''}
-        ${trackCount > 0 ? '<span class="track-count" title="' + t('content.trackTooltip') + '">' + trackCount + t('content.trackUnit') + '</span>' : ''}
+        ${tagsBlock}
+        ${trackHtml}
         <span class="aoty-score">${scoreText}</span>
       </div>
     </div>
