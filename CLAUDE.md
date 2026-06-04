@@ -30,7 +30,8 @@ npm run tauri build              # 构建 MSI 安装包
 ├── css/
 │   ├── base.css           # CSS 变量、Reset、主题（亮/暗/毛玻璃），含 --tag-bg 变量
 │   ├── layout.css         # 侧边栏、工具栏、下拉菜单布局
-│   └── components.css     # 卡片、弹窗、标签、按钮、动画
+│   ├── components.css     # 卡片、弹窗、标签、按钮、动画
+│   └── macos.css          # 桌面版专属样式（[data-desktop="true"]，UI 放大 20%）
 ├── js/
 │   ├── state.js           # 全局状态（currentFilter 为数组，支持多选）
 │   ├── i18n.js            # 中英文翻译字典、t() 函数
@@ -77,12 +78,16 @@ npm run tauri build              # 构建 MSI 安装包
 
 **桌面版（Tauri v2）**：
 - 前端通过 `window.__TAURI__` 检测桌面环境，`app.js` 末尾的 `initTauriDesktop()` 自动激活桌面功能
+- `css/macos.css` 通过 `[data-desktop="true"]` 选择器提供桌面版专属样式（UI 放大 20%），不影响网页版
 - 菜单栏事件通过 `tauriEvent.listen('menu-action')` 接收，映射到前端函数
 - 导出使用 `window.open(blobUrl)` 机制（WebView2 兼容）
 - 快捷键：Ctrl+S 导出、Ctrl+D 主题、Ctrl+G 风格、Ctrl+O 导入、Ctrl+K 搜索、Ctrl+N 新建、Ctrl+T 置顶、F11 全屏
 - 系统托盘：左键显示/隐藏窗口，右键菜单（显示/置顶/主题/退出）
+- **点击 X 最小化到系统托盘**（不退出），通过 `on_window_event` 拦截 `CloseRequested` 并 `api.prevent_close()` + `win.hide()`
+- **单实例模式**：`tauri-plugin-single-instance` 确保只有一个窗口运行，第二次启动聚焦已有窗口
 - 桌面版 localStorage 域名与网页版隔离，需单独导入一次数据
 - `build-frontend.js` 构建时将 index.html/css/js/data.json 复制到 dist/，Tauri 打包进二进制
+- Tauri 插件：dialog、fs、global-shortcut、shell、single-instance
 
 **渲染与筛选分离**：`renderContent()` 重建 DOM 时同步应用筛选（通过 `matchesFilter(entry)` 传入 `visible`），并维护 `allCards` 缓存和 `searchResults` 数组。`applyFilters()` 仅切换 `hidden` 类，不触发 DOM 重建。`rebuildCardCache()` 仅在 DOM 重建后调用。
 
@@ -107,7 +112,7 @@ npm run tauri build              # 构建 MSI 安装包
 
 **筛选系统**：`currentFilter` 为数组，支持多选标签。分数筛选支持 100、90+、80+、70+、60+、50+、<50、NR、AOTY（同时匹配 `isAoty` 和 `isSoty`）。标签下拉多选（选择后保持展开），分数下拉单选（选择后关闭）。
 
-**搜索导航**：搜索时自动滚动到第一个结果并高亮蓝色描边，右下角"下一个"按钮循环跳转搜索结果。搜索使用 200ms debounce。
+**搜索导航**：搜索时自动滚动到第一个结果并高亮蓝色描边，右下角"下一个"按钮循环跳转搜索结果。搜索使用 200ms debounce。搜索字段包括 title、artist、scoreNote、notes、review。
 
 **Entry 索引**：`buildEntryIndex()` 构建 `Map<id, entry>` 实现 O(1) 查找。
 

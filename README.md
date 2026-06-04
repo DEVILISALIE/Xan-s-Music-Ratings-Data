@@ -18,7 +18,7 @@
 
 ### 搜索
 
-- 工具栏搜索框实时搜索标题和艺术家（200ms debounce）
+- 工具栏搜索框实时搜索标题、艺术家、分数备注、笔记、乐评（200ms debounce）
 - 搜索时自动滚动到第一个结果并蓝色描边高亮
 - 右下角"下一个"按钮循环跳转所有搜索结果
 
@@ -95,6 +95,56 @@ node gen.js path/to/your/file.txt
 浏览器中的所有编辑操作自动保存到 localStorage，无需服务器。
 
 ---
+
+## 桌面版（v1.0.1）
+
+基于 [Tauri v2](https://v2.tauri.app/)（Rust + WebView2）构建的 Windows 原生应用，共享同一套前端代码。
+
+### 下载安装
+
+前往 [Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 `Xan's Music Ratings_1.0.1_x64_en-US.msi`，双击安装即可。
+
+### 桌面版专属功能
+
+- **系统托盘** — 点击窗口 X 按钮最小化到系统托盘（任务栏仍在），点击托盘图标恢复窗口；右键菜单支持显示/置顶/主题切换/退出
+- **单实例模式** — 第二次点击 exe 只会聚焦已有窗口，不会打开多个实例
+- **菜单栏** — 文件（导入/导出/退出）、视图（主题/风格/新建/搜索/置顶/全屏）、帮助（关于）
+- **全局快捷键** — `Ctrl+S` 导出、`Ctrl+O` 导入、`Ctrl+D` 主题、`Ctrl+G` 风格、`Ctrl+K` 搜索、`Ctrl+N` 新建、`Ctrl+T` 置顶、`F11` 全屏
+- **UI 放大** — 桌面版侧边栏、工具栏、弹窗、AOTY 卡片等 UI 元素等比放大 20%，适配大屏显示器
+- **独立样式** — 通过 `css/macos.css` 提供桌面版专属样式，通过 `[data-desktop="true"]` 选择器限定，不影响网页版
+
+### 构建
+
+```bash
+# 安装依赖
+npm install
+
+# 开发模式（热重载）
+npm run tauri dev
+
+# 构建 MSI 安装包
+npm run tauri build
+# 输出：src-tauri/target/release/bundle/msi/
+```
+
+### 桌面版架构
+
+```
+├── css/macos.css           # 桌面版专属样式（[data-desktop="true"]）
+├── build-frontend.js       # 构建时复制前端资源到 dist/
+├── dev-server.js           # 开发模式本地 HTTP 服务器
+├── dev-server.vbs          # VBScript 隐藏窗口启动开发服务器
+└── src-tauri/
+    ├── Cargo.toml          # Rust 依赖（tauri + 插件）
+    ├── tauri.conf.json     # 窗口大小、打包配置、插件声明
+    ├── capabilities/
+    │   └── default.json    # Tauri v2 权限（dialog/fs/shell/shortcut）
+    ├── icons/              # 应用图标
+    └── src/
+        └── main.rs         # 菜单栏、系统托盘、单实例、窗口管理
+```
+
+**Tauri 插件**：dialog（文件对话框）、fs（文件系统）、global-shortcut（全局快捷键）、shell（命令执行）、single-instance（单实例）
 
 ## txt 源文件格式
 
@@ -199,7 +249,8 @@ Vol. 1 - 2025
 ├── css/
 │   ├── base.css           # CSS 变量、Reset、亮/暗/毛玻璃主题
 │   ├── layout.css         # 侧边栏、工具栏、下拉菜单布局
-│   └── components.css     # 卡片、弹窗、标签、按钮、拖拽占位符、动画
+│   ├── components.css     # 卡片、弹窗、标签、按钮、拖拽占位符、动画
+│   └── macos.css          # 桌面版专属样式（[data-desktop="true"]）
 ├── js/
 │   ├── state.js           # 全局状态变量
 │   ├── i18n.js            # 中英文翻译字典、t() 函数
@@ -208,11 +259,20 @@ Vol. 1 - 2025
 │   ├── modal.js           # 编辑弹窗、音轨评分
 │   ├── render.js          # 侧边栏 + 内容区渲染、HTML 缓存
 │   ├── drag.js            # 拖拽排序（Pointer Events + FLIP 动画）
-│   └── app.js             # 初始化、事件委托、主题切换、localStorage 持久化、导入导出
+│   └── app.js             # 初始化、事件委托、主题切换、localStorage 持久化、Tauri 桌面版适配
 ├── gen.js                 # txt → JSON 解析器，嵌入数据到 index.html
-├── data.json              # gen.js 生成的 JSON 备份
-├── README.md              # 项目说明
-└── CLAUDE.md              # Claude Code 开发指南
+├── build-frontend.js      # Tauri 构建时复制前端资源到 dist/
+├── dev-server.js          # Tauri 开发模式本地 HTTP 服务器
+├── dev-server.vbs         # VBScript 隐藏窗口启动开发服务器
+├── package.json           # Tauri CLI 和插件依赖
+├── src-tauri/             # Tauri 桌面版（Rust 后端）
+│   ├── Cargo.toml
+│   ├── tauri.conf.json
+│   ├── capabilities/default.json
+│   ├── icons/
+│   └── src/main.rs
+├── README.md
+└── CLAUDE.md
 ```
 
 JS 加载顺序：`state.js` → `i18n.js` → `utils.js` → `filter.js` → `modal.js` → `render.js` → `drag.js` → `app.js`
