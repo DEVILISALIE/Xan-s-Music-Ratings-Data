@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="css/base.css">
 <link rel="stylesheet" href="css/layout.css">
 <link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/macos.css" media="screen">
 </head>
 <body>
 <div id="dialogContainer"></div>
@@ -85,7 +86,7 @@
         <span class="toolbar-stats-sep">·</span>
         <span id="singleCount"></span>
       </span>
-      <button class="theme-toggle" id="batchToggleBtn" data-action="toggle-batch" title="Batch Select">☑</button>
+      <button class="theme-toggle" id="batchToggleBtn" data-action="toggle-batch">✓</button>
       <button class="theme-toggle" id="langToggle" data-action="toggle-lang" aria-label="Switch language">🌐</button>
       <button class="theme-toggle" id="styleToggle" data-action="toggle-style" aria-label="Toggle glassmorphism" title="毛玻璃风格">💎</button>
       <button class="theme-toggle" id="themeToggle" data-action="toggle-theme" aria-label="Toggle dark mode">🌙</button>
@@ -95,6 +96,7 @@
 </div>
 
 <!-- FAB -->
+<button class="fab-search-next fab-search-prev" id="searchPrevBtn" data-action="go-prev" style="display:none">↑</button>
 <button class="fab-search-next" id="searchNextBtn" data-action="go-next" style="display:none">↓</button>
 <button class="fab" data-action="add-album">+</button>
 

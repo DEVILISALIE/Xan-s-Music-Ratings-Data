@@ -1,5 +1,6 @@
 # 生成的文件
 data.json
+dist/
 
 # 源数据文件（可能包含个人数据）
 *.txt
@@ -18,6 +19,9 @@ Desktop.ini
 # Node.js
 node_modules/
 npm-debug.log*
+
+# Tauri 构建产物
+src-tauri/target/
 
 # 临时文件
 *.tmp

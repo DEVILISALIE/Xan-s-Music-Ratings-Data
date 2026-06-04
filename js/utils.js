@@ -101,10 +101,11 @@ function populateSectionSelector(selectedEntryId) {
 
       if (selectedEntryId && group && group.entries.some(e => e.id === selectedEntryId)) {
         currentValue = val;
-      } else if (!selectedEntryId && isFirstOption) {
+      } else if (!selectedEntryId && isFirstOption && !window.__TAURI__) {
         currentValue = val;
         isFirstOption = false;
       }
+      if (!selectedEntryId) isFirstOption = false;
     }
   }
 

@@ -113,6 +113,11 @@ function saveEntry() {
   const title = document.getElementById('editTitle').value.trim();
   if (!title) return;
 
+  if (!selectedSectionValue) {
+    showAlert(t('modal.validation.selectSection'));
+    return;
+  }
+
   const scoreVal = document.getElementById('editScore').value;
   const score = scoreVal !== '' ? parseInt(scoreVal) : null;
   const tags = [];

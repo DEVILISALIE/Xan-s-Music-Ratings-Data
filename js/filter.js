@@ -41,7 +41,10 @@ function matchesFilter(entry) {
     const q = searchQuery.toLowerCase();
     const title = (entry.title || '').toLowerCase();
     const artist = (entry.artist || '').toLowerCase();
-    if (!title.includes(q) && !artist.includes(q)) return false;
+    const scoreNote = (entry.scoreNote || '').toLowerCase();
+    const notes = (entry.notes || '').toLowerCase();
+    const review = (entry.review || '').toLowerCase();
+    if (!title.includes(q) && !artist.includes(q) && !scoreNote.includes(q) && !notes.includes(q) && !review.includes(q)) return false;
   }
 
   return true;
@@ -60,16 +63,18 @@ function applyFilters() {
 
   // 搜索时显示"下一个"按钮并定位到第一个结果
   const nextBtn = document.getElementById('searchNextBtn');
+  const prevBtn = document.getElementById('searchPrevBtn');
   if (searchQuery && searchResults.length > 0) {
     nextBtn.style.display = 'flex';
+    prevBtn.style.display = 'flex';
     searchIndex = 0;
     highlightSearchResult(0);
     searchResults[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-    // 同步侧边栏高亮
     var grp = searchResults[0].dataset.group;
     if (grp) activateNavItem(grp);
   } else {
     nextBtn.style.display = 'none';
+    prevBtn.style.display = 'none';
     clearSearchHighlight();
     searchIndex = -1;
   }
@@ -82,7 +87,15 @@ function goToNextResult() {
   searchIndex = (searchIndex + 1) % searchResults.length;
   highlightSearchResult(searchIndex);
   searchResults[searchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
-  // 同步侧边栏高亮
+  var grp = searchResults[searchIndex].dataset.group;
+  if (grp) activateNavItem(grp);
+}
+
+function goToPrevResult() {
+  if (searchResults.length === 0) return;
+  searchIndex = (searchIndex - 1 + searchResults.length) % searchResults.length;
+  highlightSearchResult(searchIndex);
+  searchResults[searchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
   var grp = searchResults[searchIndex].dataset.group;
   if (grp) activateNavItem(grp);
 }

@@ -10,11 +10,17 @@
 
 通过 `node gen.js` 从 txt 源文件生成数据嵌入到 index.html。Vol sections 自动合并到对应年份。
 
+桌面版基于 Tauri v2（Rust + WebView2），Windows 专用，提供菜单栏、系统托盘、全局快捷键。桌面版与网页版完全独立，共享同一套前端代码。
+
 ## 常用命令
 
 ```bash
 node gen.js                      # 自动查找根目录下的 txt 文件
 node gen.js path/to/file.txt     # 指定文件路径
+
+# 桌面版
+npm run tauri dev                # 开发模式（自动启动本地服务器）
+npm run tauri build              # 构建 MSI 安装包
 ```
 
 ## 架构
@@ -33,8 +39,21 @@ node gen.js path/to/file.txt     # 指定文件路径
 │   ├── modal.js           # 编辑弹窗、音轨评分
 │   ├── render.js          # 侧边栏 + 内容区渲染、HTML 缓存
 │   ├── drag.js            # 拖拽排序（Pointer Events + FLIP 动画）
-│   └── app.js             # 初始化、事件委托、主题切换、localStorage 持久化
-└── gen.js                 # txt → JSON 解析器，嵌入数据到 index.html
+│   └── app.js             # 初始化、事件委托、主题切换、localStorage 持久化、Tauri 桌面版适配
+├── gen.js                 # txt → JSON 解析器，嵌入数据到 index.html
+├── dev-server.js          # Tauri 开发模式本地 HTTP 服务器
+├── build-frontend.js      # Tauri 构建时复制前端资源到 dist/
+├── dev-server.vbs         # VBScript 隐藏窗口启动开发服务器
+├── package.json           # Tauri CLI 和插件依赖
+└── src-tauri/             # Tauri 桌面版（Rust 后端）
+    ├── Cargo.toml         # Rust 依赖
+    ├── tauri.conf.json    # 窗口、打包、插件配置
+    ├── build.rs           # 构建脚本
+    ├── capabilities/
+    │   └── default.json   # Tauri v2 权限声明（dialog/fs/shell/shortcut）
+    ├── icons/             # 应用图标（32x32/128x128/256x256/ico）
+    └── src/
+        └── main.rs        # 菜单栏、系统托盘、全局快捷键、窗口管理
 ```
 
 **JS 加载顺序**：`state.js` → `i18n.js` → `utils.js` → `filter.js` → `modal.js` → `render.js` → `drag.js` → `app.js`
@@ -53,6 +72,17 @@ node gen.js path/to/file.txt     # 指定文件路径
 ## 关键技术细节
 
 **数据流**：优先级为 localStorage > `__MUSIC_DATA__` > `data.json`。`ensureDefaultGroups()` 在数据加载后和导入后调用，确保每个 section 都有 Albums/Singles 两个分组。`migrateVolSections()` 自动合并旧版 vol sections。
+
+**数据保护机制**：`saveData()` 内置安全检查——如果 `appData` 不含真实数据（所有 sections 无 entry），且 localStorage 中已有真实数据，则**拒绝保存**并打印警告。`loadData()` 校验数据结构完整性（必须有 `sections` 数组），异常数据被忽略。`init()` 中只有 fallback 数据源包含真实数据时才写入 localStorage，防止空数据覆盖。
+
+**桌面版（Tauri v2）**：
+- 前端通过 `window.__TAURI__` 检测桌面环境，`app.js` 末尾的 `initTauriDesktop()` 自动激活桌面功能
+- 菜单栏事件通过 `tauriEvent.listen('menu-action')` 接收，映射到前端函数
+- 导出使用 `window.open(blobUrl)` 机制（WebView2 兼容）
+- 快捷键：Ctrl+S 导出、Ctrl+D 主题、Ctrl+G 风格、Ctrl+O 导入、Ctrl+K 搜索、Ctrl+N 新建、Ctrl+T 置顶、F11 全屏
+- 系统托盘：左键显示/隐藏窗口，右键菜单（显示/置顶/主题/退出）
+- 桌面版 localStorage 域名与网页版隔离，需单独导入一次数据
+- `build-frontend.js` 构建时将 index.html/css/js/data.json 复制到 dist/，Tauri 打包进二进制
 
 **渲染与筛选分离**：`renderContent()` 重建 DOM 时同步应用筛选（通过 `matchesFilter(entry)` 传入 `visible`），并维护 `allCards` 缓存和 `searchResults` 数组。`applyFilters()` 仅切换 `hidden` 类，不触发 DOM 重建。`rebuildCardCache()` 仅在 DOM 重建后调用。
 

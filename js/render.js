@@ -334,7 +334,8 @@ function renderContent() {
   const mergedSections = getMergedSections();
   for (const section of mergedSections) {
     html += `<div class="section" id="section-${escapeHtml(section.id)}">`;
-    html += `<h2 class="section-title">${escapeHtml(section.title)}</h2>`;
+    const sectionYear = (section.title || '').match(/^\d{4}/)?.[0] || section.title;
+    html += `<h2 class="section-title">${escapeHtml(sectionYear)}</h2>`;
 
     // 动态重组：AOTY 条目(isAoty)归入 Albums 顶部，SOTY 条目(isSoty)归入 Singles 顶部
     const aotyAlbumEntries = [];
@@ -423,12 +424,15 @@ function renderContent() {
 
   // 搜索状态下更新导航按钮
   const nextBtn = document.getElementById('searchNextBtn');
+  const prevBtn = document.getElementById('searchPrevBtn');
   if (searchQuery && searchResults.length > 0) {
     nextBtn.style.display = 'flex';
+    prevBtn.style.display = 'flex';
     searchIndex = 0;
     highlightSearchResult(0);
   } else {
     nextBtn.style.display = 'none';
+    prevBtn.style.display = 'none';
     clearSearchHighlight();
     searchIndex = -1;
   }
@@ -475,7 +479,7 @@ function renderAlbumCard(entry, idx, sectionId, groupId, groupName, visible) {
 
 function renderAotyCard(entry, sectionId, groupId, visible, groupName) {
   const hiddenClass = visible ? '' : 'hidden';
-  const scoreText = entry.score != null ? entry.score + '/100' : '—';
+  const scoreText = entry.score != null ? entry.score : (entry.scoreNote === 'NR' ? 'NR' : '—');
   const { noteHtml, tagsBlock, trackHtml } = buildCardMeta(entry);
   const reviewHtml = entry.review ? `<div class="aoty-review" id="review-${escapeHtml(entry.id)}">${escapeHtml(entry.review)}</div>
     <button class="aoty-review-toggle" data-action="toggle-review" data-entry-id="${escapeHtml(entry.id)}">${t('content.showMore')}</button>` : '';
@@ -496,6 +500,7 @@ function renderAotyCard(entry, sectionId, groupId, visible, groupName) {
       <div class="album-meta">
         ${tagsBlock}
         ${trackHtml}
+        <span class="aoty-date">${escapeHtml(entry.date || '')}</span>
         <span class="aoty-score">${scoreText}</span>
       </div>
     </div>

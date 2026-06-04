@@ -53,9 +53,10 @@ const I18N = {
     'modal.placeholder.track': 'Track name…',
     'modal.placeholder.review': 'Write your review here…',
     'modal.placeholder.select': 'Select…',
+    'modal.validation.selectSection': 'Please select a section first',
 
     // Dynamic content
-    'content.sectionTitle': '{year} Albums/Mixtapes, etc. Ratings',
+    'content.sectionTitle': '{year}',
     'content.showMore': 'Show more',
     'content.showLess': 'Show less',
     'content.mustHear': '★Must Hear Album',
@@ -88,9 +89,11 @@ const I18N = {
     'dialog.invalidJsonGeneric': 'Invalid JSON file',
     'dialog.invalidYear': 'Please enter a valid 4-digit year',
     'dialog.yearExists': '{year} already exists',
+    'dialog.exportSuccess': 'Export successful',
 
     // Batch operations
     'batch.select': 'Select',
+    'batch.toggleTooltip': 'Batch Select',
     'batch.cancel': 'Cancel',
     'batch.selected': '{count} selected',
     'batch.delete': 'Delete',
@@ -169,9 +172,10 @@ const I18N = {
     'modal.placeholder.track': '曲目名称…',
     'modal.placeholder.review': '在此写你的乐评…',
     'modal.placeholder.select': '选择…',
+    'modal.validation.selectSection': '请先选择年份分区',
 
     // Dynamic content
-    'content.sectionTitle': '{year} 年专辑/混合带/等 评分',
+    'content.sectionTitle': '{year}',
     'content.showMore': '展开更多',
     'content.showLess': '收起',
     'content.mustHear': '★必听专辑',
@@ -204,9 +208,11 @@ const I18N = {
     'dialog.invalidJsonGeneric': '无效的 JSON 文件',
     'dialog.invalidYear': '请输入有效的 4 位年份',
     'dialog.yearExists': '{year} 年已存在',
+    'dialog.exportSuccess': '导出成功',
 
     // 批量操作
     'batch.select': '选择',
+    'batch.toggleTooltip': '多选',
     'batch.cancel': '取消',
     'batch.selected': '已选 {count} 项',
     'batch.delete': '删除',
@@ -263,6 +269,7 @@ function applyLang() {
   document.documentElement.setAttribute('data-lang', currentLang);
   applyI18nToDOM();
   document.getElementById('langToggle').title = t('tooltip.lang');
+  document.getElementById('batchToggleBtn').title = t('batch.toggleTooltip');
 }
 
 function toggleLang() {

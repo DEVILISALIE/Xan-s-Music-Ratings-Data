@@ -1,10 +1,23 @@
 // ===== 数据持久化 =====
 
+// 检查数据是否包含实际内容（至少有一个 entry）
+function hasRealData(data) {
+  if (!data || !Array.isArray(data.sections)) return false;
+  return data.sections.some(s => Array.isArray(s.groups) && s.groups.some(g => Array.isArray(g.entries) && g.entries.length > 0));
+}
+
 function saveData() {
+  // 安全检查：拒绝保存空数据到已有数据的 localStorage
+  if (!hasRealData(appData)) {
+    const existing = localStorage.getItem('musicData');
+    if (existing && hasRealData(JSON.parse(existing))) {
+      console.warn('安全保护：阻止空数据覆盖已有数据');
+      return;
+    }
+  }
   try {
     const json = JSON.stringify(appData);
     localStorage.setItem('musicData', json);
-    // 容量监控：超过 4MB 时警告
     if (json.length > 4 * 1024 * 1024) {
       console.warn('localStorage 数据量较大 (' + (json.length / 1024 / 1024).toFixed(1) + 'MB)，接近浏览器存储上限');
     }
@@ -21,7 +34,12 @@ function loadData() {
   const saved = localStorage.getItem('musicData');
   if (saved) {
     try {
-      return JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      // 校验数据结构完整性
+      if (parsed && Array.isArray(parsed.sections)) {
+        return parsed;
+      }
+      console.warn('localStorage 数据结构异常，已忽略');
     } catch (e) {
       console.error('Failed to parse saved data:', e);
     }
@@ -48,15 +66,26 @@ async function init() {
     const savedData = loadData();
     if (savedData) {
       appData = savedData;
-    } else if (__MUSIC_DATA__) {
+    } else if (__MUSIC_DATA__ && __MUSIC_DATA__.sections && __MUSIC_DATA__.sections.length > 0) {
       appData = __MUSIC_DATA__;
+      saveData();
     } else {
       const resp = await fetch('data.json');
-      appData = await resp.json();
+      const fetched = await resp.json();
+      if (fetched && fetched.sections && fetched.sections.length > 0) {
+        appData = fetched;
+        saveData();
+      } else if (savedData) {
+        // localStorage 有数据就用，即使 fallback 是空的
+        appData = savedData;
+      } else {
+        appData = { meta: { title: "Xan's Music Ratings", lastUpdated: new Date().toISOString().slice(0, 10) }, sections: [] };
+      }
     }
     if (migrateVolSections()) saveData();
     ensureDefaultGroups();
-    saveData();
+    // 只有 localStorage 原本有数据时才回写，防止空数据覆盖
+    if (loadData()) saveData();
   } catch (e) {
     document.getElementById('contentArea').innerHTML =
       '<div style="padding:40px;text-align:center;color:var(--text-secondary)">' +
@@ -90,6 +119,7 @@ function bindStaticButtons() {
   document.getElementById('styleToggle').addEventListener('click', toggleStyle);
   document.getElementById('themeToggle').addEventListener('click', toggleTheme);
   document.getElementById('searchNextBtn').addEventListener('click', goToNextResult);
+  document.getElementById('searchPrevBtn').addEventListener('click', goToPrevResult);
   document.querySelector('[data-action="add-album"]').addEventListener('click', openAddModal);
   document.querySelector('[data-action="add-track"]').addEventListener('click', addTrack);
   document.querySelector('[data-action="modal-cancel"]').addEventListener('click', closeModal);
@@ -457,6 +487,7 @@ function toggleBatchMode() {
   const contentArea = document.getElementById('contentArea');
   const fab = document.querySelector('.fab');
   const searchNextBtn = document.getElementById('searchNextBtn');
+  const searchPrevBtn = document.getElementById('searchPrevBtn');
 
   toggleBtn.classList.toggle('active', batchMode);
   batchBar.classList.toggle('active', batchMode);
@@ -465,6 +496,7 @@ function toggleBatchMode() {
   // 隐藏 FAB 按钮
   if (fab) fab.style.display = batchMode ? 'none' : 'flex';
   if (searchNextBtn) searchNextBtn.style.display = 'none';
+  if (searchPrevBtn) searchPrevBtn.style.display = 'none';
 
   // 清除搜索高亮
   clearSearchHighlight();
@@ -731,6 +763,11 @@ document.addEventListener('keydown', (e) => {
 // ===== 导出 / 导入 =====
 
 function exportJSON() {
+  // 桌面端优先使用 Tauri 原生保存对话框
+  if (window.__TAURI_PLUGIN_DIALOG__ && window.__TAURI_PLUGIN_FS__) {
+    exportDesktopNative();
+    return;
+  }
   const blob = new Blob([JSON.stringify(appData, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -738,6 +775,23 @@ function exportJSON() {
   a.download = 'music-ratings.json';
   a.click();
   URL.revokeObjectURL(url);
+}
+
+async function exportDesktopNative() {
+  try {
+    const { save } = window.__TAURI_PLUGIN_DIALOG__;
+    const { writeTextFile } = window.__TAURI_PLUGIN_FS__;
+    const filePath = await save({
+      defaultPath: 'music-ratings.json',
+      filters: [{ name: 'JSON', extensions: ['json'] }]
+    });
+    if (!filePath) return;
+    await writeTextFile(filePath, JSON.stringify(appData, null, 2));
+    showAlert(t('dialog.exportSuccess') || '导出成功');
+  } catch (err) {
+    console.error('导出失败:', err);
+    showAlert('导出失败: ' + err);
+  }
 }
 
 function importJSON() {
@@ -800,3 +854,33 @@ function handleImport(e) {
 // ===== 启动 =====
 
 init();
+
+// ===== Tauri 桌面版适配 =====
+
+(async function initTauriDesktop() {
+  if (!window.__TAURI__) return;
+
+  // 激活 macOS 桌面端样式
+  document.documentElement.setAttribute('data-desktop', 'true');
+
+  const tauriEvent = window.__TAURI__.event;
+
+  // 监听菜单/托盘事件
+  tauriEvent?.listen('menu-action', ({ payload }) => {
+    switch (payload) {
+      case 'import': importJSON(); break;
+      case 'export': exportDesktopNative(); break;
+      case 'toggle-theme': toggleTheme(); break;
+      case 'toggle-style': toggleStyle(); break;
+      case 'new-album': openAddModal(); break;
+      case 'focus-search':
+        document.getElementById('searchInput').focus();
+        break;
+      case 'about':
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.0.0");
+        break;
+    }
+  });
+
+  console.log('[Tauri] 桌面版功能已加载');
+})();
