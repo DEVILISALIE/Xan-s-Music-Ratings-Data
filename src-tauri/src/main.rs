@@ -202,6 +202,13 @@ fn main() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            // 第二次启动时，显示并聚焦已有窗口
+            if let Some(win) = app.get_webview_window("main") {
+                let _ = win.show();
+                let _ = win.set_focus();
+            }
+        }))
         .setup(|app| {
             let menu = build_menu(app.handle());
             app.set_menu(menu)?;
@@ -213,6 +220,17 @@ fn main() {
             if let Some(win) = app.get_webview_window("main") {
                 let _ = win.show();
                 let _ = win.set_focus();
+
+                // 点击 X 只隐藏窗口，不退出应用
+                let app_handle = app.handle().clone();
+                win.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        api.prevent_close();
+                        if let Some(win) = app_handle.get_webview_window("main") {
+                            let _ = win.hide();
+                        }
+                    }
+                });
             }
 
             Ok(())

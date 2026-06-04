@@ -302,8 +302,28 @@
 }
 
 /* ===== macOS Must Hear ===== */
+[data-desktop="true"] #mustHearSelect::after {
+  display: none !important;
+}
+
+[data-desktop="true"] #mustHearTrigger::after {
+  display: none !important;
+}
+
 [data-desktop="true"] #mustHearTrigger {
-  padding: 5px 12px;
+  padding: 7px 16px;
+  border-radius: 8px;
+  font-size: 16px;
+  border: 0.5px solid transparent;
+  background: var(--input-bg);
+  transition: background 0.12s, border-color 0.12s;
+  width: auto;
+  min-width: 0;
+  text-align: left;
+}
+
+[data-desktop="true"] #mustHearTrigger:hover {
+  background: var(--hover-bg);
 }
 
 [data-desktop="true"] .must-hear-popover {
