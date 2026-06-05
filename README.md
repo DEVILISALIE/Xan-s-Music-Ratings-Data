@@ -98,16 +98,17 @@ node gen.js path/to/your/file.txt
 
 ---
 
-## 桌面版（v1.0.1）
+## 桌面版（v1.1.0）
 
 基于 [Tauri v2](https://v2.tauri.app/)（Rust + WebView2）构建的 Windows 原生应用，共享同一套前端代码。
 
 ### 下载安装
 
-前往 [Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 `Xan's Music Ratings_1.0.1_x64_en-US.msi`，双击安装即可。
+前往 [Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 `Xan's Music Ratings_1.1.0_x64_en-US.msi`，双击安装即可。
 
 ### 桌面版专属功能
 
+- **磁盘持久化** — 数据自动保存到 AppData，每次写入前备份 `.bak` 文件，写入后校验完整性，重启不丢失任何编辑
 - **系统托盘** — 点击窗口 X 按钮最小化到系统托盘（任务栏仍在），点击托盘图标恢复窗口；右键菜单支持显示/置顶/主题切换/退出
 - **单实例模式** — 第二次点击 exe 只会聚焦已有窗口，不会打开多个实例
 - **菜单栏** — 文件（导入/导出/退出）、视图（主题/风格/新建/搜索/置顶/全屏）、帮助（关于）
