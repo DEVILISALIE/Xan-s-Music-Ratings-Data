@@ -6,7 +6,39 @@ function hasRealData(data) {
   return data.sections.some(s => Array.isArray(s.groups) && s.groups.some(g => Array.isArray(g.entries) && g.entries.length > 0));
 }
 
-function saveData() {
+// 调试：写入日志文件
+function logMsg(msg) {
+  const ts = new Date().toISOString().slice(11, 23);
+  console.log(ts + ' ' + msg);
+  if (window.__TAURI__) {
+    window.__TAURI__.core.invoke('write_log', { msg: ts + ' ' + msg }).catch(() => {});
+  }
+}
+
+// 调试：统计 appData 中的 AOTY 条目数，并写入日志文件
+function debugAotyCount(label) {
+  let count = 0;
+  let total = 0;
+  for (const section of appData.sections) {
+    for (const group of section.groups) {
+      count += group.entries.filter(e => e.isAoty).length;
+      total += group.entries.length;
+    }
+  }
+  const msg = new Date().toISOString().slice(11, 23) + ' [AOTY] ' + label + ': AOTY=' + count + ' Total=' + total;
+  console.log(msg);
+  // 写入日志文件（桌面版）
+  if (window.__TAURI__) {
+    window.__TAURI__.core.invoke('write_log', { msg }).catch(() => {});
+  }
+  return count;
+}
+
+// 防止并发保存
+let _saveInFlight = false;
+let _saveQueued = false;
+
+async function saveData() {
   // 安全检查：拒绝保存空数据到已有数据的 localStorage
   if (!hasRealData(appData)) {
     const existing = localStorage.getItem('musicData');
@@ -15,17 +47,52 @@ function saveData() {
       return;
     }
   }
+  // 防止并发：如果已有保存在进行，标记排队
+  if (_saveInFlight) {
+    _saveQueued = true;
+    return;
+  }
+  _saveInFlight = true;
   try {
     const json = JSON.stringify(appData);
     localStorage.setItem('musicData', json);
     if (json.length > 4 * 1024 * 1024) {
       console.warn('localStorage 数据量较大 (' + (json.length / 1024 / 1024).toFixed(1) + 'MB)，接近浏览器存储上限');
     }
+    // 桌面版：写入磁盘（仅在有真实数据时）
+    if (window.__TAURI__ && hasRealData(appData)) {
+      const totalEntries = appData.sections.reduce((sum, s) =>
+        sum + s.groups.reduce((gs, g) => gs + g.entries.length, 0), 0);
+      const aotyCount = appData.sections.reduce((sum, s) =>
+        sum + s.groups.reduce((gs, g) => gs + g.entries.filter(e => e.isAoty).length, 0), 0);
+      logMsg('[Save] 写入磁盘: entries=' + totalEntries + ' AOTY=' + aotyCount + ' jsonLen=' + json.length);
+      try {
+        await window.__TAURI__.core.invoke('save_data_to_disk', { data: json });
+        // 写入后校验：读回文件大小
+        const diskSize = await window.__TAURI__.core.invoke('get_data_file_size');
+        logMsg('[Disk] 写入完成, 磁盘文件=' + diskSize + '字节');
+        if (diskSize < 200) {
+          logMsg('[Disk] 警告：磁盘文件过小，可能写入失败');
+        }
+      } catch (e) {
+        logMsg('[Disk] 写入失败: ' + e);
+      }
+    } else if (window.__TAURI__) {
+      logMsg('[Save] 跳过磁盘写入: 无真实数据');
+    }
   } catch (e) {
     if (e.name === 'QuotaExceededError' || e.code === 22) {
       showAlert(t('dialog.storageFull'));
     } else {
       console.error('Failed to save data:', e);
+      logMsg('[Save] 异常: ' + e.message);
+    }
+  } finally {
+    _saveInFlight = false;
+    // 如果有排队的保存，执行之
+    if (_saveQueued) {
+      _saveQueued = false;
+      saveData();
     }
   }
 }
@@ -47,6 +114,50 @@ function loadData() {
   return null;
 }
 
+// 桌面版：从磁盘恢复数据（localStorage 为空时调用）
+async function loadDataFromDisk() {
+  if (!window.__TAURI__) {
+    logMsg('[Disk] 非桌面版，跳过');
+    return null;
+  }
+  try {
+    logMsg('[Disk] 开始读取磁盘...');
+    const json = await window.__TAURI__.core.invoke('load_data_from_disk');
+    logMsg('[Disk] 读取结果: ' + (json ? '有数据(' + json.length + '字节)' : '空'));
+    if (json && json.length > 0) {
+      const parsed = JSON.parse(json);
+      if (parsed && Array.isArray(parsed.sections) && parsed.sections.length > 0) {
+        const totalEntries = parsed.sections.reduce((sum, s) =>
+          sum + s.groups.reduce((gs, g) => gs + (g.entries ? g.entries.length : 0), 0), 0);
+        const totalAoty = parsed.sections.reduce((sum, s) =>
+          sum + s.groups.reduce((gs, g) => gs + (g.entries ? g.entries.filter(e => e.isAoty).length : 0), 0), 0);
+        logMsg('[Disk] 恢复成功: ' + totalEntries + ' 条, AOTY: ' + totalAoty);
+        return parsed;
+      }
+      logMsg('[Disk] 数据结构异常或为空，跳过');
+    }
+  } catch (e) {
+    logMsg('[Disk] 读取失败: ' + e);
+  }
+  return null;
+}
+
+// 桌面版：带重试的磁盘数据加载
+async function loadDataFromDiskWithRetry(maxRetries) {
+  maxRetries = maxRetries || 3;
+  // 首次尝试前等待一小段时间，确保 Tauri IPC 完全就绪
+  await new Promise(r => setTimeout(r, 100));
+  for (let i = 0; i < maxRetries; i++) {
+    if (i > 0) {
+      logMsg('[Disk] 重试 #' + i + '...');
+      await new Promise(r => setTimeout(r, 300));
+    }
+    const data = await loadDataFromDisk();
+    if (data) return data;
+  }
+  return null;
+}
+
 // ===== 下拉菜单统一关闭 =====
 
 function closeAllDropdowns() {
@@ -59,33 +170,90 @@ function closeAllDropdowns() {
 // ===== 初始化入口 =====
 
 async function init() {
+  logMsg('[Init] === 应用启动 ===');
+  logMsg('[Init] __TAURI__: ' + !!window.__TAURI__);
   applyLang();
   applyTheme();
 
   try {
-    const savedData = loadData();
-    if (savedData) {
-      appData = savedData;
-    } else if (__MUSIC_DATA__ && __MUSIC_DATA__.sections && __MUSIC_DATA__.sections.length > 0) {
-      appData = __MUSIC_DATA__;
-      saveData();
-    } else {
-      const resp = await fetch('data.json');
-      const fetched = await resp.json();
-      if (fetched && fetched.sections && fetched.sections.length > 0) {
-        appData = fetched;
-        saveData();
-      } else if (savedData) {
-        // localStorage 有数据就用，即使 fallback 是空的
-        appData = savedData;
+    // 桌面版：优先从磁盘加载（最新数据源）
+    if (window.__TAURI__) {
+      logMsg('[Init] 桌面版：优先从磁盘加载');
+      const diskData = await loadDataFromDiskWithRetry(3);
+      if (diskData) {
+        appData = diskData;
+        debugAotyCount('从磁盘加载');
+        // 同步到 localStorage
+        localStorage.setItem('musicData', JSON.stringify(appData));
+        logMsg('[Init] 磁盘数据已同步到 localStorage');
       } else {
-        appData = { meta: { title: "Xan's Music Ratings", lastUpdated: new Date().toISOString().slice(0, 10) }, sections: [] };
+        // 磁盘无数据，尝试 localStorage
+        logMsg('[Init] 磁盘无数据，尝试 localStorage');
+        const savedData = loadData();
+        const hasEntries = savedData && savedData.sections && savedData.sections.some(s =>
+          s.groups && s.groups.some(g => g.entries && g.entries.length > 0));
+        if (hasEntries) {
+          appData = savedData;
+          debugAotyCount('从 localStorage 加载');
+          // localStorage 有数据但磁盘没有，写入磁盘
+          await saveData();
+        } else {
+          // 两者都没有，检查磁盘文件是否存在（可能读取失败）
+          let hasDiskFile = false;
+          try {
+            hasDiskFile = await window.__TAURI__.core.invoke('check_disk_data');
+          } catch (_) {}
+          logMsg('[Init] 磁盘加载失败, hasDiskFile:' + hasDiskFile);
+          if (hasDiskFile) {
+            document.getElementById('contentArea').innerHTML =
+              '<div style="padding:40px;text-align:center;color:var(--text-secondary)">' +
+              '<p style="font-size:18px;margin-bottom:8px">数据加载失败</p>' +
+              '<p>磁盘数据文件存在但无法读取，请尝试重新启动应用</p>' +
+              '<p style="margin-top:12px;font-size:12px;opacity:0.6">AppData/Roaming/com.xan.music-ratings/music-data.json</p>' +
+              '</div>';
+            return;
+          }
+          // 使用内置数据
+          if (__MUSIC_DATA__ && __MUSIC_DATA__.sections && __MUSIC_DATA__.sections.length > 0 &&
+              __MUSIC_DATA__.sections.some(s => s.groups && s.groups.some(g => g.entries && g.entries.length > 0))) {
+            appData = __MUSIC_DATA__;
+            logMsg('[Init] 使用内置数据');
+            await saveData();
+          } else {
+            appData = { meta: { title: "Xan's Music Ratings", lastUpdated: new Date().toISOString().slice(0, 10) }, sections: [] };
+          }
+        }
+      }
+    } else {
+      // 网页版：localStorage 优先
+      const savedData = loadData();
+      const hasEntries = savedData && savedData.sections && savedData.sections.some(s =>
+        s.groups && s.groups.some(g => g.entries && g.entries.length > 0));
+      if (hasEntries) {
+        appData = savedData;
+      } else if (__MUSIC_DATA__ && __MUSIC_DATA__.sections && __MUSIC_DATA__.sections.length > 0) {
+        appData = __MUSIC_DATA__;
+        saveData();
+      } else {
+        const resp = await fetch('data.json');
+        const fetched = await resp.json();
+        if (fetched && fetched.sections && fetched.sections.length > 0) {
+          appData = fetched;
+          saveData();
+        } else {
+          appData = { meta: { title: "Xan's Music Ratings", lastUpdated: new Date().toISOString().slice(0, 10) }, sections: [] };
+        }
       }
     }
-    if (migrateVolSections()) saveData();
+    if (migrateVolSections()) await saveData();
     ensureDefaultGroups();
-    // 只有 localStorage 原本有数据时才回写，防止空数据覆盖
-    if (loadData()) saveData();
+    // 仅在有真实数据时才持久化
+    if (hasRealData(appData)) {
+      await saveData();
+    } else {
+      logMsg('[Init] 警告: appData 无真实数据，跳过保存');
+    }
+    debugAotyCount('init 完成（启动后初始状态）');
   } catch (e) {
     document.getElementById('contentArea').innerHTML =
       '<div style="padding:40px;text-align:center;color:var(--text-secondary)">' +
@@ -581,13 +749,21 @@ async function batchDelete() {
   const confirmed = await showConfirm(t('batch.deleteTitle'), t('batch.deleteMsg', { count: batchSelectedIds.size }));
   if (!confirmed) return;
 
+  debugAotyCount('batchDelete 开始');
+  console.log('[BatchDelete] 删除', batchSelectedIds.size, '个条目');
+
   for (const section of appData.sections) {
     for (const group of section.groups) {
+      const before = group.entries.length;
       group.entries = group.entries.filter(e => !batchSelectedIds.has(e.id));
+      if (group.entries.length !== before) {
+        console.log('[BatchDelete]', section.id, group.name, '从', before, '变为', group.entries.length);
+      }
     }
   }
 
   batchSelectedIds.clear();
+  debugAotyCount('batchDelete 后');
   refreshAll();
   updateBatchBar();
 }
@@ -663,6 +839,9 @@ async function batchMoveToSection(targetSectionId) {
     return;
   }
 
+  debugAotyCount('batchMove 开始');
+  console.log('[BatchMove] 移动', batchSelectedIds.size, '个条目到', targetSectionId);
+
   const targetSection = findOrCreateSection(targetSectionId);
   let targetGroup = targetSection.groups.find(g => g.name === 'Albums');
   if (!targetGroup) {
@@ -676,7 +855,9 @@ async function batchMoveToSection(targetSectionId) {
     for (const group of section.groups) {
       for (let i = group.entries.length - 1; i >= 0; i--) {
         if (batchSelectedIds.has(group.entries[i].id)) {
-          entriesToMove.push(group.entries.splice(i, 1)[0]);
+          const entry = group.entries.splice(i, 1)[0];
+          console.log('[BatchMove] 取出:', entry.title, 'isAoty:', entry.isAoty, 'from', section.id, group.name);
+          entriesToMove.push(entry);
         }
       }
     }
@@ -684,9 +865,12 @@ async function batchMoveToSection(targetSectionId) {
 
   // 添加到目标位置
   targetGroup.entries.push(...entriesToMove);
+  console.log('[BatchMove] 目标组现在有', targetGroup.entries.length, '个条目');
 
   batchSelectedIds.clear();
+  debugAotyCount('batchMove 添加后');
   refreshAll();
+  debugAotyCount('batchMove refreshAll 后');
   updateBatchBar();
   closeBatchDropdowns();
 }
@@ -877,7 +1061,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.0.1");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.1.0");
         break;
     }
   });

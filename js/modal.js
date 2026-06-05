@@ -110,6 +110,7 @@ function updateTrackSummary() {
 }
 
 function saveEntry() {
+  debugAotyCount('saveEntry 开始');
   const title = document.getElementById('editTitle').value.trim();
   if (!title) return;
 
@@ -148,6 +149,7 @@ function saveEntry() {
     const targetGroupName = sel.groupName;
     const mergedId = sel.sectionId;
     const targetSection = findOrCreateSection(mergedId);
+    console.log('[Move] 目标:', mergedId, targetGroupName, '当前条目AOTY:', editingEntry.isAoty);
 
     // 找到 entry 当前所在的原始 section/group，判断是否需要移动
     let moved = false;
@@ -156,6 +158,7 @@ function saveEntry() {
       for (const group of section.groups) {
         if (group.entries.some(e => e.id === editingEntry.id)) {
           if (!(section === targetSection && group.name === targetGroupName)) {
+            console.log('[Move] 从', section.id, group.name, '移动到', mergedId, targetGroupName);
             // 从旧 group 移除
             const idx = group.entries.indexOf(editingEntry);
             if (idx !== -1) group.entries.splice(idx, 1);
@@ -166,11 +169,15 @@ function saveEntry() {
               targetSection.groups.push(targetGroup);
             }
             targetGroup.entries.push(editingEntry);
+            console.log('[Move] 移动后目标组条目数:', targetGroup.entries.length);
           }
           moved = true;
           break;
         }
       }
+    }
+    if (!moved) {
+      console.warn('[Move] 警告：找不到条目', editingEntry.id, '所在的 section/group！');
     }
   } else {
     // Add new
@@ -185,7 +192,9 @@ function saveEntry() {
     group.entries.push(data);
   }
 
+  debugAotyCount('saveEntry 后');
   refreshAll();
+  debugAotyCount('refreshAll 后');
   closeModal();
 }
 
@@ -194,17 +203,22 @@ async function deleteEntry() {
   const confirmed = await showConfirm(t('dialog.deleteEntry'), t('dialog.deleteEntryMsg'));
   if (!confirmed) return;
 
+  debugAotyCount('deleteEntry 开始');
+  console.log('[Delete] 删除:', editingEntry.title, 'isAoty:', editingEntry.isAoty, 'id:', editingEntry.id);
+
   for (const section of appData.sections) {
     for (const group of section.groups) {
       const idx = group.entries.findIndex(e => e.id === editingEntry.id);
       if (idx !== -1) {
         group.entries.splice(idx, 1);
+        debugAotyCount('deleteEntry 移除后');
         refreshAll();
         closeModal();
         return;
       }
     }
   }
+  console.warn('[Delete] 警告：找不到条目', editingEntry.id);
 }
 
 function updateAotyLabel() {

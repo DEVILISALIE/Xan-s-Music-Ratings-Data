@@ -435,13 +435,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 同步 entries 顺序到指定 group
+  // 保留 DOM 中未出现的条目（如 AOTY 卡片被渲染到组顶部，不在普通卡片列表中）
   function syncEntriesOrder(group, finalOrder) {
-    const entryIds = new Set(group.entries.map(e => e.id));
-    const filteredOrder = finalOrder.filter(id => entryIds.has(id));
+    const orderSet = new Set(finalOrder);
     const entryMap = new Map(group.entries.map(e => [e.id, e]));
-    group.entries = filteredOrder
-      .map(id => entryMap.get(id))
-      .filter(e => e !== undefined);
+    // DOM 中有的条目按 DOM 顺序排列
+    const ordered = finalOrder.map(id => entryMap.get(id)).filter(e => e !== undefined);
+    // DOM 中没有的条目（如 AOTY）追加到末尾，保留原有顺序
+    const missing = group.entries.filter(e => !orderSet.has(e.id));
+    group.entries = [...ordered, ...missing];
   }
 
   // ===== 取消拖拽 =====

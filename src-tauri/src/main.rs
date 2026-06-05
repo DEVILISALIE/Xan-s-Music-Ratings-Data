@@ -6,6 +6,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager, WebviewWindow,
 };
+use std::fs;
 
 // 向前端发送菜单动作事件
 fn emit_menu_action(app: &AppHandle, action: &str) {
@@ -196,6 +197,143 @@ fn toggle_fullscreen(app: AppHandle) {
     }
 }
 
+// 获取主文件和备份文件路径
+fn data_file_path(app: &AppHandle) -> Option<std::path::PathBuf> {
+    app.path().app_data_dir().ok().map(|p| p.join("music-data.json"))
+}
+
+fn data_backup_path(app: &AppHandle) -> Option<std::path::PathBuf> {
+    app.path().app_data_dir().ok().map(|p| p.join("music-data.json.bak"))
+}
+
+#[tauri::command]
+fn save_data_to_disk(app: AppHandle, data: String) -> Result<(), String> {
+    // 防护：不允许写入空数据
+    if data.len() < 200 {
+        let _ = write_log(app.clone(), format!("[Rust] 拒绝写入: 数据过小({}字节)", data.len()));
+        return Ok(());
+    }
+    // 验证 JSON 结构
+    if let Ok(parsed) = serde_json::from_str::<serde_json::Value>(&data) {
+        if let Some(sections) = parsed.get("sections") {
+            if let Some(arr) = sections.as_array() {
+                if arr.is_empty() {
+                    let _ = write_log(app.clone(), "[Rust] 拒绝写入: sections 为空".to_string());
+                    return Ok(());
+                }
+            }
+        }
+    }
+    let path = data_file_path(&app).ok_or("无法获取数据目录")?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    // 写入前：如果主文件存在且有效，先备份
+    if path.exists() {
+        if let Ok(meta) = fs::metadata(&path) {
+            if meta.len() > 200 {
+                if let Some(bak_path) = data_backup_path(&app) {
+                    let _ = fs::copy(&path, &bak_path);
+                    let _ = write_log(app.clone(), format!("[Rust] 已备份到 .bak ({}字节)", meta.len()));
+                }
+            }
+        }
+    }
+    fs::write(&path, data).map_err(|e| e.to_string())
+}
+
+// 读取 JSON 文件，返回 (内容, 文件路径描述)
+fn read_json_file(path: &std::path::PathBuf) -> Option<(String, String)> {
+    if !path.exists() {
+        return None;
+    }
+    match fs::read_to_string(path) {
+        Ok(content) => {
+            if content.len() < 50 {
+                return None; // 文件太小，可能是损坏的
+            }
+            Some((content, format!("{:?}", path)))
+        }
+        Err(_) => None
+    }
+}
+
+#[tauri::command]
+fn load_data_from_disk(app: AppHandle) -> Result<String, String> {
+    let path = data_file_path(&app).ok_or("无法获取数据目录")?;
+    let log_msg = format!("读取路径: {:?} 存在: {} ", path, path.exists());
+    if let Ok(meta) = fs::metadata(&path) {
+        let _ = write_log(app.clone(), format!("{}大小: {} 字节", log_msg, meta.len()));
+    } else {
+        let _ = write_log(app.clone(), log_msg);
+    }
+
+    // 尝试读取主文件
+    let result = read_json_file(&path);
+
+    match result {
+        Some((content, src)) => {
+            let _ = write_log(app.clone(), format!("[Rust] 从 {} 读取成功 ({}字节)", src, content.len()));
+            Ok(content)
+        }
+        None => {
+            // 主文件不存在或损坏，尝试备份文件
+            let bak_path = data_backup_path(&app).ok_or("无法获取数据目录")?;
+            let _ = write_log(app.clone(), format!("[Rust] 主文件不可用，尝试 .bak: {:?}", bak_path));
+            match read_json_file(&bak_path) {
+                Some((content, src)) => {
+                    let _ = write_log(app.clone(), format!("[Rust] 从 {} 恢复成功 ({}字节)", src, content.len()));
+                    Ok(content)
+                }
+                None => {
+                    let _ = write_log(app.clone(), "[Rust] 主文件和 .bak 均不可用".to_string());
+                    Ok(String::new())
+                }
+            }
+        }
+    }
+}
+
+// 检查磁盘上是否有数据文件（供 JS 用于判断是否需要加载）
+#[tauri::command]
+fn check_disk_data(app: AppHandle) -> Result<bool, String> {
+    let path = data_file_path(&app).ok_or("无法获取数据目录")?;
+    if path.exists() {
+        if let Ok(meta) = fs::metadata(&path) {
+            return Ok(meta.len() > 200);
+        }
+    }
+    // 也检查备份
+    let bak_path = data_backup_path(&app).ok_or("无法获取数据目录")?;
+    if bak_path.exists() {
+        if let Ok(meta) = fs::metadata(&bak_path) {
+            return Ok(meta.len() > 200);
+        }
+    }
+    Ok(false)
+}
+
+// 返回磁盘数据文件大小（字节），用于写入后校验
+#[tauri::command]
+fn get_data_file_size(app: AppHandle) -> Result<u64, String> {
+    let path = data_file_path(&app).ok_or("无法获取数据目录")?;
+    if path.exists() {
+        fs::metadata(&path).map(|m| m.len()).map_err(|e| e.to_string())
+    } else {
+        Ok(0)
+    }
+}
+
+#[tauri::command]
+fn write_log(app: AppHandle, msg: String) -> Result<(), String> {
+    let dir = app.path().app_data_dir().map_err(|e| e.to_string())?;
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let log_path = dir.join("debug-aoty.log");
+    use std::io::Write;
+    let mut file = fs::OpenOptions::new().create(true).append(true).open(&log_path).map_err(|e| e.to_string())?;
+    writeln!(file, "{}", msg).map_err(|e| e.to_string())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -236,7 +374,7 @@ fn main() {
             Ok(())
         })
         .on_menu_event(handle_menu_event)
-        .invoke_handler(tauri::generate_handler![toggle_topmost, toggle_fullscreen])
+        .invoke_handler(tauri::generate_handler![toggle_topmost, toggle_fullscreen, save_data_to_disk, load_data_from_disk, check_disk_data, get_data_file_size, write_log])
         .run(tauri::generate_context!())
         .expect("启动 Tauri 应用失败");
 }

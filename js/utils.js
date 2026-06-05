@@ -29,13 +29,17 @@ function generateId() {
   return 'e' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 }
 
-function refreshAll() {
+async function refreshAll() {
+  debugAotyCount('refreshAll 开始');
   buildEntryIndex();
   _lastSidebarHtml = '';
   _lastContentHtml = '';
   renderSidebar();
+  debugAotyCount('renderSidebar 后');
   renderContent();
-  saveData();
+  debugAotyCount('renderContent 后');
+  await saveData();
+  debugAotyCount('saveData 后');
 }
 
 function findOrCreateSection(sectionId) {

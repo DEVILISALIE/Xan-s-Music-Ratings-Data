@@ -261,6 +261,10 @@
   width: 140px;
 }
 
+[data-desktop="true"][data-lang="en"] .custom-select-trigger {
+  width: 170px;
+}
+
 [data-desktop="true"] .custom-select-trigger:hover {
   background: var(--hover-bg);
 }
@@ -317,9 +321,8 @@
   border: 0.5px solid transparent;
   background: var(--input-bg);
   transition: background 0.12s, border-color 0.12s;
-  width: auto;
   min-width: 0;
-  text-align: left;
+  text-align: center;
 }
 
 [data-desktop="true"] #mustHearTrigger:hover {

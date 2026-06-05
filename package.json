@@ -1,6 +1,6 @@
 {
   "name": "music-ratings",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "private": true,
   "description": "Xan's Music Ratings - Desktop Edition",
   "scripts": {
@@ -9,7 +9,8 @@
     "tauri:build": "tauri build"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2"
+    "@tauri-apps/cli": "^2",
+    "sharp": "^0.34.5"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",

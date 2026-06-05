@@ -14,6 +14,7 @@ function rebuildScrollCache() {
 // 获取所有 sections 并按年份降序排列
 // 旧版 localStorage 数据可能还有 vol sections，这里做兼容合并
 function getMergedSections() {
+  debugAotyCount('getMergedSections 开始');
   const volByYear = {};
   const normalSections = [];
 
@@ -32,7 +33,7 @@ function getMergedSections() {
   const volYears = Object.keys(volByYear).sort((a, b) => b - a);
 
   for (const section of normalSections) {
-    const merged = { ...section, groups: section.groups.map(g => ({ ...g, entries: [...g.entries] })) };
+    const merged = { ...section, groups: section.groups.map(g => ({ ...g, entries: g.entries.map(e => ({...e})) })) };
     result.push(merged);
     const year = section.id;
     if (volByYear[year]) {
@@ -81,6 +82,7 @@ function getMergedSections() {
     return yb - ya;
   });
 
+  debugAotyCount('getMergedSections 结束');
   return result;
 }
 

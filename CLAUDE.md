@@ -72,9 +72,15 @@ npm run tauri build              # 构建 MSI 安装包
 
 ## 关键技术细节
 
-**数据流**：优先级为 localStorage > `__MUSIC_DATA__` > `data.json`。`ensureDefaultGroups()` 在数据加载后和导入后调用，确保每个 section 都有 Albums/Singles 两个分组。`migrateVolSections()` 自动合并旧版 vol sections。
+**数据流**：桌面版优先从磁盘文件加载（`AppData/Roaming/com.xan.music-ratings/music-data.json`），再 fallback 到 localStorage 和 `__MUSIC_DATA__`。网页版优先 localStorage。`ensureDefaultGroups()` 在数据加载后和导入后调用，确保每个 section 都有 Albums/Singles 两个分组。`migrateVolSections()` 自动合并旧版 vol sections。
 
-**数据保护机制**：`saveData()` 内置安全检查——如果 `appData` 不含真实数据（所有 sections 无 entry），且 localStorage 中已有真实数据，则**拒绝保存**并打印警告。`loadData()` 校验数据结构完整性（必须有 `sections` 数组），异常数据被忽略。`init()` 中只有 fallback 数据源包含真实数据时才写入 localStorage，防止空数据覆盖。
+**数据保护机制**：
+- `saveData()` 为 async 函数，使用 `await` 等待磁盘写入完成，写入后调用 `get_data_file_size` 校验文件大小
+- 内置并发锁（`_saveInFlight` / `_saveQueued`）防止多次保存冲突
+- 如果 `appData` 不含真实数据且 localStorage 已有数据，拒绝保存
+- Rust 端 `save_data_to_disk` 写入前自动备份到 `.json.bak`，数据小于 200 字节或 sections 为空则拒绝写入
+- `load_data_from_disk` 主文件不可用时自动尝试 `.bak` 备份文件
+- 桌面版启动时优先从磁盘加载，加载成功后同步到 localStorage
 
 **桌面版（Tauri v2）**：
 - 前端通过 `window.__TAURI__` 检测桌面环境，`app.js` 末尾的 `initTauriDesktop()` 自动激活桌面功能

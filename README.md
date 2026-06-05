@@ -68,11 +68,13 @@
 
 ### 数据管理
 
+- **磁盘持久化**（桌面版）— 数据自动保存到 `AppData/Roaming/com.xan.music-ratings/music-data.json`，每次写入前自动备份 `.bak` 文件，写入后校验文件完整性
+- **桌面版启动** — 优先从磁盘文件加载最新数据，确保重启不丢失任何编辑
 - **导出 JSON** — 一键下载完整数据文件
 - **导入 JSON** — 选择文件导入，自动补齐 Albums/Singles 分组
 - **从 txt 生成** — 通过 `node gen.js` 从源文件生成数据并嵌入到 index.html
 - Vol sections（如 `Vol. 1 - 2025`）解析时自动合并到对应年份
-- 数据加载优先级：`localStorage > __MUSIC_DATA__（嵌入数据）> data.json`
+- 桌面版数据加载优先级：`磁盘文件 > localStorage > __MUSIC_DATA__（嵌入数据）> data.json`
 
 ---
 
