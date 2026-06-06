@@ -98,13 +98,13 @@ node gen.js path/to/your/file.txt
 
 ---
 
-## 桌面版（v1.1.0）
+## 桌面版（v1.1.1）
 
 基于 [Tauri v2](https://v2.tauri.app/)（Rust + WebView2）构建的 Windows 原生应用，共享同一套前端代码。
 
 ### 下载安装
 
-前往 [Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 `Xan's Music Ratings_1.1.0_x64_en-US.msi`，双击安装即可。
+前往 [Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 `Xan's Music Ratings_1.1.1_x64_en-US.msi`，双击安装即可。
 
 ### 桌面版专属功能
 
