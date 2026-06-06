@@ -34,10 +34,6 @@ function debugAotyCount(label) {
   return count;
 }
 
-// 防止并发保存
-let _saveInFlight = false;
-let _saveQueued = false;
-
 async function saveData() {
   // 安全检查：拒绝保存空数据到已有数据的 localStorage
   if (!hasRealData(appData)) {
@@ -47,12 +43,6 @@ async function saveData() {
       return;
     }
   }
-  // 防止并发：如果已有保存在进行，标记排队
-  if (_saveInFlight) {
-    _saveQueued = true;
-    return;
-  }
-  _saveInFlight = true;
   try {
     const json = JSON.stringify(appData);
     localStorage.setItem('musicData', json);
@@ -65,34 +55,22 @@ async function saveData() {
         sum + s.groups.reduce((gs, g) => gs + g.entries.length, 0), 0);
       const aotyCount = appData.sections.reduce((sum, s) =>
         sum + s.groups.reduce((gs, g) => gs + g.entries.filter(e => e.isAoty).length, 0), 0);
-      logMsg('[Save] 写入磁盘: entries=' + totalEntries + ' AOTY=' + aotyCount + ' jsonLen=' + json.length);
+      console.log('[Save] entries=' + totalEntries + ' AOTY=' + aotyCount + ' jsonLen=' + json.length);
+      logMsg('[Save] entries=' + totalEntries + ' AOTY=' + aotyCount + ' jsonLen=' + json.length);
       try {
         await window.__TAURI__.core.invoke('save_data_to_disk', { data: json });
-        // 写入后校验：读回文件大小
-        const diskSize = await window.__TAURI__.core.invoke('get_data_file_size');
-        logMsg('[Disk] 写入完成, 磁盘文件=' + diskSize + '字节');
-        if (diskSize < 200) {
-          logMsg('[Disk] 警告：磁盘文件过小，可能写入失败');
-        }
+        console.log('[Disk] 写入成功');
+        logMsg('[Disk] 写入成功');
       } catch (e) {
+        console.error('[Disk] 写入失败:', e);
         logMsg('[Disk] 写入失败: ' + e);
       }
-    } else if (window.__TAURI__) {
-      logMsg('[Save] 跳过磁盘写入: 无真实数据');
     }
   } catch (e) {
     if (e.name === 'QuotaExceededError' || e.code === 22) {
       showAlert(t('dialog.storageFull'));
     } else {
       console.error('Failed to save data:', e);
-      logMsg('[Save] 异常: ' + e.message);
-    }
-  } finally {
-    _saveInFlight = false;
-    // 如果有排队的保存，执行之
-    if (_saveQueued) {
-      _saveQueued = false;
-      saveData();
     }
   }
 }
