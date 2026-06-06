@@ -6,6 +6,7 @@ use tauri::{
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager, WebviewWindow,
 };
+use tauri_plugin_global_shortcut::GlobalShortcutExt;
 use std::fs;
 
 // 向前端发送菜单动作事件
@@ -58,7 +59,6 @@ fn build_menu(app: &AppHandle) -> tauri::menu::Menu<tauri::Wry> {
         .build(app)
         .unwrap();
     let fullscreen = MenuItemBuilder::with_id("fullscreen", "全屏")
-        .accelerator("F11")
         .build(app)
         .unwrap();
     let new_album = MenuItemBuilder::with_id("new_album", "新建专辑")
@@ -353,6 +353,15 @@ fn main() {
 
             // 系统托盘
             setup_tray(app.handle()).expect("无法设置系统托盘");
+
+            // F11 全局快捷键：全屏切换
+            let app_handle = app.handle().clone();
+            let _ = app.global_shortcut().on_shortcut("F11", move |_app, _shortcut, _event| {
+                if let Some(win) = app_handle.get_webview_window("main") {
+                    let is_fs = win.is_fullscreen().unwrap_or(false);
+                    let _ = win.set_fullscreen(!is_fs);
+                }
+            });
 
             // 确保主窗口在任务栏显示
             if let Some(win) = app.get_webview_window("main") {
