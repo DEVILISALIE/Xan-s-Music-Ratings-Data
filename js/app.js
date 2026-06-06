@@ -1039,7 +1039,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.1.0");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.1.2");
         break;
     }
   });
