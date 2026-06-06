@@ -7,7 +7,6 @@ function updateToolbarStats() {
   let albumCount = 0;
   let singleCount = 0;
   for (const { card } of allCards) {
-    if (card.classList.contains('hidden')) continue;
     const group = card.dataset.group || '';
     if (group.includes('singles')) singleCount++;
     else albumCount++;
