@@ -533,10 +533,70 @@ async function deleteYearSection(sectionId) {
     .filter(s => s.id === sectionId)
     .reduce((sum, s) => sum + s.groups.reduce((s2, g) => s2 + g.entries.length, 0), 0);
 
-  const confirmed = await showConfirm(
-    t('dialog.deleteYear'),
-    t('dialog.deleteYearMsg', { year: yearNum, count: entryCount })
-  );
+  // 自定义确认框，确认按钮带 5 秒倒计时
+  const confirmed = await new Promise((resolve) => {
+    const msg = t('dialog.deleteYearMsg', { year: yearNum, count: entryCount });
+    let countdown = 5;
+    const container = document.getElementById('dialogContainer');
+    container.innerHTML =
+      '<div class="dialog-overlay">' +
+        '<div class="dialog-sheet">' +
+          '<div class="dialog-title">' + escapeHtml(t('dialog.deleteYear')) + '</div>' +
+          '<div class="dialog-message">' + escapeHtml(msg) + '</div>' +
+          '<div class="dialog-buttons">' +
+            '<button class="dialog-btn cancel" data-action="dialog-cancel">' + escapeHtml(t('dialog.cancel')) + '</button>' +
+            '<button class="dialog-btn confirm" data-action="dialog-confirm" disabled style="opacity:0.4;cursor:not-allowed">' +
+              escapeHtml(t('dialog.confirm')) + ' (' + countdown + ')' +
+            '</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+
+    requestAnimationFrame(() => container.querySelector('.dialog-overlay').classList.add('active'));
+
+    const confirmBtn = container.querySelector('[data-action="dialog-confirm"]');
+    const timer = setInterval(() => {
+      countdown--;
+      if (countdown <= 0) {
+        clearInterval(timer);
+        confirmBtn.disabled = false;
+        confirmBtn.style.opacity = '';
+        confirmBtn.style.cursor = '';
+        confirmBtn.textContent = t('dialog.confirm');
+      } else {
+        confirmBtn.textContent = t('dialog.confirm') + ' (' + countdown + ')';
+      }
+    }, 1000);
+
+    function cleanup(result) {
+      clearInterval(timer);
+      const overlay = container.querySelector('.dialog-overlay');
+      if (overlay) overlay.classList.remove('active');
+      setTimeout(() => { container.innerHTML = ''; }, 250);
+      resolve(result);
+    }
+
+    const sheet = container.querySelector('.dialog-sheet');
+    sheet.addEventListener('click', (e) => {
+      const action = e.target.closest('[data-action]');
+      if (!action) return;
+      if (action.dataset.action === 'dialog-confirm' && !confirmBtn.disabled) {
+        cleanup(true);
+      } else if (action.dataset.action === 'dialog-cancel') {
+        cleanup(false);
+      }
+    });
+
+    container.addEventListener('keydown', function onKey(e) {
+      if (e.key === 'Escape') {
+        cleanup(false);
+        container.removeEventListener('keydown', onKey);
+      } else if (e.key === 'Enter' && !confirmBtn.disabled) {
+        cleanup(true);
+        container.removeEventListener('keydown', onKey);
+      }
+    });
+  });
   if (!confirmed) return;
 
   appData.sections = appData.sections.filter(s => s.id !== sectionId);

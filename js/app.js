@@ -267,7 +267,7 @@ function bindStaticButtons() {
   document.getElementById('searchNextBtn').addEventListener('click', goToNextResult);
   document.getElementById('searchPrevBtn').addEventListener('click', goToPrevResult);
   document.querySelector('[data-action="add-album"]').addEventListener('click', openAddModal);
-  document.querySelector('[data-action="add-track"]').addEventListener('click', addTrack);
+  document.querySelector('[data-action="add-disc"]').addEventListener('click', addDisc);
   document.querySelector('[data-action="modal-cancel"]').addEventListener('click', closeModal);
   document.getElementById('deleteBtn').addEventListener('click', deleteEntry);
   document.querySelector('[data-action="modal-save"]').addEventListener('click', saveEntry);
@@ -576,7 +576,9 @@ function bindTrackList() {
 
   trackList.addEventListener('click', (e) => {
     const removeBtn = e.target.closest('[data-action="remove-track"]');
-    if (removeBtn) removeTrack(parseInt(removeBtn.dataset.trackIndex));
+    if (removeBtn) { removeTrack(parseInt(removeBtn.dataset.trackIndex)); return; }
+    const addBtn = e.target.closest('[data-action="add-track-to-disc"]');
+    if (addBtn) addTrackToDisc(parseInt(addBtn.dataset.disc));
   });
 }
 
@@ -993,6 +995,7 @@ function handleImport(e) {
             if (entry.score != null) entry.score = Math.max(0, Math.min(100, parseInt(entry.score) || 0));
             if (!Array.isArray(entry.tags)) entry.tags = [];
             if (!Array.isArray(entry.tracks)) entry.tracks = [];
+            for (const tr of entry.tracks) { if (!tr.disc) tr.disc = 1; }
             if (typeof entry.review !== 'string') entry.review = String(entry.review || '');
             if (typeof entry.scoreNote !== 'string') entry.scoreNote = String(entry.scoreNote || '');
             if (typeof entry.date !== 'string') entry.date = String(entry.date || '');

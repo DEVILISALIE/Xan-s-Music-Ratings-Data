@@ -666,6 +666,35 @@ textarea.form-input::-webkit-scrollbar-corner {
   color: #E53B2F;
 }
 
+.track-disc-header {
+  padding: 8px 0 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--separator);
+  margin-top: 8px;
+}
+
+.track-add-inline {
+  display: block;
+  width: 100%;
+  padding: 6px;
+  margin-top: 4px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--accent);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: center;
+  transition: background 0.15s;
+}
+
+.track-add-inline:hover {
+  background: var(--hover-bg);
+}
+
 .track-add {
   display: flex;
   align-items: center;

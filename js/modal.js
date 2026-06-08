@@ -30,7 +30,7 @@ function openEditModal(entryId, sectionId, groupId) {
     tag.classList.toggle('active', activeTags.includes(tag.dataset.tag));
   });
 
-  editingTracks = (entry.tracks || []).map(t => ({ ...t }));
+  editingTracks = (entry.tracks || []).map(t => ({ ...t, disc: t.disc || 1 }));
   renderTracks();
 
   document.getElementById('editModal').classList.add('active');
@@ -74,22 +74,75 @@ function closeModal() {
 
 function renderTracks() {
   const container = document.getElementById('trackList');
-  container.innerHTML = editingTracks.map((tr, i) => `
-    <div class="track-row" data-track-index="${i}">
-      <span class="track-num">${i + 1}</span>
-      <div class="track-name">
-        <input class="form-input track-name-input" placeholder="${t('modal.placeholder.track')}" value="${escapeHtml(tr.name)}">
-      </div>
-      <div class="track-score">
-        <input class="form-input track-score-input" type="text" placeholder="—" value="${tr.score != null ? tr.score : ''}">
-      </div>
-      <button type="button" class="track-remove" data-action="remove-track" data-track-index="${i}">×</button>
-    </div>`).join('');
+  // 按 disc 分组
+  const discMap = new Map();
+  for (let i = 0; i < editingTracks.length; i++) {
+    const disc = editingTracks[i].disc || 1;
+    if (!discMap.has(disc)) discMap.set(disc, []);
+    discMap.get(disc).push(i);
+  }
+  const discs = [...discMap.keys()].sort((a, b) => a - b);
+  const multiDisc = discs.length > 1;
+
+  let html = '';
+  for (const disc of discs) {
+    const indices = discMap.get(disc);
+    if (multiDisc) {
+      html += `<div class="track-disc-header">Disc ${disc}</div>`;
+    }
+    let discNum = 0;
+    for (const i of indices) {
+      discNum++;
+      const tr = editingTracks[i];
+      html += `<div class="track-row" data-track-index="${i}">
+        <span class="track-num">${discNum}</span>
+        <div class="track-name">
+          <input class="form-input track-name-input" placeholder="${t('modal.placeholder.track')}" value="${escapeHtml(tr.name)}">
+        </div>
+        <div class="track-score">
+          <input class="form-input track-score-input" type="text" placeholder="—" value="${tr.score != null ? tr.score : ''}">
+        </div>
+        <button type="button" class="track-remove" data-action="remove-track" data-track-index="${i}">×</button>
+      </div>`;
+    }
+    // 每个 disc 底部添加曲目按钮
+    html += `<button type="button" class="track-add-inline" data-action="add-track-to-disc" data-disc="${disc}">+ ${t('modal.addTrack').replace('+ ', '')}</button>`;
+  }
+  container.innerHTML = html;
   updateTrackSummary();
 }
 
 function addTrack() {
-  editingTracks.push({ name: '', score: null });
+  const lastDisc = editingTracks.length > 0 ? (editingTracks[editingTracks.length - 1].disc || 1) : 1;
+  editingTracks.push({ name: '', score: null, disc: lastDisc });
+  renderTracks();
+  const rows = document.querySelectorAll('#trackList .track-row');
+  if (rows.length) rows[rows.length - 1].querySelector('input').focus();
+}
+
+function addTrackToDisc(disc) {
+  // 在该 disc 的最后一个曲目后插入
+  let insertIdx = editingTracks.length;
+  for (let i = editingTracks.length - 1; i >= 0; i--) {
+    if ((editingTracks[i].disc || 1) === disc) {
+      insertIdx = i + 1;
+      break;
+    }
+  }
+  editingTracks.splice(insertIdx, 0, { name: '', score: null, disc: disc });
+  renderTracks();
+  const rows = document.querySelectorAll('#trackList .track-row');
+  for (const row of rows) {
+    if (parseInt(row.dataset.trackIndex) === insertIdx) {
+      row.querySelector('input').focus();
+      break;
+    }
+  }
+}
+
+function addDisc() {
+  const maxDisc = editingTracks.reduce((max, t) => Math.max(max, t.disc || 1), 0);
+  editingTracks.push({ name: '', score: null, disc: maxDisc + 1 });
   renderTracks();
   const rows = document.querySelectorAll('#trackList .track-row');
   if (rows.length) rows[rows.length - 1].querySelector('input').focus();
