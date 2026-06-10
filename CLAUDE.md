@@ -10,7 +10,7 @@
 
 通过 `node gen.js` 从 txt 源文件生成数据嵌入到 index.html。Vol sections 自动合并到对应年份。
 
-桌面版基于 Tauri v2（Rust + WebView2），Windows 专用，提供菜单栏、系统托盘、全局快捷键。桌面版与网页版完全独立，共享同一套前端代码。
+桌面版基于 Tauri v2（Rust + WebView2），Windows 专用，自定义标题栏（无原生菜单栏）、系统托盘、全局快捷键。桌面版与网页版完全独立，共享同一套前端代码。
 
 ## 常用命令
 
@@ -51,10 +51,10 @@ npm run tauri build              # 构建 MSI 安装包
     ├── tauri.conf.json    # 窗口、打包、插件配置
     ├── build.rs           # 构建脚本
     ├── capabilities/
-    │   └── default.json   # Tauri v2 权限声明（dialog/fs/shell/shortcut）
+    │   └── default.json   # Tauri v2 权限声明（dialog/fs/shell/shortcut/window）
     ├── icons/             # 应用图标（32x32/128x128/256x256/ico）
     └── src/
-        └── main.rs        # 菜单栏、系统托盘、全局快捷键、窗口管理
+        └── main.rs        # 系统托盘、全局快捷键、窗口管理、数据持久化命令
 ```
 
 **JS 加载顺序**：`state.js` → `i18n.js` → `utils.js` → `filter.js` → `modal.js` → `render.js` → `drag.js` → `app.js`
@@ -75,25 +75,28 @@ npm run tauri build              # 构建 MSI 安装包
 **数据流**：桌面版优先从磁盘文件加载（`AppData/Roaming/com.xan.music-ratings/music-data.json`），再 fallback 到 localStorage 和 `__MUSIC_DATA__`。网页版优先 localStorage。`ensureDefaultGroups()` 在数据加载后和导入后调用，确保每个 section 都有 Albums/Singles 两个分组。`migrateVolSections()` 自动合并旧版 vol sections。
 
 **数据保护机制**：
-- `saveData()` 为 async 函数，使用 `await` 等待磁盘写入完成，写入后调用 `get_data_file_size` 校验文件大小
-- 内置并发锁（`_saveInFlight` / `_saveQueued`）防止多次保存冲突
-- 如果 `appData` 不含真实数据且 localStorage 已有数据，拒绝保存
-- Rust 端 `save_data_to_disk` 写入前自动备份到 `.json.bak`，数据小于 200 字节或 sections 为空则拒绝写入
+- `saveData()` 为 async 函数，内置并发锁（`_saveLock` / `_saveQueued`）防止多次保存冲突，确保最新数据始终被写入
+- JSON.parse(localStorage 数据) 有 try-catch 防护，损坏数据不阻断保存
+- Rust 端 `save_data_to_disk` JSON 解析失败时返回错误拒绝写入，写入前自动备份到 `.json.bak`
 - `load_data_from_disk` 主文件不可用时自动尝试 `.bak` 备份文件
 - 桌面版启动时优先从磁盘加载，加载成功后同步到 localStorage
 
 **桌面版（Tauri v2）**：
 - 前端通过 `window.__TAURI__` 检测桌面环境，`app.js` 末尾的 `initTauriDesktop()` 自动激活桌面功能
 - `css/macos.css` 通过 `[data-desktop="true"]` 选择器提供桌面版专属样式（UI 放大 20%），不影响网页版
-- 菜单栏事件通过 `tauriEvent.listen('menu-action')` 接收，映射到前端函数
-- 导出使用 `window.open(blobUrl)` 机制（WebView2 兼容）
+- **自定义标题栏**（`decorations: false`）：38px 毛玻璃标题栏，左侧版本号，右侧 Windows 风格窗口控件（最小化/最大化/关闭），标题栏可拖拽移动窗口，关闭按钮 hover 变红（Windows 11 风格）
+- 窗口管理通过自定义 Tauri command：`minimize_window`、`toggle_maximize`、`close_window`、`start_window_drag`
+- 托盘事件通过 `tauriEvent.listen('menu-action')` 接收，映射到前端函数
+- 导出使用 Tauri 原生文件对话框（`__TAURI_PLUGIN_DIALOG__` + `__TAURI_PLUGIN_FS__`）
 - 快捷键：Ctrl+S 导出、Ctrl+D 主题、Ctrl+G 风格、Ctrl+O 导入、Ctrl+K 搜索、Ctrl+N 新建、Ctrl+T 置顶、F11 全屏
 - 系统托盘：左键显示/隐藏窗口，右键菜单（显示/置顶/主题/退出）
-- **点击 X 最小化到系统托盘**（不退出），通过 `on_window_event` 拦截 `CloseRequested` 并 `api.prevent_close()` + `win.hide()`
-- **单实例模式**：`tauri-plugin-single-instance` 确保只有一个窗口运行，第二次启动聚焦已有窗口
+- 点击 X 最小化到系统托盘（不退出），通过 `on_window_event` 拦截 `CloseRequested` 并 `api.prevent_close()` + `win.hide()`
+- 单实例模式：`tauri-plugin-single-instance` 确保只有一个窗口运行，第二次启动聚焦已有窗口
 - 桌面版 localStorage 域名与网页版隔离，需单独导入一次数据
 - `build-frontend.js` 构建时将 index.html/css/js/data.json 复制到 dist/，Tauri 打包进二进制
 - Tauri 插件：dialog、fs、global-shortcut、shell、single-instance
+
+**分数统计面板**：`render.js` 中 `updateGlobalStatsSidebar()` 在右侧固定位置渲染两个统计卡片（Albums / Singles），显示平均分（仅计算有分数的条目）、7 档分数分布柱状图（100 / 90+ / 80 / 70 / 60 / 50 / <50）和 NR 数量。每次数据变更后通过 `refreshAll()` 实时更新。
 
 **渲染与筛选分离**：`renderContent()` 重建 DOM 时同步应用筛选（通过 `matchesFilter(entry)` 传入 `visible`），并维护 `allCards` 缓存和 `searchResults` 数组。`applyFilters()` 仅切换 `hidden` 类，不触发 DOM 重建。`rebuildCardCache()` 仅在 DOM 重建后调用。
 

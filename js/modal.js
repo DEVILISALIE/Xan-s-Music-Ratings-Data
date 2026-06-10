@@ -14,7 +14,6 @@ function openEditModal(entryId, sectionId, groupId) {
   document.getElementById('editScore').value = entry.score != null ? entry.score : '';
   document.getElementById('editDate').value = entry.date || '';
   document.getElementById('editScoreNote').value = entry.scoreNote || '';
-  document.getElementById('editNotes').value = entry.notes || '';
   document.getElementById('editReview').value = entry.review || '';
   document.getElementById('editSectionGroup').style.display = 'block';
   document.getElementById('deleteBtn').style.display = 'inline-block';
@@ -48,7 +47,6 @@ function openAddModal() {
   document.getElementById('editScore').value = '';
   document.getElementById('editDate').value = '';
   document.getElementById('editScoreNote').value = '';
-  document.getElementById('editNotes').value = '';
   document.getElementById('editReview').value = '';
   document.getElementById('editAotyToggle').checked = false;
   document.getElementById('editSotyToggle').checked = false;
@@ -188,7 +186,7 @@ function saveEntry() {
     review: document.getElementById('editReview').value,
     isAoty: document.getElementById('editAotyToggle').checked,
     isSoty: document.getElementById('editSotyToggle').checked,
-    notes: document.getElementById('editNotes').value.trim(),
+    notes: editingEntry ? editingEntry.notes || '' : '',
     tracks: [...editingTracks]
   };
 

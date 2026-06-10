@@ -6,17 +6,19 @@ function hasRealData(data) {
   return data.sections.some(s => Array.isArray(s.groups) && s.groups.some(g => Array.isArray(g.entries) && g.entries.length > 0));
 }
 
-// 调试：写入日志文件
+// 调试：仅开发模式启用
+const isDev = () => !window.__TAURI__;
+
+// 调试：写入日志文件（仅开发模式）
 function logMsg(msg) {
+  if (!isDev()) return;
   const ts = new Date().toISOString().slice(11, 23);
   console.log(ts + ' ' + msg);
-  if (window.__TAURI__) {
-    window.__TAURI__.core.invoke('write_log', { msg: ts + ' ' + msg }).catch(() => {});
-  }
 }
 
-// 调试：统计 appData 中的 AOTY 条目数，并写入日志文件
+// 调试：统计 appData 中的 AOTY 条目数（仅开发模式输出日志）
 function debugAotyCount(label) {
+  if (!isDev()) return 0;
   let count = 0;
   let total = 0;
   for (const section of appData.sections) {
@@ -27,52 +29,52 @@ function debugAotyCount(label) {
   }
   const msg = new Date().toISOString().slice(11, 23) + ' [AOTY] ' + label + ': AOTY=' + count + ' Total=' + total;
   console.log(msg);
-  // 写入日志文件（桌面版）
-  if (window.__TAURI__) {
-    window.__TAURI__.core.invoke('write_log', { msg }).catch(() => {});
-  }
   return count;
 }
+
+let _saveLock = null;
+let _saveQueued = false;
 
 async function saveData() {
   // 安全检查：拒绝保存空数据到已有数据的 localStorage
   if (!hasRealData(appData)) {
     const existing = localStorage.getItem('musicData');
-    if (existing && hasRealData(JSON.parse(existing))) {
-      console.warn('安全保护：阻止空数据覆盖已有数据');
-      return;
+    if (existing) {
+      try {
+        if (hasRealData(JSON.parse(existing))) {
+          console.warn('安全保护：阻止空数据覆盖已有数据');
+          return;
+        }
+      } catch (_) { /* localStorage 中的 JSON 已损坏，不阻止本次保存 */ }
     }
   }
-  try {
-    const json = JSON.stringify(appData);
-    localStorage.setItem('musicData', json);
-    if (json.length > 4 * 1024 * 1024) {
-      console.warn('localStorage 数据量较大 (' + (json.length / 1024 / 1024).toFixed(1) + 'MB)，接近浏览器存储上限');
-    }
-    // 桌面版：写入磁盘（仅在有真实数据时）
-    if (window.__TAURI__ && hasRealData(appData)) {
-      const totalEntries = appData.sections.reduce((sum, s) =>
-        sum + s.groups.reduce((gs, g) => gs + g.entries.length, 0), 0);
-      const aotyCount = appData.sections.reduce((sum, s) =>
-        sum + s.groups.reduce((gs, g) => gs + g.entries.filter(e => e.isAoty).length, 0), 0);
-      console.log('[Save] entries=' + totalEntries + ' AOTY=' + aotyCount + ' jsonLen=' + json.length);
-      logMsg('[Save] entries=' + totalEntries + ' AOTY=' + aotyCount + ' jsonLen=' + json.length);
-      try {
-        await window.__TAURI__.core.invoke('save_data_to_disk', { data: json });
-        console.log('[Disk] 写入成功');
-        logMsg('[Disk] 写入成功');
-      } catch (e) {
-        console.error('[Disk] 写入失败:', e);
-        logMsg('[Disk] 写入失败: ' + e);
+  // 并发锁：等待上一次保存完成后再执行
+  if (_saveLock) { _saveQueued = true; return await _saveLock; }
+  _saveLock = (async () => {
+    try {
+      const json = JSON.stringify(appData);
+      localStorage.setItem('musicData', json);
+      if (json.length > 4 * 1024 * 1024) {
+        console.warn('localStorage 数据量较大 (' + (json.length / 1024 / 1024).toFixed(1) + 'MB)，接近浏览器存储上限');
+      }
+      // 桌面版：写入磁盘（仅在有真实数据时）
+      if (window.__TAURI__ && hasRealData(appData)) {
+        try {
+          await window.__TAURI__.core.invoke('save_data_to_disk', { data: json });
+        } catch (e) {
+          console.error('[Disk] 写入失败:', e);
+        }
+      }
+    } catch (e) {
+      if (e.name === 'QuotaExceededError' || e.code === 22) {
+        showAlert(t('dialog.storageFull'));
+      } else {
+        console.error('Failed to save data:', e);
       }
     }
-  } catch (e) {
-    if (e.name === 'QuotaExceededError' || e.code === 22) {
-      showAlert(t('dialog.storageFull'));
-    } else {
-      console.error('Failed to save data:', e);
-    }
-  }
+  })();
+  try { await _saveLock; } finally { _saveLock = null; }
+  if (_saveQueued) { _saveQueued = false; await saveData(); }
 }
 
 function loadData() {
@@ -95,13 +97,12 @@ function loadData() {
 // 桌面版：从磁盘恢复数据（localStorage 为空时调用）
 async function loadDataFromDisk() {
   if (!window.__TAURI__) {
-    logMsg('[Disk] 非桌面版，跳过');
     return null;
   }
+  if (isDev()) logMsg('[Disk] 开始读取磁盘...');
   try {
-    logMsg('[Disk] 开始读取磁盘...');
     const json = await window.__TAURI__.core.invoke('load_data_from_disk');
-    logMsg('[Disk] 读取结果: ' + (json ? '有数据(' + json.length + '字节)' : '空'));
+    if (isDev()) logMsg('[Disk] 读取结果: ' + (json ? '有数据(' + json.length + '字节)' : '空'));
     if (json && json.length > 0) {
       const parsed = JSON.parse(json);
       if (parsed && Array.isArray(parsed.sections) && parsed.sections.length > 0) {
@@ -109,13 +110,13 @@ async function loadDataFromDisk() {
           sum + s.groups.reduce((gs, g) => gs + (g.entries ? g.entries.length : 0), 0), 0);
         const totalAoty = parsed.sections.reduce((sum, s) =>
           sum + s.groups.reduce((gs, g) => gs + (g.entries ? g.entries.filter(e => e.isAoty).length : 0), 0), 0);
-        logMsg('[Disk] 恢复成功: ' + totalEntries + ' 条, AOTY: ' + totalAoty);
+        if (isDev()) logMsg('[Disk] 恢复成功: ' + totalEntries + ' 条, AOTY: ' + totalAoty);
         return parsed;
       }
-      logMsg('[Disk] 数据结构异常或为空，跳过');
+      if (isDev()) logMsg('[Disk] 数据结构异常或为空，跳过');
     }
   } catch (e) {
-    logMsg('[Disk] 读取失败: ' + e);
+    if (isDev()) logMsg('[Disk] 读取失败: ' + e);
   }
   return null;
 }
@@ -127,7 +128,7 @@ async function loadDataFromDiskWithRetry(maxRetries) {
   await new Promise(r => setTimeout(r, 100));
   for (let i = 0; i < maxRetries; i++) {
     if (i > 0) {
-      logMsg('[Disk] 重试 #' + i + '...');
+      if (isDev()) logMsg('[Disk] 重试 #' + i + '...');
       await new Promise(r => setTimeout(r, 300));
     }
     const data = await loadDataFromDisk();
@@ -148,31 +149,29 @@ function closeAllDropdowns() {
 // ===== 初始化入口 =====
 
 async function init() {
-  logMsg('[Init] === 应用启动 ===');
-  logMsg('[Init] __TAURI__: ' + !!window.__TAURI__);
+  if (isDev()) logMsg('[Init] === 应用启动 ===');
+  if (isDev()) logMsg('[Init] __TAURI__: ' + !!window.__TAURI__);
   applyLang();
   applyTheme();
 
   try {
     // 桌面版：优先从磁盘加载（最新数据源）
     if (window.__TAURI__) {
-      logMsg('[Init] 桌面版：优先从磁盘加载');
+      if (isDev()) logMsg('[Init] 桌面版：优先从磁盘加载');
       const diskData = await loadDataFromDiskWithRetry(3);
       if (diskData) {
         appData = diskData;
-        debugAotyCount('从磁盘加载');
         // 同步到 localStorage
         localStorage.setItem('musicData', JSON.stringify(appData));
-        logMsg('[Init] 磁盘数据已同步到 localStorage');
+        if (isDev()) logMsg('[Init] 磁盘数据已同步到 localStorage');
       } else {
         // 磁盘无数据，尝试 localStorage
-        logMsg('[Init] 磁盘无数据，尝试 localStorage');
+        if (isDev()) logMsg('[Init] 磁盘无数据，尝试 localStorage');
         const savedData = loadData();
         const hasEntries = savedData && savedData.sections && savedData.sections.some(s =>
           s.groups && s.groups.some(g => g.entries && g.entries.length > 0));
         if (hasEntries) {
           appData = savedData;
-          debugAotyCount('从 localStorage 加载');
           // localStorage 有数据但磁盘没有，写入磁盘
           await saveData();
         } else {
@@ -181,7 +180,7 @@ async function init() {
           try {
             hasDiskFile = await window.__TAURI__.core.invoke('check_disk_data');
           } catch (_) {}
-          logMsg('[Init] 磁盘加载失败, hasDiskFile:' + hasDiskFile);
+          if (isDev()) logMsg('[Init] 磁盘加载失败, hasDiskFile:' + hasDiskFile);
           if (hasDiskFile) {
             document.getElementById('contentArea').innerHTML =
               '<div style="padding:40px;text-align:center;color:var(--text-secondary)">' +
@@ -195,7 +194,7 @@ async function init() {
           if (__MUSIC_DATA__ && __MUSIC_DATA__.sections && __MUSIC_DATA__.sections.length > 0 &&
               __MUSIC_DATA__.sections.some(s => s.groups && s.groups.some(g => g.entries && g.entries.length > 0))) {
             appData = __MUSIC_DATA__;
-            logMsg('[Init] 使用内置数据');
+            if (isDev()) logMsg('[Init] 使用内置数据');
             await saveData();
           } else {
             appData = { meta: { title: "Xan's Music Ratings", lastUpdated: new Date().toISOString().slice(0, 10) }, sections: [] };
@@ -229,9 +228,8 @@ async function init() {
     if (hasRealData(appData)) {
       await saveData();
     } else {
-      logMsg('[Init] 警告: appData 无真实数据，跳过保存');
+      if (isDev()) logMsg('[Init] 警告: appData 无真实数据，跳过保存');
     }
-    debugAotyCount('init 完成（启动后初始状态）');
   } catch (e) {
     document.getElementById('contentArea').innerHTML =
       '<div style="padding:40px;text-align:center;color:var(--text-secondary)">' +
@@ -1029,8 +1027,33 @@ init();
   document.documentElement.setAttribute('data-desktop', 'true');
 
   const tauriEvent = window.__TAURI__.event;
+  const invoke = window.__TAURI__.core.invoke;
 
-  // 监听菜单/托盘事件
+  // 显示版本号
+  try {
+    const version = await invoke('get_app_version');
+    const el = document.getElementById('appVersion');
+    if (el) el.textContent = 'v' + version;
+  } catch (_) {}
+
+  // 窗口控件
+  document.querySelector('[data-action="win-minimize"]')?.addEventListener('click', () => {
+    invoke('minimize_window');
+  });
+  document.querySelector('[data-action="win-maximize"]')?.addEventListener('click', () => {
+    invoke('toggle_maximize');
+  });
+  document.querySelector('[data-action="win-close"]')?.addEventListener('click', () => {
+    invoke('close_window');
+  });
+
+  // 标题栏双击切换最大化
+  document.getElementById('titleBar')?.addEventListener('dblclick', (e) => {
+    if (e.target.closest('.titlebar-controls')) return;
+    invoke('toggle_maximize');
+  });
+
+  // 监听托盘事件
   tauriEvent?.listen('menu-action', ({ payload }) => {
     switch (payload) {
       case 'import': importJSON(); break;
@@ -1042,7 +1065,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.1.2");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.2.0");
         break;
     }
   });

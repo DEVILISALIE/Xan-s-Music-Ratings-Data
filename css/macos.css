@@ -386,7 +386,13 @@
 /* ===== macOS Content Area ===== */
 [data-desktop="true"] .content {
   padding: 16px 26px 80px;
-  max-width: 860px;
+  max-width: none;
+  margin-right: 260px;
+}
+
+[data-desktop="true"] .album-card,
+[data-desktop="true"] .aoty-card {
+  /* no extra margin - fill full content width */
 }
 
 [data-desktop="true"] .section-title {
@@ -649,4 +655,191 @@
 /* ===== macOS Transition Refinements ===== */
 [data-desktop="true"] * {
   -webkit-tap-highlight-color: transparent;
+}
+
+/* ===== 自定义标题栏 ===== */
+.titlebar {
+  display: none;
+}
+
+[data-desktop="true"] .app {
+  padding-top: 38px;
+  height: 100vh;
+  box-sizing: border-box;
+}
+
+[data-desktop="true"] .titlebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9990;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 38px;
+  padding: 0 4px 0 16px;
+  background: var(--sidebar-bg);
+  backdrop-filter: blur(30px) saturate(200%);
+  -webkit-backdrop-filter: blur(30px) saturate(200%);
+  border-bottom: 0.5px solid var(--separator);
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+[data-desktop="true"] .titlebar-version {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.3px;
+  pointer-events: none;
+}
+
+[data-desktop="true"] .titlebar-controls {
+  display: flex;
+  -webkit-app-region: no-drag;
+}
+
+[data-desktop="true"] .titlebar-btn {
+  width: 46px;
+  height: 38px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+  -webkit-app-region: no-drag;
+}
+
+[data-desktop="true"] .titlebar-btn:hover {
+  background: var(--hover-bg);
+}
+
+[data-desktop="true"] .titlebar-btn:active {
+  opacity: 0.6;
+}
+
+[data-desktop="true"] .titlebar-btn svg {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+}
+
+[data-desktop="true"] .titlebar-btn-close:hover {
+  background: #c42b1c;
+  color: #fff;
+}
+
+/* ===== 分数统计面板 ===== */
+[data-desktop="true"] .section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 28px;
+  align-items: flex-start;
+}
+
+[data-desktop="true"] .section-title,
+[data-desktop="true"] .group-title,
+[data-desktop="true"] .group-cards-list {
+  flex-basis: 100%;
+}
+
+/* 全局右侧统计面板（固定不滚动） */
+[data-desktop="true"] .global-stats-sidebar {
+  position: fixed;
+  right: 20px;
+  top: 160px;
+  width: 220px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  z-index: 100;
+}
+
+[data-desktop="true"] .stats-card {
+  padding: 20px;
+  border-radius: 14px;
+  background: var(--card-bg);
+  border: 0.5px solid var(--separator);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+}
+
+[data-desktop="true"] .stats-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+  letter-spacing: 0.3px;
+}
+
+[data-desktop="true"] .stats-header {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  margin-bottom: 14px;
+}
+
+[data-desktop="true"] .stats-avg-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+[data-desktop="true"] .stats-avg-label {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+[data-desktop="true"] .stats-dist {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+[data-desktop="true"] .stats-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+[data-desktop="true"] .stats-label {
+  width: 28px;
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-align: right;
+  flex-shrink: 0;
+}
+
+[data-desktop="true"] .stats-bar-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--input-bg);
+  overflow: hidden;
+}
+
+[data-desktop="true"] .stats-bar {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+  transition: width 0.3s ease;
+}
+
+[data-desktop="true"] .stats-count {
+  width: 18px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: left;
+  flex-shrink: 0;
+}
+
+[data-desktop="true"] .stats-nr {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-tertiary);
 }

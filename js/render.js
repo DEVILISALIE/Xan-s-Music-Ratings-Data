@@ -326,6 +326,7 @@ function setupScrollSync() {
   });
 }
 
+
 // ===== Content Rendering =====
 function renderContent() {
   const area = document.getElementById('contentArea');
@@ -384,8 +385,12 @@ function renderContent() {
 
       // 渲染分组标题
       if (group.entries.length > 0) {
-        const singlesBottom = group.name === 'Singles' ? 'margin-bottom:40px;' : '';
-        html += `<div class="group-title" id="group-${escapeHtml(gid)}" style="${singlesBottom}">${escapeHtml(group.name)}</div>`;
+        html += `<div class="group-title" id="group-${escapeHtml(gid)}">${escapeHtml(group.name)}</div>`;
+      }
+
+      // 卡片列表
+      if (group.entries.length > 0) {
+        html += `<div class="group-cards-list">`;
       }
 
       let idx = 0;
@@ -402,10 +407,17 @@ function renderContent() {
           html += renderAlbumCard(entry, idx, section.id, gid, group.name, visible);
         }
       }
+
+      if (group.entries.length > 0) {
+        html += `</div>`; // .group-cards-list
+      }
     }
 
     html += `</div>`;
   }
+
+  // 更新右侧固定统计面板
+  updateGlobalStatsSidebar();
 
   // 缓存检查：HTML 未变化时跳过 DOM 重建
   if (html === _lastContentHtml) {
@@ -438,6 +450,70 @@ function renderContent() {
     clearSearchHighlight();
     searchIndex = -1;
   }
+}
+
+// 全局统计面板（专辑 + 单曲两个）
+function updateGlobalStatsSidebar() {
+  const panel = document.getElementById('globalStatsSidebar');
+  if (!panel || !appData) return;
+
+  // 分类收集：专辑 vs 单曲
+  const albumScores = [];
+  const singleScores = [];
+  for (const section of appData.sections) {
+    for (const group of section.groups) {
+      if (group.name === 'Albums') {
+        for (const entry of group.entries) {
+          if (entry.score != null) albumScores.push(entry.score);
+        }
+      } else if (group.name === 'Singles') {
+        for (const entry of group.entries) {
+          if (entry.score != null) singleScores.push(entry.score);
+        }
+      }
+    }
+  }
+
+  function buildPanel(scores, label, totalEntries) {
+    const avg = scores.length > 0 ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : '—';
+    const nrCount = totalEntries - scores.length;
+    // 100 单独一栏，90-99 为 90+
+    const ranges = [[100, 100], [90, 99], [80, 89], [70, 79], [60, 69], [50, 59], [0, 49]];
+    const dist = ranges.map(([lo, hi]) => scores.filter(s => s >= lo && s <= hi).length);
+    const maxCount = Math.max(...dist, 1);
+
+    let barsHtml = '';
+    for (let i = 0; i < ranges.length; i++) {
+      const pct = Math.round(dist[i] / maxCount * 100);
+      const rangeLabel = i === 0 ? '100' : i === 1 ? '90+' : i === ranges.length - 1 ? '<50' : String(ranges[i][0]);
+      barsHtml += '<div class="stats-row">' +
+        '<span class="stats-label">' + rangeLabel + '</span>' +
+        '<div class="stats-bar-track"><div class="stats-bar" style="width:' + pct + '%"></div></div>' +
+        '<span class="stats-count">' + (dist[i] || '') + '</span>' +
+        '</div>';
+    }
+
+    return '<div class="stats-card">' +
+      '<div class="stats-card-title">' + label + '</div>' +
+      '<div class="stats-header">' +
+      '<span class="stats-avg-value">' + avg + '</span>' +
+      '<span class="stats-avg-label">avg</span>' +
+      '</div>' +
+      '<div class="stats-dist">' + barsHtml + '</div>' +
+      (nrCount > 0 ? '<div class="stats-nr">NR: ' + nrCount + '</div>' : '<div class="stats-nr">0 NR</div>') +
+      '</div>';
+  }
+
+  const albumTotal = appData.sections.reduce((sum, s) => {
+    const g = s.groups.find(g => g.name === 'Albums');
+    return sum + (g ? g.entries.length : 0);
+  }, 0);
+  const singleTotal = appData.sections.reduce((sum, s) => {
+    const g = s.groups.find(g => g.name === 'Singles');
+    return sum + (g ? g.entries.length : 0);
+  }, 0);
+
+  panel.innerHTML = buildPanel(albumScores, 'Albums', albumTotal) + buildPanel(singleScores, 'Singles', singleTotal);
 }
 
 // 卡片元数据渲染（标签、曲目数、备注文字）— 供 renderAlbumCard / renderAotyCard 共用

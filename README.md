@@ -98,23 +98,28 @@ node gen.js path/to/your/file.txt
 
 ---
 
-## 桌面版（v1.1.2）
+## 桌面版（v1.2.0）
 
 基于 [Tauri v2](https://v2.tauri.app/)（Rust + WebView2）构建的 Windows 原生应用，共享同一套前端代码。
 
 ### 下载安装
 
-前往 [Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 `Xan's Music Ratings_1.1.2_x64_en-US.msi`，双击安装即可。
+前往 [Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 `Xan's Music Ratings_1.2.0_x64_en-US.msi`，双击安装即可。
 
 ### 桌面版专属功能
 
+- **自定义标题栏** — 无原生菜单栏，38px 毛玻璃标题栏，左侧版本号，右侧 Windows 风格窗口控件（最小化/最大化/关闭），标题栏可拖拽移动窗口，关闭按钮 hover 变红
 - **磁盘持久化** — 数据自动保存到 AppData，每次写入前备份 `.bak` 文件，写入后校验完整性，重启不丢失任何编辑
 - **系统托盘** — 点击窗口 X 按钮最小化到系统托盘（任务栏仍在），点击托盘图标恢复窗口；右键菜单支持显示/置顶/主题切换/退出
 - **单实例模式** — 第二次点击 exe 只会聚焦已有窗口，不会打开多个实例
-- **菜单栏** — 文件（导入/导出/退出）、视图（主题/风格/新建/搜索/置顶/全屏）、帮助（关于）
 - **全局快捷键** — `Ctrl+S` 导出、`Ctrl+O` 导入、`Ctrl+D` 主题、`Ctrl+G` 风格、`Ctrl+K` 搜索、`Ctrl+N` 新建、`Ctrl+T` 置顶、`F11` 全屏
 - **UI 放大** — 桌面版侧边栏、工具栏、弹窗、AOTY 卡片等 UI 元素等比放大 20%，适配大屏显示器
 - **独立样式** — 通过 `css/macos.css` 提供桌面版专属样式，通过 `[data-desktop="true"]` 选择器限定，不影响网页版
+
+### 功能一览新增
+
+- **分数统计面板** — 右侧固定显示两个统计卡片（Albums / Singles），各自显示平均分、7 档分数分布柱状图（100 / 90+ / 80 / 70 / 60 / 50 / <50）和 NR 数量，数据实时更新
+- **并发保存锁** — `saveData()` 内置锁机制，快速连续操作不会丢失数据
 
 ### 构建
 
@@ -140,11 +145,10 @@ npm run tauri build
 └── src-tauri/
     ├── Cargo.toml          # Rust 依赖（tauri + 插件）
     ├── tauri.conf.json     # 窗口大小、打包配置、插件声明
-    ├── capabilities/
-    │   └── default.json    # Tauri v2 权限（dialog/fs/shell/shortcut）
+    ├── capabilities/default.json    # Tauri v2 权限（dialog/fs/shell/shortcut/window）
     ├── icons/              # 应用图标
     └── src/
-        └── main.rs         # 菜单栏、系统托盘、单实例、窗口管理
+        └── main.rs         # 系统托盘、单实例、窗口管理、数据持久化命令
 ```
 
 **Tauri 插件**：dialog（文件对话框）、fs（文件系统）、global-shortcut（全局快捷键）、shell（命令执行）、single-instance（单实例）
