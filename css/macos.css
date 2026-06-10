@@ -70,7 +70,6 @@
 [data-desktop="true"] .sidebar {
   width: 288px;
   min-width: 288px;
-  height: calc(100vh - 38px);
   border-right: 0.5px solid var(--separator);
   backdrop-filter: blur(30px) saturate(200%);
   -webkit-backdrop-filter: blur(30px) saturate(200%);
@@ -667,11 +666,6 @@
   padding-top: 38px;
   height: 100vh;
   box-sizing: border-box;
-}
-
-[data-desktop="true"] .main {
-  height: calc(100vh - 38px);
-  overflow-x: hidden;
 }
 
 [data-desktop="true"] .titlebar {
