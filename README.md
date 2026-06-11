@@ -98,13 +98,13 @@ node gen.js path/to/your/file.txt
 
 ---
 
-## 桌面版（v1.2.0）
+## 桌面版（v1.2.1）
 
 基于 [Tauri v2](https://v2.tauri.app/)（Rust + WebView2）构建的 Windows 原生应用，共享同一套前端代码。
 
 ### 下载安装
 
-前往 [Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 `Xan's Music Ratings_1.2.0_x64_en-US.msi`，双击安装即可。
+前往 [Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 `Xan's Music Ratings_1.2.1_x64_en-US.msi`，双击安装即可。
 
 ### 桌面版专属功能
 
@@ -118,8 +118,9 @@ node gen.js path/to/your/file.txt
 
 ### 功能一览新增
 
-- **分数统计面板** — 右侧固定显示两个统计卡片（Albums / Singles），各自显示平均分、7 档分数分布柱状图（100 / 90+ / 80 / 70 / 60 / 50 / <50）和 NR 数量，数据实时更新
+- **分数统计面板** — 右侧固定显示两个统计卡片（专辑 / 单曲），各自显示平均分、7 档分数分布柱状图（100 / 90+ / 80 / 70 / 60 / 50 / <50）、已打分/未打分/总条目数，中英文切换实时生效
 - **并发保存锁** — `saveData()` 内置锁机制，快速连续操作不会丢失数据
+- **分组标题中英文** — Albums/Singles 标题随语言切换显示「专辑/单曲」
 
 ### 构建
 

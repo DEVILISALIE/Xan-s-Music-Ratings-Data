@@ -383,9 +383,10 @@ function renderContent() {
         html += `<div id="group-${escapeHtml(getGroupId(section.id, 'soty'))}" style="height:1px;margin:0;padding:0;overflow:hidden"></div>`;
       }
 
-      // 渲染分组标题
+      // 渲染分组标题（支持中英文）
       if (group.entries.length > 0) {
-        html += `<div class="group-title" id="group-${escapeHtml(gid)}">${escapeHtml(group.name)}</div>`;
+        const groupLabel = group.name === 'Albums' ? t('toolbar.albums') : group.name === 'Singles' ? t('toolbar.singles') : group.name;
+        html += `<div class="group-title" id="group-${escapeHtml(gid)}">${escapeHtml(groupLabel)}</div>`;
       }
 
       // 卡片列表
@@ -497,10 +498,12 @@ function updateGlobalStatsSidebar() {
       '<div class="stats-card-title">' + label + '</div>' +
       '<div class="stats-header">' +
       '<span class="stats-avg-value">' + avg + '</span>' +
-      '<span class="stats-avg-label">avg</span>' +
+      '<span class="stats-avg-label">' + t('stats.avg') + '</span>' +
       '</div>' +
       '<div class="stats-dist">' + barsHtml + '</div>' +
-      (nrCount > 0 ? '<div class="stats-nr">NR: ' + nrCount + '</div>' : '<div class="stats-nr">0 NR</div>') +
+      '<div class="stats-nr">' + t('stats.scored') + ': ' + scores.length + '</div>' +
+      '<div class="stats-nr">' + t('stats.nr') + ': ' + nrCount + '</div>' +
+      '<div class="stats-nr">' + totalEntries + ' ' + t('stats.entries') + '</div>' +
       '</div>';
   }
 
@@ -513,7 +516,7 @@ function updateGlobalStatsSidebar() {
     return sum + (g ? g.entries.length : 0);
   }, 0);
 
-  panel.innerHTML = buildPanel(albumScores, 'Albums', albumTotal) + buildPanel(singleScores, 'Singles', singleTotal);
+  panel.innerHTML = buildPanel(albumScores, t('toolbar.albums'), albumTotal) + buildPanel(singleScores, t('toolbar.singles'), singleTotal);
 }
 
 // 卡片元数据渲染（标签、曲目数、备注文字）— 供 renderAlbumCard / renderAotyCard 共用

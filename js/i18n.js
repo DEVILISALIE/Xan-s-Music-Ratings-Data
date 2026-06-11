@@ -23,6 +23,10 @@ const I18N = {
     'toolbar.singles': 'Singles',
     'toolbar.countFiltered': '{visible} / {total}',
     'toolbar.nr': 'NR / No Score',
+    'stats.avg': 'avg',
+    'stats.nr': 'NR',
+    'stats.entries': 'entries',
+    'stats.scored': 'scored',
 
     // Modal
     'modal.editTitle': 'Edit Content',
@@ -143,6 +147,10 @@ const I18N = {
     'toolbar.singles': '单曲',
     'toolbar.countFiltered': '{visible} / {total}',
     'toolbar.nr': 'NR / 无分数',
+    'stats.avg': '平均',
+    'stats.nr': '未打分',
+    'stats.entries': '条',
+    'stats.scored': '已打分',
 
     // Modal
     'modal.editTitle': '编辑内容',

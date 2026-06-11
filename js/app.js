@@ -1065,7 +1065,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.2.0");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.2.1");
         break;
     }
   });
