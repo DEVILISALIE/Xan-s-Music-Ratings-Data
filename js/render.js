@@ -486,7 +486,7 @@ function updateGlobalStatsSidebar() {
     let barsHtml = '';
     for (let i = 0; i < ranges.length; i++) {
       const pct = Math.round(dist[i] / maxCount * 100);
-      const rangeLabel = i === 0 ? '100' : i === 1 ? '90+' : i === ranges.length - 1 ? '<50' : String(ranges[i][0]);
+      const rangeLabel = i === 0 ? '100' : i === 1 ? '90-99' : i === ranges.length - 1 ? '0-49' : String(ranges[i][0]) + '-' + String(ranges[i][1]);
       barsHtml += '<div class="stats-row">' +
         '<span class="stats-label">' + rangeLabel + '</span>' +
         '<div class="stats-bar-track"><div class="stats-bar" style="width:' + pct + '%"></div></div>' +
@@ -503,7 +503,7 @@ function updateGlobalStatsSidebar() {
       '<div class="stats-dist">' + barsHtml + '</div>' +
       '<div class="stats-nr">' + t('stats.scored') + ': ' + scores.length + '</div>' +
       '<div class="stats-nr">' + t('stats.nr') + ': ' + nrCount + '</div>' +
-      '<div class="stats-nr">' + totalEntries + ' ' + t('stats.entries') + '</div>' +
+      '<div class="stats-nr">' + t('stats.entries') + ': ' + totalEntries + '</div>' +
       '</div>';
   }
 

@@ -17,6 +17,9 @@
   <div class="titlebar" id="titleBar">
     <span class="titlebar-version" id="appVersion"></span>
     <div class="titlebar-controls">
+      <button class="titlebar-btn titlebar-btn-pin" data-action="win-topmost" aria-label="Topmost">
+        <svg class="pin-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="3" width="14" height="4.5" rx="2"/><line x1="12" y1="7.5" x2="12" y2="21" stroke-width="2.8"/></svg>
+      </button>
       <button class="titlebar-btn" data-action="win-minimize" aria-label="Minimize">
         <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
       </button>
@@ -111,6 +114,14 @@
 
   <!-- 右侧统计面板（固定位置） -->
   <aside class="global-stats-sidebar" id="globalStatsSidebar"></aside>
+  <!-- 自定义右键菜单 -->
+  <div class="context-menu" id="contextMenu">
+    <div class="context-menu-item" data-action="ctx-minimize">最小化 <span class="shortcut">Alt+F4</span></div>
+    <div class="context-menu-item" data-action="ctx-maximize" id="ctxMaximizeItem">最大化 <span class="shortcut">双击标题栏</span></div>
+    <div class="context-menu-item" data-action="ctx-topmost" id="ctxTopmostItem">置顶 <span class="shortcut">Ctrl+T</span></div>
+    <div class="context-menu-sep"></div>
+    <div class="context-menu-item" data-action="ctx-close">关闭 <span class="shortcut">Alt+F4</span></div>
+  </div>
 </div>
 
 <!-- FAB -->

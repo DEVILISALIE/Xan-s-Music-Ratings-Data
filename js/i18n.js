@@ -25,7 +25,7 @@ const I18N = {
     'toolbar.nr': 'NR / No Score',
     'stats.avg': 'avg',
     'stats.nr': 'NR',
-    'stats.entries': 'entries',
+    'stats.entries': 'Entries',
     'stats.scored': 'scored',
 
     // Modal
@@ -149,7 +149,7 @@ const I18N = {
     'toolbar.nr': 'NR / 无分数',
     'stats.avg': '平均',
     'stats.nr': '未打分',
-    'stats.entries': '条',
+    'stats.entries': '条目',
     'stats.scored': '已打分',
 
     // Modal

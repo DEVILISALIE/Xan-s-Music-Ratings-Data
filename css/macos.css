@@ -388,12 +388,13 @@
 [data-desktop="true"] .content {
   padding: 16px 26px 80px;
   max-width: none;
-  margin-right: 260px;
+  margin-right: 320px;
 }
 
 [data-desktop="true"] .album-card,
 [data-desktop="true"] .aoty-card {
-  /* no extra margin - fill full content width */
+  width: 100%;
+  box-sizing: border-box;
 }
 
 [data-desktop="true"] .section-title {
@@ -507,6 +508,7 @@
   right: 24px;
   border-radius: 14px;
   box-shadow: 0 2px 12px rgba(0, 122, 255, 0.3);
+  z-index: 200;
 }
 
 [data-desktop="true"] .fab:hover {
@@ -517,13 +519,15 @@
   width: 36px;
   height: 36px;
   font-size: 16px;
-  bottom: 84px;
-  right: 32px;
+  bottom: 26px;
+  right: 90px;
   border-radius: 10px;
+  z-index: 200;
 }
 
 [data-desktop="true"] .fab-search-prev {
-  bottom: 128px;
+  bottom: 72px;
+  right: 90px;
 }
 
 /* ===== macOS Modal ===== */
@@ -689,8 +693,8 @@
   backdrop-filter: blur(30px) saturate(200%);
   -webkit-backdrop-filter: blur(30px) saturate(200%);
   border-bottom: 0.5px solid var(--separator);
-  -webkit-app-region: drag;
   user-select: none;
+  cursor: default;
 }
 
 [data-desktop="true"] .titlebar-version {
@@ -703,6 +707,11 @@
 [data-desktop="true"] .titlebar-controls {
   display: flex;
   -webkit-app-region: no-drag;
+}
+
+[data-desktop="true"] .titlebar-btn-pin.active {
+  color: var(--accent);
+  background: var(--pill-bg);
 }
 
 [data-desktop="true"] .titlebar-btn {
@@ -738,6 +747,63 @@
   color: #fff;
 }
 
+/* ===== 自定义右键菜单 ===== */
+[data-desktop="true"] .context-menu {
+  display: none;
+  position: fixed;
+  min-width: 200px;
+  padding: 6px;
+  border-radius: 10px;
+  background: var(--card-bg);
+  border: 0.5px solid var(--separator);
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 0 0 0.5px rgba(0,0,0,0.06);
+  z-index: 10000;
+  font-size: 13px;
+}
+
+[data-desktop="true"] .context-menu.open {
+  display: block;
+}
+
+[data-desktop="true"] .context-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text);
+  transition: background 0.1s;
+}
+
+[data-desktop="true"] .context-menu-item:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+[data-desktop="true"] .context-menu-item.disabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+[data-desktop="true"] .context-menu-item .shortcut {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-left: 24px;
+}
+
+[data-desktop="true"] .context-menu-item:hover .shortcut {
+  color: rgba(255,255,255,0.7);
+}
+
+[data-desktop="true"] .context-menu-sep {
+  height: 1px;
+  background: var(--separator);
+  margin: 4px 8px;
+}
+
 /* ===== 分数统计面板 ===== */
 [data-desktop="true"] .section {
   display: flex;
@@ -750,6 +816,14 @@
 [data-desktop="true"] .group-title,
 [data-desktop="true"] .group-cards-list {
   flex-basis: 100%;
+  min-width: 0;
+}
+
+[data-desktop="true"] .album-card,
+[data-desktop="true"] .aoty-card {
+  width: 100%;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
 /* 全局右侧统计面板（固定不滚动） */
@@ -757,7 +831,7 @@
   position: fixed;
   right: 20px;
   top: 160px;
-  width: 220px;
+  width: 280px;
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -814,11 +888,12 @@
 }
 
 [data-desktop="true"] .stats-label {
-  width: 28px;
+  width: 40px;
   font-size: 11px;
   color: var(--text-tertiary);
   text-align: right;
   flex-shrink: 0;
+  white-space: nowrap;
 }
 
 [data-desktop="true"] .stats-bar-track {

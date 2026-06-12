@@ -134,6 +134,22 @@ fn start_window_drag(app: AppHandle) {
     }
 }
 
+#[tauri::command]
+fn is_window_maximized(app: AppHandle) -> bool {
+    if let Some(win) = get_main_window(&app) {
+        return win.is_maximized().unwrap_or(false);
+    }
+    false
+}
+
+#[tauri::command]
+fn is_window_fullscreen(app: AppHandle) -> bool {
+    if let Some(win) = get_main_window(&app) {
+        return win.is_fullscreen().unwrap_or(false);
+    }
+    false
+}
+
 // ===== 数据持久化 =====
 
 // 获取主文件和备份文件路径
@@ -329,6 +345,7 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             get_app_version, toggle_topmost, toggle_fullscreen,
             minimize_window, toggle_maximize, close_window, start_window_drag,
+            is_window_maximized, is_window_fullscreen,
             save_data_to_disk, load_data_from_disk, check_disk_data, get_data_file_size, write_log
         ])
         .run(tauri::generate_context!())

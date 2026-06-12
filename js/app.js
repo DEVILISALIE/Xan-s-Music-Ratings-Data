@@ -592,18 +592,39 @@ function bindContentArea() {
       toggleReview(reviewToggle);
       return;
     }
-    // 批量模式下点击卡片切换选中
+    // 批量模式下点击卡片切换选中（支持 Shift 范围选择）
     if (batchMode) {
       const batchCheckbox = e.target.closest('[data-action="batch-toggle-entry"]');
-      if (batchCheckbox) {
-        e.stopPropagation();
-        batchToggleEntry(batchCheckbox.dataset.entryId);
-        return;
-      }
       const card = e.target.closest('.album-card, .aoty-card');
-      if (card) {
+      const target = batchCheckbox || card;
+      if (target) {
         e.stopPropagation();
-        batchToggleEntry(card.dataset.entryId);
+        const entryId = target.dataset.entryId || (card && card.dataset.entryId);
+        if (!entryId) return;
+
+        if (e.shiftKey && window._lastBatchClickId) {
+          // Shift+click：选中上次点击到当前点击之间的所有卡片
+          const visibleCards = allCards.filter(c => !c.card.classList.contains('hidden'));
+          const lastIdx = visibleCards.findIndex(c => c.entry && c.entry.id === window._lastBatchClickId);
+          const curIdx = visibleCards.findIndex(c => c.entry && c.entry.id === entryId);
+          if (lastIdx !== -1 && curIdx !== -1) {
+            const start = Math.min(lastIdx, curIdx);
+            const end = Math.max(lastIdx, curIdx);
+            for (let i = start; i <= end; i++) {
+              if (visibleCards[i].entry) {
+                batchSelectedIds.add(visibleCards[i].entry.id);
+                const el = visibleCards[i].card;
+                el.classList.add('batch-selected');
+                const cb = el.querySelector('.batch-checkbox');
+                if (cb) cb.classList.add('checked');
+              }
+            }
+            updateBatchBar();
+          }
+        } else {
+          batchToggleEntry(entryId);
+        }
+        window._lastBatchClickId = entryId;
         return;
       }
       return;
@@ -658,6 +679,7 @@ function toggleBatchMode() {
 function cancelBatchMode() {
   batchMode = false;
   batchSelectedIds.clear();
+  window._lastBatchClickId = null;
   const toggleBtn = document.getElementById('batchToggleBtn');
   const batchBar = document.getElementById('batchBar');
   const contentArea = document.getElementById('contentArea');
@@ -1037,21 +1059,124 @@ init();
   } catch (_) {}
 
   // 窗口控件
+  const maximizeBtn = document.querySelector('[data-action="win-maximize"]');
+  const pinBtn = document.querySelector('[data-action="win-topmost"]');
+  const pinEmpty = '<svg class="pin-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="3" width="14" height="4.5" rx="2"/><line x1="12" y1="7.5" x2="12" y2="21" stroke-width="2.8"/></svg>';
+  const pinFilled = '<svg class="pin-icon" width="11" height="11" viewBox="0 0 24 24" fill="var(--accent)" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><rect x="5" y="3" width="14" height="4.5" rx="2"/><line x1="12" y1="7.5" x2="12" y2="21" stroke-width="2.8"/></svg>';
+  const maximizeSvg = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="9" height="9" rx="1"/></svg>';
+  const restoreSvg = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1"><rect x="2" y="0.5" width="7.5" height="7.5" rx="1"/><rect x="0.5" y="2" width="7.5" height="7.5" rx="1" fill="var(--card-bg, #fff)"/></svg>';
+  let isTopmost = false;
+
+  pinBtn?.addEventListener('click', () => {
+    invoke('toggle_topmost');
+    isTopmost = !isTopmost;
+    pinBtn.innerHTML = isTopmost ? pinFilled : pinEmpty;
+    pinBtn.classList.toggle('active', isTopmost);
+  });
+
+  async function updateMaximizeIcon() {
+    if (!maximizeBtn) return;
+    try {
+      const [isMax, isFs] = await Promise.all([
+        invoke('is_window_maximized'),
+        invoke('is_window_fullscreen')
+      ]);
+      maximizeBtn.innerHTML = (isMax || isFs) ? restoreSvg : maximizeSvg;
+    } catch (_) {}
+  }
+
+  maximizeBtn?.addEventListener('click', () => {
+    invoke('toggle_maximize').then(updateMaximizeIcon);
+  });
   document.querySelector('[data-action="win-minimize"]')?.addEventListener('click', () => {
     invoke('minimize_window');
-  });
-  document.querySelector('[data-action="win-maximize"]')?.addEventListener('click', () => {
-    invoke('toggle_maximize');
   });
   document.querySelector('[data-action="win-close"]')?.addEventListener('click', () => {
     invoke('close_window');
   });
 
+  // 标题栏拖拽（替代 -webkit-app-region: drag，避免系统右键菜单）
+  document.getElementById('titleBar')?.addEventListener('mousedown', (e) => {
+    if (e.target.closest('.titlebar-controls')) return;
+    if (e.button !== 0) return;
+    invoke('start_window_drag');
+  });
+
   // 标题栏双击切换最大化
   document.getElementById('titleBar')?.addEventListener('dblclick', (e) => {
     if (e.target.closest('.titlebar-controls')) return;
-    invoke('toggle_maximize');
+    invoke('toggle_maximize').then(updateMaximizeIcon);
   });
+
+  // 监听窗口大小变化，自动更新图标
+  tauriEvent?.listen('tauri://resize', updateMaximizeIcon);
+  // 初始化图标状态
+  updateMaximizeIcon();
+
+  // ===== 自定义右键菜单 =====
+  const ctxMenu = document.getElementById('contextMenu');
+  const ctxMaximizeItem = document.getElementById('ctxMaximizeItem');
+  const ctxTopmostItem = document.getElementById('ctxTopmostItem');
+
+  function updateCtxMenuLabels() {
+    try {
+      Promise.all([invoke('is_window_maximized'), invoke('is_window_fullscreen')]).then(([isMax, isFs]) => {
+        ctxMaximizeItem.childNodes[0].textContent = (isMax || isFs) ? '还原' : '最大化';
+      });
+      invoke('toggle_topmost').then(() => {
+        // toggle_topmost 是切换，需要先查询状态。用另一个方式
+      });
+    } catch (_) {}
+  }
+
+  // 禁止系统右键菜单，显示自定义菜单
+  document.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!ctxMenu) return;
+
+    // 更新菜单项文字
+    const isZh = currentLang === 'zh';
+    const minLabel = isZh ? '最小化' : 'Minimize';
+    const closeLabel = isZh ? '关闭' : 'Close';
+    const topLabel = isZh ? '置顶' : 'Topmost';
+    ctxMenu.children[0].childNodes[0].textContent = minLabel;
+    ctxMenu.children[0].querySelector('.shortcut').textContent = '—';
+    ctxMenu.children[2].childNodes[0].textContent = topLabel;
+    ctxMenu.children[2].querySelector('.shortcut').textContent = 'Ctrl+T';
+    ctxMenu.children[4].childNodes[0].textContent = closeLabel;
+    ctxMenu.children[4].querySelector('.shortcut').textContent = 'Alt+F4';
+
+    // 更新最大化/还原标签
+    Promise.all([invoke('is_window_maximized'), invoke('is_window_fullscreen')]).then(([isMax, isFs]) => {
+      ctxMaximizeItem.childNodes[0].textContent = (isMax || isFs)
+        ? (isZh ? '还原' : 'Restore')
+        : (isZh ? '最大化' : 'Maximize');
+    }).catch(() => {});
+
+    // 定位菜单（防止超出窗口）
+    const x = Math.min(e.clientX, window.innerWidth - 220);
+    const y = Math.min(e.clientY, window.innerHeight - 200);
+    ctxMenu.style.left = x + 'px';
+    ctxMenu.style.top = y + 'px';
+    ctxMenu.classList.add('open');
+  });
+
+  // 菜单项点击
+  ctxMenu?.addEventListener('click', (e) => {
+    const item = e.target.closest('.context-menu-item');
+    if (!item) return;
+    const action = item.dataset.action;
+    if (action === 'ctx-minimize') invoke('minimize_window');
+    else if (action === 'ctx-maximize') invoke('toggle_maximize').then(updateMaximizeIcon);
+    else if (action === 'ctx-topmost') invoke('toggle_topmost');
+    else if (action === 'ctx-close') invoke('close_window');
+    ctxMenu.classList.remove('open');
+  });
+
+  // 点击其他地方关闭菜单
+  document.addEventListener('click', () => ctxMenu?.classList.remove('open'));
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') ctxMenu?.classList.remove('open'); });
 
   // 监听托盘事件
   tauriEvent?.listen('menu-action', ({ payload }) => {
@@ -1065,7 +1190,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.2.1");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.2.2");
         break;
     }
   });

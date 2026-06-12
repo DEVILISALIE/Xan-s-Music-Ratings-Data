@@ -84,7 +84,8 @@ npm run tauri build              # 构建 MSI 安装包
 **桌面版（Tauri v2）**：
 - 前端通过 `window.__TAURI__` 检测桌面环境，`app.js` 末尾的 `initTauriDesktop()` 自动激活桌面功能
 - `css/macos.css` 通过 `[data-desktop="true"]` 选择器提供桌面版专属样式（UI 放大 20%），不影响网页版
-- **自定义标题栏**（`decorations: false`）：38px 毛玻璃标题栏，左侧版本号，右侧 Windows 风格窗口控件（最小化/最大化/关闭），标题栏可拖拽移动窗口，关闭按钮 hover 变红（Windows 11 风格）
+- **自定义标题栏**（`decorations: false`）：38px 毛玻璃标题栏，左侧版本号，右侧窗口控件（📌置顶 / □最大化 / —最小化 / ×关闭），标题栏通过 JS `start_window_drag` 拖拽（不使用 `-webkit-app-region: drag` 以避免系统右键菜单），关闭按钮 hover 变红，最大化/全屏时中间按钮自动切换为还原图标
+- **自定义右键菜单**：拦截系统右键菜单，显示毛玻璃风格自定义菜单（最小化/最大化还原/置顶/关闭），支持中英文
 - 窗口管理通过自定义 Tauri command：`minimize_window`、`toggle_maximize`、`close_window`、`start_window_drag`
 - 托盘事件通过 `tauriEvent.listen('menu-action')` 接收，映射到前端函数
 - 导出使用 Tauri 原生文件对话框（`__TAURI_PLUGIN_DIALOG__` + `__TAURI_PLUGIN_FS__`）
@@ -96,11 +97,13 @@ npm run tauri build              # 构建 MSI 安装包
 - `build-frontend.js` 构建时将 index.html/css/js/data.json 复制到 dist/，Tauri 打包进二进制
 - Tauri 插件：dialog、fs、global-shortcut、shell、single-instance
 
-**分数统计面板**：`render.js` 中 `updateGlobalStatsSidebar()` 在右侧固定位置渲染两个统计卡片（Albums / Singles），各自显示平均分、7 档分数分布柱状图（100 / 90+ / 80 / 70 / 60 / 50 / <50）、已打分/未打分/总条目数。所有标签（专辑/单曲、平均、已打分、未打分、条）均支持中英文切换，通过 `t()` 函数实现。每次数据变更后通过 `refreshAll()` 实时更新。
+**分数统计面板**：`render.js` 中 `updateGlobalStatsSidebar()` 在右侧固定位置渲染两个统计卡片（专辑 / 单曲），各自显示平均分、7 档分数分布柱状图（100 / 90-99 / 80-89 / 70-79 / 60-69 / 50-59 / 0-49）、已打分/未打分/条目数。所有标签均支持中英文切换，通过 `t()` 函数实现。每次数据变更后通过 `refreshAll()` 实时更新。
+
+**Shift+click 批量选择**：批量模式下，点击第一张卡片后 Shift+点击另一张卡片，自动选中两者之间的所有卡片。退出批量模式时清除选择记忆。
 
 **渲染与筛选分离**：`renderContent()` 重建 DOM 时同步应用筛选（通过 `matchesFilter(entry)` 传入 `visible`），并维护 `allCards` 缓存和 `searchResults` 数组。`applyFilters()` 仅切换 `hidden` 类，不触发 DOM 重建。`rebuildCardCache()` 仅在 DOM 重建后调用。
 
-**国际化**：`i18n.js` 包含 `I18N` 字典（en/zh）和 `t(key, params)` 翻译函数。HTML 中通过 `data-i18n`、`data-i18n-placeholder`、`data-i18n-title` 属性标记需翻译的元素。`applyI18nToDOM()` 批量替换 DOM 文本。语言偏好持久化到 localStorage（key: `lang`）。切换语言时同步更新 tooltip 文字、分组标题（Albums→专辑 / Singles→单曲）和统计面板标签（avg→平均 / NR→未打分 / entries→条 / scored→已打分）。
+**国际化**：`i18n.js` 包含 `I18N` 字典（en/zh）和 `t(key, params)` 翻译函数。HTML 中通过 `data-i18n`、`data-i18n-placeholder`、`data-i18n-title` 属性标记需翻译的元素。`applyI18nToDOM()` 批量替换 DOM 文本。语言偏好持久化到 localStorage（key: `lang`）。切换语言时同步更新 tooltip 文字、分组标题（Albums→专辑 / Singles→单曲）和统计面板标签（avg→平均 / NR→未打分 / Entries→条目 / scored→已打分）。
 
 **主题与风格**：iOS 15 设计语言。两个维度独立切换：亮/暗模式（`[data-theme="dark"]`）和风格预设（纯色 vs 毛玻璃 `[data-style="glass"]`），状态持久化到 localStorage。默认风格为毛玻璃。
 
