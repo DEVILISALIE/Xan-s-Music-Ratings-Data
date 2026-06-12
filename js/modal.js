@@ -32,6 +32,9 @@ function openEditModal(entryId, sectionId, groupId) {
   editingTracks = (entry.tracks || []).map(t => ({ ...t, disc: t.disc || 1 }));
   renderTracks();
 
+  // 封面
+  loadCoverPreview(entry.cover, entry.id);
+
   document.getElementById('editModal').classList.add('active');
 }
 
@@ -61,12 +64,14 @@ function openAddModal() {
 
   document.querySelectorAll('#editTags .form-tag').forEach(t => t.classList.remove('active'));
 
+  clearCoverPreview();
   document.getElementById('editModal').classList.add('active');
 }
 
 function closeModal() {
   document.getElementById('editModal').classList.remove('active');
   document.getElementById('editSectionSelect').classList.remove('open');
+  document.getElementById('coverRemoveDropdown').classList.remove('active');
   editingEntry = null;
 }
 
@@ -157,7 +162,27 @@ function updateTrackSummary() {
   const rated = editingTracks.filter(t => t.score != null && t.score !== 'NR').length;
   if (len === 0) { el.textContent = ''; return; }
   const avg = rated > 0 ? (editingTracks.reduce((s, t) => s + (typeof t.score === 'number' ? t.score : 0), 0) / rated).toFixed(1) : '—';
-  el.textContent = t('modal.trackSummary', { count: len, plural: len > 1 ? 's' : '', rated, avg });
+  const overallText = t('modal.trackSummary', { count: len, plural: len > 1 ? 's' : '', rated, avg });
+
+  const discMap = new Map();
+  for (const tr of editingTracks) {
+    const disc = tr.disc || 1;
+    if (!discMap.has(disc)) discMap.set(disc, []);
+    discMap.get(disc).push(tr);
+  }
+  const discs = [...discMap.keys()].sort((a, b) => a - b);
+
+  if (discs.length > 1) {
+    const discLines = discs.map(disc => {
+      const tracks = discMap.get(disc);
+      const discRated = tracks.filter(t => t.score != null && t.score !== 'NR').length;
+      const discAvg = discRated > 0 ? (tracks.reduce((s, t) => s + (typeof t.score === 'number' ? t.score : 0), 0) / discRated).toFixed(1) : '—';
+      return t('modal.discAvg', { disc, avg: discAvg });
+    });
+    el.innerHTML = escapeHtml(overallText) + '<br>' + discLines.map(l => escapeHtml(l)).join(' · ');
+  } else {
+    el.textContent = overallText;
+  }
 }
 
 function saveEntry() {
@@ -282,4 +307,239 @@ function updateAotyLabel() {
     const sotyLabel = document.getElementById('sotyGroup').querySelector('.form-label');
     if (sotyLabel) sotyLabel.textContent = currentLang === 'zh' ? '年度单曲' : 'Single of the Year';
   } catch (_) {}
+}
+
+// ===== 封面管理 =====
+
+function loadCoverPreview(cover, entryId) {
+  const wrap = document.getElementById('coverPreviewWrap');
+  const img = document.getElementById('coverPreview');
+  const removeWrap = document.getElementById('coverRemoveWrap');
+
+  // 等比缩放：撑满表单宽度，高度按原图比例
+  function fitImage() {
+    const modal = document.querySelector('.modal');
+    if (!modal) return;
+    const containerW = modal.clientWidth - 48; // 减去 modal padding 24*2
+    const naturalW = img.naturalWidth;
+    const naturalH = img.naturalHeight;
+    if (!containerW || !naturalW || !naturalH) return;
+    const ratio = naturalH / naturalW;
+    img.style.width = containerW + 'px';
+    img.style.height = Math.round(containerW * ratio) + 'px';
+  }
+
+  img.onload = function() {
+    // 弹窗打开动画 0.25s 后再计算，确保 layout 完成
+    setTimeout(fitImage, 300);
+  };
+
+  if (!cover) {
+    wrap.style.display = 'none';
+    img.src = '';
+    img.style.width = '';
+    img.style.height = '';
+    removeWrap.style.display = 'none';
+    return;
+  }
+
+  if (cover.startsWith('http')) {
+    img.src = cover;
+    wrap.style.display = '';
+    removeWrap.style.display = '';
+  } else if (window.__TAURI__) {
+    const cached = coverCache.get(entryId);
+    if (cached) {
+      img.src = cached;
+      wrap.style.display = '';
+      removeWrap.style.display = '';
+    } else {
+      window.__TAURI__.core.invoke('read_cover', { entryId: entryId }).then(dataUrl => {
+        coverCache.set(entryId, dataUrl);
+        img.src = dataUrl;
+        wrap.style.display = '';
+        removeWrap.style.display = '';
+      }).catch(() => {
+        wrap.style.display = 'none';
+        removeWrap.style.display = 'none';
+      });
+    }
+  }
+}
+
+function clearCoverPreview() {
+  document.getElementById('coverPreviewWrap').style.display = 'none';
+  const img = document.getElementById('coverPreview');
+  img.src = '';
+  img.style.width = '';
+  img.style.height = '';
+  document.getElementById('coverRemoveWrap').style.display = 'none';
+  document.getElementById('coverRemoveDropdown').classList.remove('active');
+}
+
+function setupCoverEvents() {
+  const section = document.getElementById('coverSection');
+  if (!section) return;
+
+  // 本地上传
+  section.querySelector('[data-action="cover-upload"]').addEventListener('click', async () => {
+    if (!window.__TAURI__ || !editingEntry) return;
+    try {
+      const { open } = window.__TAURI_PLUGIN_DIALOG__;
+      const selected = await open({
+        multiple: false,
+        filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'avif'] }]
+      });
+      if (!selected) return;
+      const filename = await window.__TAURI__.core.invoke('upload_cover', {
+        entryId: editingEntry.id,
+        sourcePath: selected
+      });
+      editingEntry.cover = filename;
+      // 更新缓存
+      try {
+        const dataUrl = await window.__TAURI__.core.invoke('read_cover', { entryId: editingEntry.id });
+        coverCache.set(editingEntry.id, dataUrl);
+      } catch (_) {}
+      loadCoverPreview(filename, editingEntry.id);
+    } catch (err) {
+      console.error('封面上传失败:', err);
+    }
+  });
+
+  // URL 输入
+  section.querySelector('[data-action="cover-url"]').addEventListener('click', () => {
+    if (!editingEntry) return;
+    const url = prompt(t('modal.coverUrlPrompt'));
+    if (!url || !url.trim()) return;
+    editingEntry.cover = url.trim();
+    coverCache.set(editingEntry.id, url.trim());
+    loadCoverPreview(url.trim(), editingEntry.id);
+  });
+
+  // 移除 — 显示确认 dropdown
+  section.querySelector('[data-action="cover-remove"]').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const dropdown = document.getElementById('coverRemoveDropdown');
+    dropdown.classList.toggle('active');
+  });
+
+  // 确认移除
+  section.querySelector('[data-action="cover-remove-confirm"]').addEventListener('click', async () => {
+    if (!editingEntry) return;
+    if (window.__TAURI__) {
+      try {
+        await window.__TAURI__.core.invoke('remove_cover', { entryId: editingEntry.id });
+      } catch (_) {}
+    }
+    editingEntry.cover = null;
+    coverCache.delete(editingEntry.id);
+    clearCoverPreview();
+  });
+
+  // 取消移除
+  section.querySelector('[data-action="cover-remove-cancel"]').addEventListener('click', () => {
+    document.getElementById('coverRemoveDropdown').classList.remove('active');
+  });
+
+  // 点击外部关闭移除 dropdown
+  document.addEventListener('click', (e) => {
+    const dropdown = document.getElementById('coverRemoveDropdown');
+    const removeWrap = document.getElementById('coverRemoveWrap');
+    if (dropdown.classList.contains('active') && !removeWrap.contains(e.target)) {
+      dropdown.classList.remove('active');
+    }
+  });
+
+  // ===== 封面放大查看器 =====
+  const viewer = document.getElementById('coverViewer');
+  const viewerImg = document.getElementById('coverViewerImg');
+  let viewerScale = 1;
+  let panX = 0, panY = 0;
+  let isDragging = false, dragStartX = 0, dragStartY = 0, dragStartPanX = 0, dragStartPanY = 0;
+
+  function updateViewerTransform() {
+    viewerImg.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + viewerScale + ')';
+  }
+
+  function openCoverViewer() {
+    const src = document.getElementById('coverPreview').src;
+    if (!src) return;
+    viewerImg.src = src;
+    viewerScale = 1;
+    panX = 0;
+    panY = 0;
+    updateViewerTransform();
+    viewer.classList.add('active');
+  }
+
+  function closeCoverViewer() {
+    viewer.classList.remove('active');
+    viewerImg.src = '';
+  }
+
+  // 双击封面图 → 打开放大查看器
+  document.getElementById('coverPreview').addEventListener('dblclick', openCoverViewer);
+
+  // 点击关闭按钮
+  viewer.querySelector('[data-action="cover-viewer-close"]').addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeCoverViewer();
+  });
+
+  // 点击遮罩背景关闭（不包括图片）
+  viewer.addEventListener('click', (e) => {
+    if (e.target === viewer) closeCoverViewer();
+  });
+
+  // 滚轮缩放（以鼠标位置为中心）
+  viewer.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = viewerImg.getBoundingClientRect();
+    const imgCenterX = rect.left + rect.width / 2;
+    const imgCenterY = rect.top + rect.height / 2;
+    const mouseX = e.clientX - imgCenterX;
+    const mouseY = e.clientY - imgCenterY;
+    const oldScale = viewerScale;
+    const delta = e.deltaY > 0 ? -0.15 : 0.15;
+    viewerScale = Math.max(0.3, Math.min(5, viewerScale + delta));
+    const r = viewerScale / oldScale;
+    panX = panX * r - mouseX * (r - 1);
+    panY = panY * r - mouseY * (r - 1);
+    updateViewerTransform();
+  }, { passive: false });
+
+  // 鼠标拖拽平移
+  viewerImg.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    isDragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    dragStartPanX = panX;
+    dragStartPanY = panY;
+    viewerImg.style.cursor = 'grabbing';
+    viewerImg.style.transition = 'none'; // 拖拽时去掉过渡，跟手
+  });
+
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    panX = dragStartPanX + (e.clientX - dragStartX);
+    panY = dragStartPanY + (e.clientY - dragStartY);
+    updateViewerTransform();
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isDragging) {
+      isDragging = false;
+      viewerImg.style.cursor = 'grab';
+      viewerImg.style.transition = 'transform 0.15s ease'; // 松开后恢复过渡
+    }
+  });
+
+  // Escape 关闭
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && viewer.classList.contains('active')) {
+      closeCoverViewer();
+    }
+  });
 }

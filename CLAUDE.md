@@ -54,7 +54,7 @@ npm run tauri build              # 构建 MSI 安装包
     │   └── default.json   # Tauri v2 权限声明（dialog/fs/shell/shortcut/window）
     ├── icons/             # 应用图标（32x32/128x128/256x256/ico）
     └── src/
-        └── main.rs        # 系统托盘、全局快捷键、窗口管理、数据持久化命令
+        └── main.rs        # 系统托盘、全局快捷键、窗口管理、数据持久化命令、封面管理命令
 ```
 
 **JS 加载顺序**：`state.js` → `i18n.js` → `utils.js` → `filter.js` → `modal.js` → `render.js` → `drag.js` → `app.js`
@@ -145,3 +145,20 @@ npm run tauri build              # 构建 MSI 安装包
 **下拉菜单交互**：标签下拉多选，选择后保持展开，点击外部关闭；分数下拉单选，选择后关闭；切换下拉时其他已打开的自动收回。
 
 **解析器注意事项**（gen.js）：日期提取在标签移除之后执行。`psl()` 中分数提取在括号注释移除之后执行。正则 `/^\d+[\.\s]/` 同时匹配 `1. Title` 和 `1 Title` 两种格式。Vol headers 匹配 `/^Vol\.\s*\d+\s*-\s*(\d{4})/` 并合并到已有年份 section。`me()` 函数输出包含 `isSoty: false` 字段（SOTY 通过编辑弹窗手动标记）。
+
+**专辑封面管理**：
+- 数据模型：entry 新增 `cover` 字段，值为本地文件名（如 `"a1.jpg"`）或完整 URL；`null` 表示无封面。通过判断是否以 `http` 开头区分类型
+- 本地文件存储在 `{appDataDir}/covers/` 目录，文件名以 entry id 命名（如 `{entryId}.jpg`），同一 entry 重复上传直接覆盖，旧文件自动清理
+- Rust 端三个 Tauri 命令：`upload_cover(entry_id, source_path)` 复制文件到 covers 目录并返回文件名；`remove_cover(entry_id)` 删除匹配文件；`read_cover(entry_id)` 读取文件并返回 base64 data URL
+- 前端使用 `coverCache`（`Map<id, dataUrl>`）缓存已加载的封面；卡片渲染时懒加载——`getCoverHtml()` 在 `coverCache` 未命中时异步调用 `read_cover` 并就地更新 `<img>` src，不依赖启动预加载
+- 编辑弹窗封面区域：顶部大图预览 + 上传/URL/移除按钮；移除按钮有二级确认 dropdown（确认/取消），点击外部自动关闭
+- 卡片缩略图：普通卡片 48px（桌面版 58px），AOTY/SOTY 卡片使用固定尺寸容器 `.aoty-cover-wrap`（80px/96px），无封面时不显示占位
+- 全屏查看器：双击封面打开，支持滚轮缩放（0.3x–5x，以鼠标位置为锚点）和按住左键拖拽平移；Escape/点击背景/点击 × 关闭
+- 文件大小限制：上传和读取均限制 20MB；支持格式：jpg、jpeg、png、webp、gif、bmp、avif
+- `saveEntry()` 自动包含 `cover` 字段，`refreshAll()` 触发卡片重渲染
+
+**曲目碟号（disc）**：
+- 每首曲目有 `disc` 字段（number，默认 1），用于多碟专辑分组
+- 卡片曲目标签：多碟时显示 `2 Discs 28T`（英文）/ `2碟 28首`（中文），单碟保持原样
+- 编辑弹窗内多碟专辑额外显示每碟独立平均分，用「·」分隔，如 `碟1：平均 85.2 · 碟2：平均 79.4`
+- i18n 键：`content.discLabel`（`{count} Discs ` / `{count}碟 `）、`modal.discAvg`（`Disc {disc}: avg {avg}` / `碟{disc}：平均 {avg}`）

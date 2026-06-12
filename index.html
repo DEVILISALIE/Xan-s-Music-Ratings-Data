@@ -192,6 +192,22 @@
     <div class="modal-title" id="modalTitle" data-i18n="modal.editTitle">Edit Album</div>
     <input type="hidden" id="editId">
     <input type="hidden" id="editSectionId">
+    <div class="form-group cover-section" id="coverSection">
+      <div class="cover-preview-wrap" id="coverPreviewWrap" style="display:none">
+        <img id="coverPreview" class="cover-preview-img" src="" alt="">
+      </div>
+      <div class="cover-actions">
+        <button type="button" class="cover-btn" data-action="cover-upload" data-i18n="modal.coverUpload">Upload</button>
+        <button type="button" class="cover-btn" data-action="cover-url" data-i18n="modal.coverUrl">URL</button>
+        <div class="cover-remove-wrap" id="coverRemoveWrap" style="display:none">
+          <button type="button" class="cover-btn cover-btn-remove" data-action="cover-remove" data-i18n="modal.coverRemove">Remove</button>
+          <div class="cover-remove-dropdown" id="coverRemoveDropdown">
+            <button type="button" class="cover-dropdown-item confirm" data-action="cover-remove-confirm" data-i18n="modal.coverRemoveConfirm">Confirm</button>
+            <button type="button" class="cover-dropdown-item cancel" data-action="cover-remove-cancel" data-i18n="modal.coverRemoveCancel">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="form-group">
       <label class="form-label" data-i18n="modal.title">Title</label>
       <input class="form-input" id="editTitle" name="title" autocomplete="off" placeholder="Album title…" data-i18n-placeholder="modal.placeholder.title">
@@ -269,6 +285,12 @@
       <button class="modal-btn primary" data-action="modal-save" data-i18n="modal.save">Save</button>
     </div>
   </div>
+</div>
+
+<!-- 封面图片放大查看器 -->
+<div class="cover-viewer-overlay" id="coverViewer">
+  <div class="cover-viewer-close" data-action="cover-viewer-close">×</div>
+  <img class="cover-viewer-img" id="coverViewerImg" src="" alt="">
 </div>
 
 <script>

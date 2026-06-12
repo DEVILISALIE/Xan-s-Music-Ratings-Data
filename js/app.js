@@ -252,6 +252,7 @@ async function init() {
   bindSidebar();
   bindTrackList();
   bindContentArea();
+  setupCoverEvents();
 }
 
 // ===== 事件绑定：工具栏按钮 / 弹窗按钮 =====
@@ -1190,7 +1191,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.2.2");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.3.0");
         break;
     }
   });

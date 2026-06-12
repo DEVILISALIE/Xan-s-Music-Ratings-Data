@@ -2,6 +2,9 @@
 let _lastSidebarHtml = '';
 let _lastContentHtml = '';
 
+// 封面缓存：entryId → dataUrl (base64) 或 URL
+const coverCache = new Map();
+
 // 滚动同步用的元素缓存（renderContent / renderSidebar 后刷新，避免每帧 querySelectorAll）
 let _cachedNavItems = [];
 let _cachedGroupEls = [];
@@ -519,13 +522,39 @@ function updateGlobalStatsSidebar() {
   panel.innerHTML = buildPanel(albumScores, t('toolbar.albums'), albumTotal) + buildPanel(singleScores, t('toolbar.singles'), singleTotal);
 }
 
+// 封面缩略图 HTML — 供 renderAlbumCard / renderAotyCard 共用
+// 支持懒加载：缓存未命中时异步获取并就地更新
+function getCoverHtml(entry) {
+  if (!entry.cover) return '';
+  if (entry.cover.startsWith('http')) {
+    return '<img class="album-cover-thumb" src="' + escapeHtml(entry.cover) + '" alt="" loading="lazy">';
+  }
+  const cached = coverCache.get(entry.id);
+  if (cached) {
+    return '<img class="album-cover-thumb" src="' + escapeHtml(cached) + '" alt="" loading="lazy">';
+  }
+  // 缓存未命中，返回带 data-cover-id 的占位 img，异步加载后更新
+  if (window.__TAURI__) {
+    const eid = entry.id;
+    window.__TAURI__.core.invoke('read_cover', { entryId: eid }).then(dataUrl => {
+      coverCache.set(eid, dataUrl);
+      document.querySelectorAll('.album-cover-thumb[data-cover-id]').forEach(img => {
+        if (img.dataset.coverId === eid) img.src = dataUrl;
+      });
+    }).catch(() => {});
+  }
+  return '<img class="album-cover-thumb" data-cover-id="' + escapeHtml(entry.id) + '" alt="" loading="lazy">';
+}
+
 // 卡片元数据渲染（标签、曲目数、备注文字）— 供 renderAlbumCard / renderAotyCard 共用
 function buildCardMeta(entry) {
   const noteText = entry.scoreNote && entry.scoreNote !== 'NR' ? ` (${entry.scoreNote})` : '';
   const noteHtml = noteText ? ' <span style="font-size:12px;color:var(--text-tertiary)">' + escapeHtml(noteText) + '</span>' : '';
   const tagsHtml = (entry.tags || []).map(t => `<span class="tag">${escapeHtml(t)}</span>`).join('');
   const trackCount = entry.tracks && entry.tracks.length > 0 ? entry.tracks.length : 0;
-  const trackHtml = trackCount > 0 ? '<span class="track-count" title="' + t('content.trackTooltip') + '">' + trackCount + t('content.trackUnit') + '</span>' : '';
+  const discCount = trackCount > 0 ? new Set(entry.tracks.map(tr => tr.disc || 1)).size : 0;
+  const discPrefix = discCount > 1 ? t('content.discLabel', { count: discCount }) : '';
+  const trackHtml = trackCount > 0 ? '<span class="track-count" title="' + t('content.trackTooltip') + '">' + discPrefix + trackCount + t('content.trackUnit') + '</span>' : '';
   const tagsBlock = tagsHtml ? '<div class="album-tags">' + tagsHtml + '</div>' : '';
   return { noteHtml, tagsBlock, trackHtml };
 }
@@ -543,6 +572,7 @@ function renderAlbumCard(entry, idx, sectionId, groupId, groupName, visible) {
   return `<div class="album-card ${hiddenClass} ${selectedClass}" data-entry-id="${escapeHtml(entry.id)}" data-section="${escapeHtml(sectionId)}" data-group="${escapeHtml(groupId)}" data-action="open-edit" role="button" tabindex="0">
     <div class="batch-checkbox ${checkedClass}" data-action="batch-toggle-entry" data-entry-id="${escapeHtml(entry.id)}"></div>
     <span class="album-index">${idx}</span>
+    ${getCoverHtml(entry)}
     <div class="album-info">
       <div class="album-title">${escapeHtml(entry.title)}${noteHtml}</div>
       <div class="album-artist">${escapeHtml(entry.artist || '')}</div>
@@ -570,6 +600,7 @@ function renderAotyCard(entry, sectionId, groupId, visible, groupName) {
   return `<div class="aoty-card ${groupName === 'Singles' ? 'soty-card' : ''} ${hiddenClass} ${selectedClass}" data-entry-id="${escapeHtml(entry.id)}" data-section="${escapeHtml(sectionId)}" data-group="${escapeHtml(groupId)}" data-action="open-edit" role="button" tabindex="0">
     <div style="display:flex;align-items:flex-start;gap:12px">
       <div class="batch-checkbox ${checkedClass}" data-action="batch-toggle-entry" data-entry-id="${escapeHtml(entry.id)}"></div>
+      ${entry.cover ? '<div class="aoty-cover-wrap">' + getCoverHtml(entry) + '</div>' : ''}
       <div style="flex:1;min-width:0">
         <div class="aoty-header">
           <span class="aoty-badge${groupName === 'Singles' ? ' soty' : ''}">${groupName === 'Singles' ? 'SOTY' : 'AOTY'}</span>

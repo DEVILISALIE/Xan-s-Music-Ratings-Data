@@ -32,7 +32,9 @@
 ### 编辑
 
 - 点击卡片打开编辑弹窗，可修改：标题、艺术家、分数、日期、分数备注、标签、AOTY/SOTY 标记、备注、音轨评分、乐评
-- **音轨评分** — 在弹窗内逐首添加曲目和分数，分数输入 `NR` 表示听过但无法给出分数的曲目，实时显示曲目数/已评分数/平均分
+- **专辑封面** — 支持本地上传（jpg/png/webp/gif/bmp/avif，最大 20MB）和 URL 两种方式，封面存储在 AppData covers/ 目录，JSON 仅存引用；卡片左侧显示缩略图，编辑弹窗内显示大图预览；双击封面可进入全屏查看器，支持滚轮缩放（0.3x–5x，以鼠标位置为锚点）和按住拖拽平移；移除封面有二级确认菜单防误操作
+- **音轨评分** — 在弹窗内逐首添加曲目和分数，分数输入 `NR` 表示听过但无法给出分数的曲目，实时显示曲目数/已评分数/平均分；多碟专辑额外显示每碟独立平均分
+- **曲目标签** — 卡片上的曲目数标签在多碟时显示碟数，如「2 Discs 28T」/「2碟 28首」，单碟时保持原样
 - **添加到分组** — 下拉选择目标年份和 Albums/Singles 分组，可跨年份移动条目
 - **AOTY/SOTY 开关** — Albums 组条目可标记为年度专辑（AOTY），Singles 组条目可标记为年度单曲（SOTY），编辑弹窗根据分组自动切换
 - **必听专辑** — Albums 分组中高分条目自动显示 ★Must Hear Album 标记，阈值和开关可在工具栏自定义，点击保存后生效
@@ -42,7 +44,7 @@
 ### AOTY / SOTY（年度专辑 / 年度单曲）
 
 - Albums 组条目可通过编辑弹窗标记为 AOTY，Singles 组条目可标记为 SOTY
-- AOTY/SOTY 卡片使用独立大卡片样式，显示标签、分数和乐评
+- AOTY/SOTY 卡片使用独立大卡片样式，显示封面缩略图（96px）、标签、分数和乐评
 - 乐评支持展开/收起（超过 120px 自动截断，点击"展开更多"）
 - 侧边栏导航精确到 group 级别，点击跳转后高亮对应 AOTY/SOTY/Albums/Singles 导航项
 
@@ -98,13 +100,13 @@ node gen.js path/to/your/file.txt
 
 ---
 
-## 桌面版（v1.2.2）
+## 桌面版（v1.3.0）
 
 基于 [Tauri v2](https://v2.tauri.app/)（Rust + WebView2）构建的 Windows 原生应用，共享同一套前端代码。
 
 ### 下载安装
 
-前往 [Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 `Xan's Music Ratings_1.2.2_x64_en-US.msi`，双击安装即可。
+前往 [Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 `Xan's Music Ratings_1.3.0_x64_en-US.msi`，双击安装即可。
 
 ### 桌面版专属功能
 
@@ -151,10 +153,10 @@ npm run tauri build
     ├── capabilities/default.json    # Tauri v2 权限（dialog/fs/shell/shortcut/window）
     ├── icons/              # 应用图标
     └── src/
-        └── main.rs         # 系统托盘、单实例、窗口管理、数据持久化命令
+        └── main.rs         # 系统托盘、单实例、窗口管理、数据持久化命令、封面管理命令
 ```
 
-**Tauri 插件**：dialog（文件对话框）、fs（文件系统）、global-shortcut（全局快捷键）、shell（命令执行）、single-instance（单实例）
+**Tauri 插件**：dialog（文件对话框）、fs（文件系统）、global-shortcut（全局快捷键）、shell（命令执行）、single-instance（单实例）；Rust 依赖：base64（封面图片编码）
 
 ## txt 源文件格式
 
@@ -225,10 +227,11 @@ Vol. 1 - 2025
               "isAoty": false,
               "isSoty": false,
               "notes": "",
+              "cover": "a1.jpg",
               "tracks": [
-                { "name": "Song 1", "score": 90 },
-                { "name": "Song 2", "score": 82 },
-                { "name": "Song 3", "score": "NR" }
+                { "name": "Song 1", "score": 90, "disc": 1 },
+                { "name": "Song 2", "score": 82, "disc": 1 },
+                { "name": "Song 3", "score": "NR", "disc": 2 }
               ]
             }
           ]
@@ -247,7 +250,8 @@ Vol. 1 - 2025
 | `tags` | `string[]` | 标签数组，从预设列表中选取 |
 | `isAoty` | `boolean` | 年度专辑标记，渲染时动态归入 AOTY 组 |
 | `isSoty` | `boolean` | 年度单曲标记，渲染时动态归入 SOTY 组 |
-| `tracks` | `array` | 可选的音轨评分数组，每首曲目含 `name` 和 `score`（0–100 或 `"NR"` 表示听过但无法评分） |
+| `tracks` | `array` | 可选的音轨评分数组，每首曲目含 `name`、`score`（0–100 或 `"NR"`）和 `disc`（碟号，默认 1） |
+| `cover` | `string` / `null` | 封面图片：本地文件名（如 `"a1.jpg"`，存在 AppData covers/ 目录）或完整 URL；`null` 表示无封面 |
 | `review` | `string` | 乐评文本，AOTY 卡片中可展开/收起 |
 | `notes` | `string` | 附加备注 |
 

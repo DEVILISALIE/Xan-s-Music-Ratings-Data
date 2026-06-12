@@ -49,6 +49,13 @@ const I18N = {
     'modal.addTrack': '+ Add Track',
     'modal.addDisc': '+ Add Disc',
     'modal.trackSummary': '{count} track{plural} · {rated} rated · avg {avg}',
+    'modal.discAvg': 'Disc {disc}: avg {avg}',
+    'modal.coverUpload': 'Upload',
+    'modal.coverUrl': 'URL',
+    'modal.coverRemove': 'Remove',
+    'modal.coverRemoveConfirm': 'Confirm',
+    'modal.coverRemoveCancel': 'Cancel',
+    'modal.coverUrlPrompt': 'Enter image URL:',
     'modal.placeholder.title': 'Album title…',
     'modal.placeholder.artist': 'Artist name…',
     'modal.placeholder.score': '0–100',
@@ -67,6 +74,7 @@ const I18N = {
     'content.mustHear': '★Must Hear Album',
     'content.trackTooltip': 'Track ratings',
     'content.trackUnit': 'T',
+    'content.discLabel': '{count} Discs ',
     'content.reviewTooltip': 'Has review',
 
     // Confirmations / Alerts
@@ -173,6 +181,13 @@ const I18N = {
     'modal.addTrack': '+ 添加曲目',
     'modal.addDisc': '+ 添加 Disc',
     'modal.trackSummary': '{count} 首曲 · {rated} 首有分 · 平均 {avg}',
+    'modal.discAvg': '碟{disc}：平均 {avg}',
+    'modal.coverUpload': '上传',
+    'modal.coverUrl': 'URL',
+    'modal.coverRemove': '移除',
+    'modal.coverRemoveConfirm': '确认移除',
+    'modal.coverRemoveCancel': '取消',
+    'modal.coverUrlPrompt': '输入图片 URL：',
     'modal.placeholder.title': '专辑名称…',
     'modal.placeholder.artist': '艺术家名称…',
     'modal.placeholder.score': '0–100',
@@ -191,6 +206,7 @@ const I18N = {
     'content.mustHear': '★必听专辑',
     'content.trackTooltip': '曲目评分',
     'content.trackUnit': '首',
+    'content.discLabel': '{count}碟 ',
     'content.reviewTooltip': '有乐评',
 
     // Confirmations / Alerts

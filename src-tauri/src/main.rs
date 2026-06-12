@@ -8,6 +8,7 @@ use tauri::{
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 use std::fs;
+use base64::Engine;
 
 // 向前端发送菜单动作事件
 fn emit_menu_action(app: &AppHandle, action: &str) {
@@ -295,6 +296,101 @@ fn write_log(app: AppHandle, msg: String) -> Result<(), String> {
     writeln!(file, "{}", msg).map_err(|e| e.to_string())
 }
 
+// ===== 封面管理 =====
+
+fn covers_dir(app: &AppHandle) -> Option<std::path::PathBuf> {
+    app.path().app_data_dir().ok().map(|p| p.join("covers"))
+}
+
+#[tauri::command]
+fn upload_cover(app: AppHandle, entry_id: String, source_path: String) -> Result<String, String> {
+    let dir = covers_dir(&app).ok_or("无法获取数据目录")?;
+    fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+
+    let src = std::path::Path::new(&source_path);
+    if !src.exists() {
+        return Err("源文件不存在".into());
+    }
+    // 限制文件大小 20MB
+    if let Ok(meta) = fs::metadata(src) {
+        if meta.len() > 20 * 1024 * 1024 {
+            return Err("图片文件过大（最大 20MB）".into());
+        }
+    }
+    let ext = src.extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("jpg");
+    let filename = format!("{}.{}", entry_id, ext);
+    let dest = dir.join(&filename);
+
+    // 清除该 entry 的旧封面（不同扩展名）
+    if let Ok(entries) = fs::read_dir(&dir) {
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.starts_with(&entry_id) && name != filename {
+                let _ = fs::remove_file(entry.path());
+            }
+        }
+    }
+
+    fs::copy(src, &dest).map_err(|e| e.to_string())?;
+    Ok(filename)
+}
+
+#[tauri::command]
+fn remove_cover(app: AppHandle, entry_id: String) -> Result<(), String> {
+    let dir = match covers_dir(&app) {
+        Some(d) => d,
+        None => return Ok(()),
+    };
+    if !dir.exists() { return Ok(()); }
+    if let Ok(entries) = fs::read_dir(&dir) {
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.starts_with(&entry_id) {
+                let _ = fs::remove_file(entry.path());
+            }
+        }
+    }
+    Ok(())
+}
+
+#[tauri::command]
+fn read_cover(app: AppHandle, entry_id: String) -> Result<String, String> {
+    let dir = covers_dir(&app).ok_or("无法获取数据目录")?;
+    if !dir.exists() { return Err("covers 目录不存在".into()); }
+
+    if let Ok(entries) = fs::read_dir(&dir) {
+        for entry in entries.flatten() {
+            let name = entry.file_name().to_string_lossy().to_string();
+            if name.starts_with(&entry_id) {
+                // 限制读取大小 20MB
+                if let Ok(meta) = fs::metadata(entry.path()) {
+                    if meta.len() > 20 * 1024 * 1024 {
+                        return Err("封面文件过大".into());
+                    }
+                }
+                let bytes = fs::read(entry.path()).map_err(|e| e.to_string())?;
+                let ext = std::path::Path::new(&name)
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .unwrap_or("jpeg");
+                let mime = match ext.to_lowercase().as_str() {
+                    "png" => "image/png",
+                    "gif" => "image/gif",
+                    "webp" => "image/webp",
+                    "bmp" => "image/bmp",
+                    "avif" => "image/avif",
+                    _ => "image/jpeg",
+                };
+                let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+                return Ok(format!("data:{};base64,{}", mime, b64));
+            }
+        }
+    }
+    Err("封面文件不存在".into())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
@@ -346,7 +442,8 @@ fn main() {
             get_app_version, toggle_topmost, toggle_fullscreen,
             minimize_window, toggle_maximize, close_window, start_window_drag,
             is_window_maximized, is_window_fullscreen,
-            save_data_to_disk, load_data_from_disk, check_disk_data, get_data_file_size, write_log
+            save_data_to_disk, load_data_from_disk, check_disk_data, get_data_file_size, write_log,
+            upload_cover, remove_cover, read_cover
         ])
         .run(tauri::generate_context!())
         .expect("启动 Tauri 应用失败");
