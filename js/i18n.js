@@ -26,6 +26,7 @@ const I18N = {
     'settings.darkMode': 'Dark Mode',
     'settings.glassStyle': 'Glass Style',
     'settings.language': 'Language',
+    'settings.batchMode': 'Batch Mode',
     'stats.avg': 'avg',
     'stats.nr': 'NR',
     'stats.entries': 'Entries',
@@ -161,6 +162,7 @@ const I18N = {
     'settings.darkMode': '深色模式',
     'settings.glassStyle': '毛玻璃风格',
     'settings.language': '语言',
+    'settings.batchMode': '多选模式',
     'stats.avg': '平均',
     'stats.nr': '未打分',
     'stats.entries': '条目',
@@ -302,7 +304,6 @@ function applyLang() {
   applyI18nToDOM();
   const langVal = document.getElementById('settingsLangValue');
   if (langVal) langVal.textContent = currentLang === 'zh' ? '中文' : 'English';
-  document.getElementById('batchToggleBtn').title = t('batch.toggleTooltip');
 }
 
 function toggleLang() {

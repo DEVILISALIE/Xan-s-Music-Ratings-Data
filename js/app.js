@@ -285,7 +285,7 @@ function bindStaticButtons() {
   document.querySelector('[data-action="settings-lang"]').addEventListener('click', () => { toggleLang(); });
 
   // 批量操作按钮
-  document.getElementById('batchToggleBtn').addEventListener('click', toggleBatchMode);
+  document.querySelector('[data-action="settings-batch"]').addEventListener('click', () => { toggleBatchMode(); });
   document.querySelector('[data-action="cancel-batch"]').addEventListener('click', cancelBatchMode);
   document.querySelector('[data-action="batch-select-all"]').addEventListener('click', batchSelectAll);
   document.querySelector('[data-action="batch-deselect-all"]').addEventListener('click', batchDeselectAll);
@@ -359,8 +359,6 @@ function bindScoreFilter() {
     applyFilters();
     select.classList.remove('open');
   });
-
-  document.addEventListener('click', () => closeAllDropdowns());
 }
 
 // ===== 事件绑定：标签筛选下拉（多选） =====
@@ -462,8 +460,9 @@ function bindMustHear() {
 
   trigger.addEventListener('click', (e) => {
     e.stopPropagation();
+    const wasOpen = popover.classList.contains('open');
     closeAllDropdowns();
-    popover.classList.toggle('open');
+    if (!wasOpen) popover.classList.add('open');
   });
 
   saveBtn.addEventListener('click', () => {
@@ -663,16 +662,16 @@ function bindContentArea() {
 function toggleBatchMode() {
   batchMode = !batchMode;
   batchSelectedIds.clear();
-  const toggleBtn = document.getElementById('batchToggleBtn');
   const batchBar = document.getElementById('batchBar');
   const contentArea = document.getElementById('contentArea');
   const fab = document.querySelector('.fab');
   const searchNextBtn = document.getElementById('searchNextBtn');
   const searchPrevBtn = document.getElementById('searchPrevBtn');
 
-  toggleBtn.classList.toggle('active', batchMode);
   batchBar.classList.toggle('active', batchMode);
   contentArea.classList.toggle('batch-mode', batchMode);
+  const batchVal = document.getElementById('settingsBatchValue');
+  if (batchVal) batchVal.textContent = batchMode ? 'ON' : 'OFF';
 
   // 隐藏 FAB 按钮
   if (fab) fab.style.display = batchMode ? 'none' : 'flex';
@@ -694,14 +693,14 @@ function cancelBatchMode() {
   batchMode = false;
   batchSelectedIds.clear();
   window._lastBatchClickId = null;
-  const toggleBtn = document.getElementById('batchToggleBtn');
   const batchBar = document.getElementById('batchBar');
   const contentArea = document.getElementById('contentArea');
   const fab = document.querySelector('.fab');
 
-  toggleBtn.classList.remove('active');
   batchBar.classList.remove('active');
   contentArea.classList.remove('batch-mode');
+  const batchVal = document.getElementById('settingsBatchValue');
+  if (batchVal) batchVal.textContent = 'OFF';
 
   // 恢复 FAB 按钮
   if (fab) fab.style.display = 'flex';

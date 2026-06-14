@@ -436,6 +436,7 @@
   right: 0;
   min-width: 200px;
   padding: 6px;
+  z-index: 150;
 }
 
 .settings-group {
@@ -465,7 +466,6 @@
 .settings-value {
   font-size: 13px;
   color: var(--text-secondary);
-}
 }
 
 /* Must Hear Popover */
