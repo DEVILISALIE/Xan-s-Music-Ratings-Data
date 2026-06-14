@@ -455,11 +455,22 @@
 
 /* ===== macOS AOTY Card ===== */
 [data-desktop="true"] .aoty-card {
-  padding: 19px;
+  padding: 19px 29px;
   border-radius: 12px;
   margin-bottom: 12px;
   border: 1.5px solid var(--aoty-border);
   background: var(--aoty-bg);
+}
+
+/* 让 AOTY 卡片突破父容器宽度限制 */
+[data-desktop="true"] .group-cards-list:has(.aoty-card) {
+  overflow: visible;
+}
+
+[data-desktop="true"] .group-cards-list .aoty-card {
+  width: calc(100% + 20px);
+  max-width: calc(100% + 20px);
+  margin-left: -10px;
 }
 
 [data-desktop="true"] .aoty-card:hover {

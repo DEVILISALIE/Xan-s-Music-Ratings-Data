@@ -79,6 +79,7 @@ npm run tauri build              # 构建 MSI 安装包
 - JSON.parse(localStorage 数据) 有 try-catch 防护，损坏数据不阻断保存
 - Rust 端 `save_data_to_disk` JSON 解析失败时返回错误拒绝写入，写入前自动备份到 `.json.bak`
 - `load_data_from_disk` 主文件不可用时自动尝试 `.bak` 备份文件
+- **即时保存（v1.3.1）**：托盘"退出"不再直接 `app.exit(0)`，改为发送 `request-shutdown` 事件给前端，前端 `await saveData()` 确保磁盘写入完成后调用 `graceful_exit` 延迟 500ms 退出；5秒强制退出保底防卡死
 - 桌面版启动时优先从磁盘加载，加载成功后同步到 localStorage
 
 **桌面版（Tauri v2）**：

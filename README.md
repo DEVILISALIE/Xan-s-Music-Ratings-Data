@@ -100,19 +100,20 @@ node gen.js path/to/your/file.txt
 
 ---
 
-## 桌面版（v1.3.0）
+## 桌面版（v1.3.1）
 
 基于 [Tauri v2](https://v2.tauri.app/)（Rust + WebView2）构建的 Windows 原生应用，共享同一套前端代码。
 
 ### 下载安装
 
-前往 [Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 `Xan's Music Ratings_1.3.0_x64_en-US.msi`，双击安装即可。
+前往 [Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 `Xan's Music Ratings_1.3.1_x64_en-US.msi`，双击安装即可。
 
 ### 桌面版专属功能
 
 - **自定义标题栏** — 无原生菜单栏，38px 毛玻璃标题栏，左侧版本号，右侧窗口控件（📌置顶 / □最大化 / —最小化 / ×关闭），标题栏通过 JS 拖拽，关闭按钮 hover 变红，最大化时中间按钮自动切换为还原图标
 - **自定义右键菜单** — 拦截系统右键菜单，显示毛玻璃风格菜单（最小化/最大化还原/置顶/关闭），支持中英文
 - **磁盘持久化** — 数据自动保存到 AppData，每次写入前备份 `.bak` 文件，写入后校验完整性，重启不丢失任何编辑
+- **即时保存** — 从托盘退出时先等待数据保存完成再关闭进程，彻底杜绝退出丢数据的问题
 - **系统托盘** — 点击窗口 X 按钮最小化到系统托盘（任务栏仍在），点击托盘图标恢复窗口；右键菜单支持显示/置顶/主题切换/退出
 - **单实例模式** — 第二次点击 exe 只会聚焦已有窗口，不会打开多个实例
 - **全局快捷键** — `Ctrl+S` 导出、`Ctrl+O` 导入、`Ctrl+D` 主题、`Ctrl+G` 风格、`Ctrl+K` 搜索、`Ctrl+N` 新建、`Ctrl+T` 置顶、`F11` 全屏

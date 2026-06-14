@@ -56,7 +56,15 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
             }
             "tray_theme" => emit_menu_action(app, "toggle-theme"),
             "tray_quit" => {
-                app.exit(0);
+                // 通知前端保存数据后再退出（避免 app.exit(0) 直接终止导致数据丢失）
+                if let Some(win) = app.get_webview_window("main") {
+                    let _ = win.emit("request-shutdown", ());
+                }
+                // 5秒后强制退出（防止前端无响应时卡死）
+                std::thread::spawn(|| {
+                    std::thread::sleep(std::time::Duration::from_secs(5));
+                    std::process::exit(0);
+                });
             }
             _ => {}
         })
@@ -296,6 +304,15 @@ fn write_log(app: AppHandle, msg: String) -> Result<(), String> {
     writeln!(file, "{}", msg).map_err(|e| e.to_string())
 }
 
+// 前端保存完成后调用，延迟退出确保 IPC 响应送达
+#[tauri::command]
+fn graceful_exit() {
+    std::thread::spawn(|| {
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        std::process::exit(0);
+    });
+}
+
 // ===== 封面管理 =====
 
 fn covers_dir(app: &AppHandle) -> Option<std::path::PathBuf> {
@@ -443,6 +460,7 @@ fn main() {
             minimize_window, toggle_maximize, close_window, start_window_drag,
             is_window_maximized, is_window_fullscreen,
             save_data_to_disk, load_data_from_disk, check_disk_data, get_data_file_size, write_log,
+            graceful_exit,
             upload_cover, remove_cover, read_cover
         ])
         .run(tauri::generate_context!())

@@ -425,9 +425,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // 动画完成后重置
-    setTimeout(() => {
+    setTimeout(async () => {
       buildEntryIndex();
-      saveData();
+      await saveData();
       state.isAnimating = false;
       contentArea.classList.remove('is-dragging');
       resetState();

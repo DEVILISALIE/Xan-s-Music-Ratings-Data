@@ -765,7 +765,7 @@ async function batchDelete() {
 
   batchSelectedIds.clear();
   debugAotyCount('batchDelete 后');
-  refreshAll();
+  await refreshAll();
   updateBatchBar();
 }
 
@@ -788,7 +788,7 @@ async function batchAddTag(tag) {
     }
   }
 
-  refreshAll();
+  await refreshAll();
   updateBatchBar();
   closeBatchDropdowns();
 }
@@ -809,7 +809,7 @@ async function batchRemoveTag(tag) {
     }
   }
 
-  refreshAll();
+  await refreshAll();
   updateBatchBar();
   closeBatchDropdowns();
 }
@@ -870,7 +870,7 @@ async function batchMoveToSection(targetSectionId) {
 
   batchSelectedIds.clear();
   debugAotyCount('batchMove 添加后');
-  refreshAll();
+  await refreshAll();
   debugAotyCount('batchMove refreshAll 后');
   updateBatchBar();
   closeBatchDropdowns();
@@ -991,7 +991,7 @@ function handleImport(e) {
   const file = e.target.files[0];
   if (!file) return;
   const reader = new FileReader();
-  reader.onload = (ev) => {
+  reader.onload = async (ev) => {
     try {
       const parsed = JSON.parse(ev.target.result);
       if (!parsed || !Array.isArray(parsed.sections)) {
@@ -1028,7 +1028,7 @@ function handleImport(e) {
       }
       appData = parsed;
       ensureDefaultGroups();
-      refreshAll();
+      await refreshAll();
     } catch (err) {
       showAlert(t('dialog.invalidJsonGeneric'));
     }
@@ -1191,9 +1191,15 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.3.0");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.3.1");
         break;
     }
+  });
+
+  // 监听关闭请求：先保存数据，再退出
+  tauriEvent?.listen('request-shutdown', async () => {
+    try { await saveData(); } catch (_) {}
+    invoke('graceful_exit');
   });
 
   console.log('[Tauri] 桌面版功能已加载');

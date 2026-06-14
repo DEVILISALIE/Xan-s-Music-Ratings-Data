@@ -185,7 +185,7 @@ function updateTrackSummary() {
   }
 }
 
-function saveEntry() {
+async function saveEntry() {
   debugAotyCount('saveEntry 开始');
   const title = document.getElementById('editTitle').value.trim();
   if (!title) return;
@@ -269,7 +269,7 @@ function saveEntry() {
   }
 
   debugAotyCount('saveEntry 后');
-  refreshAll();
+  await refreshAll();
   debugAotyCount('refreshAll 后');
   closeModal();
 }
@@ -288,7 +288,7 @@ async function deleteEntry() {
       if (idx !== -1) {
         group.entries.splice(idx, 1);
         debugAotyCount('deleteEntry 移除后');
-        refreshAll();
+        await refreshAll();
         closeModal();
         return;
       }
