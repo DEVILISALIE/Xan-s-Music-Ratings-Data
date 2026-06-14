@@ -430,6 +430,44 @@
   font-weight: 500;
 }
 
+/* ===== Settings Dropdown ===== */
+.settings-dropdown {
+  left: auto;
+  right: 0;
+  min-width: 200px;
+  padding: 6px;
+}
+
+.settings-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: default;
+}
+
+.settings-item-click {
+  cursor: pointer;
+}
+
+.settings-item-click:hover {
+  background: var(--hover-bg);
+}
+
+.settings-value {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+}
+
 /* Must Hear Popover */
 .must-hear-popover {
   position: absolute;

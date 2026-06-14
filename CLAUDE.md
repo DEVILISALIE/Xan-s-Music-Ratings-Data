@@ -91,6 +91,7 @@ npm run tauri build              # 构建 MSI 安装包
 - 托盘事件通过 `tauriEvent.listen('menu-action')` 接收，映射到前端函数
 - 导出使用 Tauri 原生文件对话框（`__TAURI_PLUGIN_DIALOG__` + `__TAURI_PLUGIN_FS__`）
 - 快捷键：Ctrl+S 导出、Ctrl+D 主题、Ctrl+G 风格、Ctrl+O 导入、Ctrl+K 搜索、Ctrl+N 新建、Ctrl+T 置顶、F11 全屏
+- **设置按钮（v1.3.1）**：工具栏 stats 右侧 ⚙ 按钮，点击弹出 iOS 风格下拉菜单，集成深色模式/毛玻璃风格/语言三个开关，复用 `.toggle-switch` 样式，点击外部自动关闭
 - 系统托盘：左键显示/隐藏窗口，右键菜单（显示/置顶/主题/退出）
 - 点击 X 最小化到系统托盘（不退出），通过 `on_window_event` 拦截 `CloseRequested` 并 `api.prevent_close()` + `win.hide()`
 - 单实例模式：`tauri-plugin-single-instance` 确保只有一个窗口运行，第二次启动聚焦已有窗口

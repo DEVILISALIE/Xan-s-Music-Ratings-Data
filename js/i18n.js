@@ -23,6 +23,9 @@ const I18N = {
     'toolbar.singles': 'Singles',
     'toolbar.countFiltered': '{visible} / {total}',
     'toolbar.nr': 'NR / No Score',
+    'settings.darkMode': 'Dark Mode',
+    'settings.glassStyle': 'Glass Style',
+    'settings.language': 'Language',
     'stats.avg': 'avg',
     'stats.nr': 'NR',
     'stats.entries': 'Entries',
@@ -155,6 +158,9 @@ const I18N = {
     'toolbar.singles': '单曲',
     'toolbar.countFiltered': '{visible} / {total}',
     'toolbar.nr': 'NR / 无分数',
+    'settings.darkMode': '深色模式',
+    'settings.glassStyle': '毛玻璃风格',
+    'settings.language': '语言',
     'stats.avg': '平均',
     'stats.nr': '未打分',
     'stats.entries': '条目',
@@ -294,7 +300,8 @@ function applyLang() {
   document.documentElement.lang = currentLang === 'zh' ? 'zh-CN' : 'en';
   document.documentElement.setAttribute('data-lang', currentLang);
   applyI18nToDOM();
-  document.getElementById('langToggle').title = t('tooltip.lang');
+  const langVal = document.getElementById('settingsLangValue');
+  if (langVal) langVal.textContent = currentLang === 'zh' ? '中文' : 'English';
   document.getElementById('batchToggleBtn').title = t('batch.toggleTooltip');
 }
 

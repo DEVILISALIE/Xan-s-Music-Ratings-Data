@@ -144,6 +144,7 @@ function closeAllDropdowns() {
   document.getElementById('tagFilter').classList.remove('open');
   document.getElementById('editSectionSelect').classList.remove('open');
   document.getElementById('mustHearPopover').classList.remove('open');
+  document.getElementById('settingsSelect').classList.remove('open');
 }
 
 // ===== 初始化入口 =====
@@ -260,9 +261,6 @@ async function init() {
 function bindStaticButtons() {
   document.querySelector('[data-action="export-json"]').addEventListener('click', exportJSON);
   document.querySelector('[data-action="import-json"]').addEventListener('click', importJSON);
-  document.getElementById('langToggle').addEventListener('click', toggleLang);
-  document.getElementById('styleToggle').addEventListener('click', toggleStyle);
-  document.getElementById('themeToggle').addEventListener('click', toggleTheme);
   document.getElementById('searchNextBtn').addEventListener('click', goToNextResult);
   document.getElementById('searchPrevBtn').addEventListener('click', goToPrevResult);
   document.querySelector('[data-action="add-album"]').addEventListener('click', openAddModal);
@@ -270,6 +268,21 @@ function bindStaticButtons() {
   document.querySelector('[data-action="modal-cancel"]').addEventListener('click', closeModal);
   document.getElementById('deleteBtn').addEventListener('click', deleteEntry);
   document.querySelector('[data-action="modal-save"]').addEventListener('click', saveEntry);
+
+  // 设置按钮
+  document.getElementById('settingsBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const select = document.getElementById('settingsSelect');
+    const wasOpen = select.classList.contains('open');
+    closeAllDropdowns();
+    if (!wasOpen) {
+      select.classList.add('open');
+      syncSettingsToggles();
+    }
+  });
+  document.getElementById('settingsThemeToggle').addEventListener('change', () => { toggleTheme(); });
+  document.getElementById('settingsStyleToggle').addEventListener('change', () => { toggleStyle(); });
+  document.querySelector('[data-action="settings-lang"]').addEventListener('click', () => { toggleLang(); });
 
   // 批量操作按钮
   document.getElementById('batchToggleBtn').addEventListener('click', toggleBatchMode);
@@ -883,13 +896,13 @@ function applyTheme() {
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
   const theme = saved || (prefersDark ? 'dark' : 'light');
   document.documentElement.setAttribute('data-theme', theme);
-  document.getElementById('themeToggle').textContent = theme === 'dark' ? '☀️' : '🌙';
-  document.getElementById('themeToggle').title = theme === 'dark' ? t('tooltip.lightMode') : t('tooltip.darkMode');
+  const themeCb = document.getElementById('settingsThemeToggle');
+  if (themeCb) themeCb.checked = theme === 'dark';
 
   const savedStyle = localStorage.getItem('style') || 'glass';
   document.documentElement.setAttribute('data-style', savedStyle);
-  document.getElementById('styleToggle').textContent = savedStyle === 'glass' ? '💠' : '💎';
-  document.getElementById('styleToggle').title = savedStyle === 'glass' ? t('tooltip.solid') : t('tooltip.glass');
+  const styleCb = document.getElementById('settingsStyleToggle');
+  if (styleCb) styleCb.checked = savedStyle === 'glass';
 }
 
 function toggleTheme() {
@@ -897,8 +910,8 @@ function toggleTheme() {
   const next = current === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', next);
   localStorage.setItem('theme', next);
-  document.getElementById('themeToggle').textContent = next === 'dark' ? '☀️' : '🌙';
-  document.getElementById('themeToggle').title = next === 'dark' ? t('tooltip.lightMode') : t('tooltip.darkMode');
+  const cb = document.getElementById('settingsThemeToggle');
+  if (cb) cb.checked = next === 'dark';
   updateThemeColor();
 }
 
@@ -907,8 +920,8 @@ function toggleStyle() {
   const next = current === 'glass' ? 'solid' : 'glass';
   document.documentElement.setAttribute('data-style', next);
   localStorage.setItem('style', next);
-  document.getElementById('styleToggle').textContent = next === 'glass' ? '💠' : '💎';
-  document.getElementById('styleToggle').title = next === 'glass' ? t('tooltip.solid') : t('tooltip.glass');
+  const cb = document.getElementById('settingsStyleToggle');
+  if (cb) cb.checked = next === 'glass';
   updateThemeColor();
 }
 
@@ -920,6 +933,17 @@ function updateThemeColor() {
   else if (theme === 'dark') color = '#000000';
   else if (style === 'glass') color = '#c1dfc4';
   document.querySelector('meta[name="theme-color"]').setAttribute('content', color);
+}
+
+function syncSettingsToggles() {
+  const theme = document.documentElement.getAttribute('data-theme');
+  const style = document.documentElement.getAttribute('data-style') || 'glass';
+  const themeCb = document.getElementById('settingsThemeToggle');
+  const styleCb = document.getElementById('settingsStyleToggle');
+  const langVal = document.getElementById('settingsLangValue');
+  if (themeCb) themeCb.checked = theme === 'dark';
+  if (styleCb) styleCb.checked = style === 'glass';
+  if (langVal) langVal.textContent = currentLang === 'zh' ? '中文' : 'English';
 }
 
 // ===== 弹窗全局事件 =====

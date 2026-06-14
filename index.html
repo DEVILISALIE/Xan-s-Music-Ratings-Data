@@ -104,10 +104,26 @@
         <span class="toolbar-stats-sep">·</span>
         <span id="singleCount"></span>
       </span>
+      <div class="custom-select" id="settingsSelect">
+        <button class="theme-toggle" id="settingsBtn" aria-label="Settings">⚙</button>
+        <div class="custom-select-menu settings-dropdown" id="settingsMenu">
+          <div class="settings-group">
+            <div class="settings-item">
+              <span data-i18n="settings.darkMode">深色模式</span>
+              <label class="toggle-switch"><input type="checkbox" id="settingsThemeToggle"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-item">
+              <span data-i18n="settings.glassStyle">毛玻璃风格</span>
+              <label class="toggle-switch"><input type="checkbox" id="settingsStyleToggle"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-item settings-item-click" data-action="settings-lang">
+              <span data-i18n="settings.language">语言</span>
+              <span class="settings-value" id="settingsLangValue">中文</span>
+            </div>
+          </div>
+        </div>
+      </div>
       <button class="theme-toggle" id="batchToggleBtn" data-action="toggle-batch">✓</button>
-      <button class="theme-toggle" id="langToggle" data-action="toggle-lang" aria-label="Switch language">🌐</button>
-      <button class="theme-toggle" id="styleToggle" data-action="toggle-style" aria-label="Toggle glassmorphism" title="毛玻璃风格">💎</button>
-      <button class="theme-toggle" id="themeToggle" data-action="toggle-theme" aria-label="Toggle dark mode">🌙</button>
     </div>
     <div class="content" id="contentArea"></div>
   </main>

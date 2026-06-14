@@ -384,6 +384,36 @@
   color: var(--text-tertiary);
 }
 
+/* ===== macOS Settings Dropdown ===== */
+[data-desktop="true"] .settings-dropdown {
+  border-radius: 14px;
+  min-width: 220px;
+}
+
+[data-desktop="true"] .settings-item {
+  padding: 11px 14px;
+  font-size: 15px;
+  border-radius: 10px;
+}
+
+[data-desktop="true"] .settings-item .toggle-switch {
+  width: 47px;
+  height: 28px;
+}
+
+[data-desktop="true"] .settings-item .toggle-slider {
+  border-radius: 28px;
+}
+
+[data-desktop="true"] .settings-item .toggle-slider::before {
+  width: 24px;
+  height: 24px;
+}
+
+[data-desktop="true"] .settings-item .toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(19px);
+}
+
 /* ===== macOS Content Area ===== */
 [data-desktop="true"] .content {
   padding: 16px 26px 80px;
