@@ -52,6 +52,7 @@ function matchesFilter(entry) {
 
 function applyFilters() {
   searchResults = [];
+  const counter = document.getElementById('searchCounter');
   for (const { card, entry } of allCards) {
     if (entry && matchesFilter(entry)) {
       card.classList.remove('hidden');
@@ -72,11 +73,13 @@ function applyFilters() {
     searchResults[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
     var grp = searchResults[0].dataset.group;
     if (grp) activateNavItem(grp);
+    if (counter) counter.textContent = '1/' + searchResults.length;
   } else {
     nextBtn.style.display = 'none';
     prevBtn.style.display = 'none';
     clearSearchHighlight();
     searchIndex = -1;
+    if (counter) counter.textContent = searchQuery ? '0' : '';
   }
   updateToolbarStats();
 }
@@ -89,6 +92,8 @@ function goToNextResult() {
   searchResults[searchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
   var grp = searchResults[searchIndex].dataset.group;
   if (grp) activateNavItem(grp);
+  var counter = document.getElementById('searchCounter');
+  if (counter) counter.textContent = (searchIndex + 1) + '/' + searchResults.length;
 }
 
 function goToPrevResult() {
@@ -98,6 +103,8 @@ function goToPrevResult() {
   searchResults[searchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
   var grp = searchResults[searchIndex].dataset.group;
   if (grp) activateNavItem(grp);
+  var counter = document.getElementById('searchCounter');
+  if (counter) counter.textContent = (searchIndex + 1) + '/' + searchResults.length;
 }
 
 function highlightSearchResult(index) {

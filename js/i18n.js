@@ -31,6 +31,8 @@ const I18N = {
     'stats.nr': 'NR',
     'stats.entries': 'Entries',
     'stats.scored': 'scored',
+    'stats.yearlyAlbums': 'Yearly Avg — Albums',
+    'stats.yearlySingles': 'Yearly Avg — Singles',
 
     // Modal
     'modal.editTitle': 'Edit Content',
@@ -167,6 +169,8 @@ const I18N = {
     'stats.nr': '未打分',
     'stats.entries': '条目',
     'stats.scored': '已打分',
+    'stats.yearlyAlbums': '年度平均分 — 专辑',
+    'stats.yearlySingles': '年度平均分 — 单曲',
 
     // Modal
     'modal.editTitle': '编辑内容',
@@ -311,9 +315,8 @@ function toggleLang() {
   localStorage.setItem('lang', currentLang);
   applyLang();
   applyTheme();
-  // 重渲染动态内容
-  renderSidebar();
-  renderContent();
+  // 只更新语言相关文本，不全量重建 DOM
+  updateLangTexts();
   // 更新分数筛选器文字
   const scoreTrigger = document.getElementById('scoreFilterTrigger');
   const activeScoreOpt = document.querySelector('#scoreFilterMenu .custom-select-option.active');

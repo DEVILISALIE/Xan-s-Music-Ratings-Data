@@ -1,6 +1,6 @@
 {
   "name": "music-ratings",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "private": true,
   "description": "Xan's Music Ratings - Desktop Edition",
   "scripts": {

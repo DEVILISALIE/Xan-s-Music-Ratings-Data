@@ -215,6 +215,7 @@ async function saveEntry() {
     tracks: [...editingTracks]
   };
 
+  let didMove = false;
   if (editingEntry) {
     // Update existing
     Object.assign(editingEntry, data);
@@ -228,9 +229,9 @@ async function saveEntry() {
     console.log('[Move] 目标:', mergedId, targetGroupName, '当前条目AOTY:', editingEntry.isAoty);
 
     // 找到 entry 当前所在的原始 section/group，判断是否需要移动
-    let moved = false;
+    let found = false;
     for (const section of appData.sections) {
-      if (moved) break;
+      if (found) break;
       for (const group of section.groups) {
         if (group.entries.some(e => e.id === editingEntry.id)) {
           if (!(section === targetSection && group.name === targetGroupName)) {
@@ -246,13 +247,14 @@ async function saveEntry() {
             }
             targetGroup.entries.push(editingEntry);
             console.log('[Move] 移动后目标组条目数:', targetGroup.entries.length);
+            didMove = true;
           }
-          moved = true;
+          found = true;
           break;
         }
       }
     }
-    if (!moved) {
+    if (!found) {
       console.warn('[Move] 警告：找不到条目', editingEntry.id, '所在的 section/group！');
     }
   } else {
@@ -269,7 +271,16 @@ async function saveEntry() {
   }
 
   debugAotyCount('saveEntry 后');
-  await refreshAll();
+  // 如果条目没有跨组移动，只更新单张卡片，不全量重建
+  if (didMove || !editingEntry) {
+    await refreshAll();
+  } else {
+    buildEntryIndex();
+    updateCardInPlace(editingEntry.id);
+    renderSidebar();
+    updateGlobalStatsSidebar();
+    await saveData();
+  }
   debugAotyCount('refreshAll 后');
   closeModal();
 }
@@ -408,9 +419,9 @@ function setupCoverEvents() {
   });
 
   // URL 输入
-  section.querySelector('[data-action="cover-url"]').addEventListener('click', () => {
+  section.querySelector('[data-action="cover-url"]').addEventListener('click', async () => {
     if (!editingEntry) return;
-    const url = prompt(t('modal.coverUrlPrompt'));
+    const url = await showPrompt(t('modal.coverUrl'), '', '', 'https://...');
     if (!url || !url.trim()) return;
     editingEntry.cover = url.trim();
     coverCache.set(editingEntry.id, url.trim());

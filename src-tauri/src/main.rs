@@ -106,6 +106,10 @@ fn toggle_topmost(app: AppHandle) {
 fn toggle_fullscreen(app: AppHandle) {
     if let Some(win) = get_main_window(&app) {
         let is_fs = win.is_fullscreen().unwrap_or(false);
+        if !is_fs {
+            // 进入全屏前先取消最大化，避免 WebView2 bug
+            let _ = win.unmaximize();
+        }
         let _ = win.set_fullscreen(!is_fs);
     }
 }

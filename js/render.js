@@ -520,6 +520,61 @@ function updateGlobalStatsSidebar() {
   }, 0);
 
   panel.innerHTML = buildPanel(albumScores, t('toolbar.albums'), albumTotal) + buildPanel(singleScores, t('toolbar.singles'), singleTotal);
+
+  // 绑定点击事件
+  const cards = panel.querySelectorAll('.stats-card');
+  if (cards[0]) cards[0].style.cursor = 'pointer';
+  if (cards[0]) cards[0].addEventListener('click', () => openYearlyStats('albums'));
+  if (cards[1]) cards[1].style.cursor = 'pointer';
+  if (cards[1]) cards[1].addEventListener('click', () => openYearlyStats('singles'));
+}
+
+function openYearlyStats(type) {
+  const groupName = type === 'albums' ? 'Albums' : 'Singles';
+  const titleKey = type === 'albums' ? 'stats.yearlyAlbums' : 'stats.yearlySingles';
+
+  // 收集每 section 的平均分
+  const rows = [];
+  for (const section of appData.sections) {
+    const scores = [];
+    for (const group of section.groups) {
+      if (group.name === groupName) {
+        for (const entry of group.entries) {
+          if (entry.score != null) scores.push(entry.score);
+        }
+      }
+    }
+    if (scores.length > 0) {
+      const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+      rows.push({ year: section.id, avg: avg, count: scores.length });
+    }
+  }
+
+  // 按年份从新到旧排序
+  rows.sort((a, b) => b.year.localeCompare(a.year));
+
+  if (rows.length === 0) return;
+
+  const maxAvg = Math.max(...rows.map(r => r.avg));
+
+  const countLabel = type === 'albums'
+    ? (currentLang === 'zh' ? '张' : 'A')
+    : (currentLang === 'zh' ? '首' : 'S');
+
+  let html = '';
+  for (const row of rows) {
+    const pct = Math.round(row.avg / maxAvg * 100);
+    html += '<div class="yearly-stats-row">' +
+      '<span class="yearly-stats-year">' + escapeHtml(row.year) + '</span>' +
+      '<div class="yearly-stats-bar-track"><div class="yearly-stats-bar" style="width:' + pct + '%"></div></div>' +
+      '<span class="yearly-stats-score">' + row.avg.toFixed(1) + '</span>' +
+      '<span class="yearly-stats-count">' + row.count + countLabel + '</span>' +
+      '</div>';
+  }
+
+  document.getElementById('yearlyStatsTitle').textContent = t(titleKey);
+  document.getElementById('yearlyStatsList').innerHTML = html;
+  document.getElementById('yearlyStatsModal').classList.add('active');
 }
 
 // 封面缩略图 HTML — 供 renderAlbumCard / renderAotyCard 共用
@@ -617,6 +672,33 @@ function renderAotyCard(entry, sectionId, groupId, visible, groupName) {
       </div>
     </div>
   </div>`;
+}
+
+function updateCardInPlace(entryId) {
+  const entry = findEntry(entryId);
+  if (!entry) return;
+  const card = document.querySelector(`.album-card[data-entry-id="${entryId}"], .aoty-card[data-entry-id="${entryId}"]`);
+  if (!card) return;
+
+  const sectionId = card.dataset.section;
+  const groupId = card.dataset.group;
+  const isVisible = !card.classList.contains('hidden');
+  const isAoty = entry.isAoty || entry.isSoty;
+  const groupName = groupId.includes('singles') ? 'Singles' : 'Albums';
+
+  const tmp = document.createElement('div');
+  if (isAoty) {
+    tmp.innerHTML = renderAotyCard(entry, sectionId, groupId, isVisible, groupName);
+  } else {
+    const idx = card.querySelector('.album-index');
+    tmp.innerHTML = renderAlbumCard(entry, idx ? parseInt(idx.textContent) : 1, sectionId, groupId, groupName, isVisible);
+  }
+  const newCard = tmp.firstElementChild;
+  card.replaceWith(newCard);
+
+  // 更新 allCards 缓存中对应条目
+  const cached = allCards.find(c => c.entry && c.entry.id === entryId);
+  if (cached) cached.card = newCard;
 }
 
 function toggleReview(btn) {

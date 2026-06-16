@@ -475,18 +475,37 @@ function bindMustHear() {
     }
     trigger.textContent = t('toolbar.mustHear');
     popover.classList.remove('open');
-    renderContent();
-    applyFilters();
+    // 只更新 Must Hear 标记，不全量重建 DOM
+    updateMustHearBadges();
   });
 
   document.addEventListener('click', (e) => {
-    if (!e.target.closest('#mustHearSelect')) {
+    if (!e.target.closest('#mustHearSelect') && popover.classList.contains('open')) {
+      // 关闭时丢弃未保存的修改，恢复为已保存的值
+      input.value = mustHearThreshold;
+      toggle.checked = mustHearEnabled;
       popover.classList.remove('open');
     }
   });
 }
 
-// ===== 事件绑定：侧边栏导航 =====
+function updateMustHearBadges() {
+  document.querySelectorAll('.album-card[data-entry-id]').forEach(card => {
+    const entry = findEntry(card.dataset.entryId);
+    if (!entry) return;
+    const existing = card.querySelector('.must-hear');
+    const shouldShow = mustHearEnabled && entry.score != null && entry.score >= mustHearThreshold;
+    if (shouldShow && !existing) {
+      const span = document.createElement('span');
+      span.className = 'must-hear';
+      span.textContent = t('content.mustHear');
+      const artist = card.querySelector('.album-artist');
+      if (artist) artist.after(span);
+    } else if (!shouldShow && existing) {
+      existing.remove();
+    }
+  });
+}
 
 function bindSidebar() {
   const sidebarNav = document.getElementById('sidebarNav');
@@ -904,6 +923,23 @@ function applyTheme() {
   if (styleCb) styleCb.checked = savedStyle === 'glass';
 }
 
+function updateLangTexts() {
+  // 分组标题
+  document.querySelectorAll('.group-title').forEach(el => {
+    const id = el.id || '';
+    if (id.includes('-albums')) el.textContent = t('toolbar.albums');
+    else if (id.includes('-singles')) el.textContent = t('toolbar.singles');
+  });
+  // Must Hear 标记
+  document.querySelectorAll('.must-hear').forEach(el => {
+    el.textContent = t('content.mustHear');
+  });
+  // 统计面板
+  updateGlobalStatsSidebar();
+  // 侧边栏
+  renderSidebar();
+}
+
 function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme');
   const next = current === 'dark' ? 'light' : 'dark';
@@ -961,11 +997,24 @@ document.addEventListener('click', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Escape') {
+    closeModal();
+    document.getElementById('yearlyStatsModal').classList.remove('active');
+  }
   if (e.key === 'Enter' && e.shiftKey && document.getElementById('editModal').classList.contains('active')) {
     e.preventDefault();
     saveEntry();
   }
+});
+
+// 年度统计弹窗：点击遮罩关闭
+document.getElementById('yearlyStatsModal').addEventListener('click', (e) => {
+  if (e.target.id === 'yearlyStatsModal') {
+    e.target.classList.remove('active');
+  }
+});
+document.querySelector('[data-action="yearly-stats-close"]').addEventListener('click', () => {
+  document.getElementById('yearlyStatsModal').classList.remove('active');
 });
 
 // ===== 导出 / 导入 =====
@@ -1112,6 +1161,9 @@ init();
   maximizeBtn?.addEventListener('click', () => {
     invoke('toggle_maximize').then(updateMaximizeIcon);
   });
+  document.querySelector('[data-action="win-fullscreen"]')?.addEventListener('click', () => {
+    invoke('toggle_fullscreen').then(updateMaximizeIcon);
+  });
   document.querySelector('[data-action="win-minimize"]')?.addEventListener('click', () => {
     invoke('minimize_window');
   });
@@ -1214,7 +1266,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.3.1");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.3.2");
         break;
     }
   });

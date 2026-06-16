@@ -20,6 +20,9 @@
       <button class="titlebar-btn titlebar-btn-pin" data-action="win-topmost" aria-label="Topmost">
         <svg class="pin-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="3" width="14" height="4.5" rx="2"/><line x1="12" y1="7.5" x2="12" y2="21" stroke-width="2.8"/></svg>
       </button>
+      <button class="titlebar-btn" data-action="win-fullscreen" aria-label="Fullscreen">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 4V1H4"/><path d="M8 1H11V4"/><path d="M11 8V11H8"/><path d="M4 11H1V8"/></svg>
+      </button>
       <button class="titlebar-btn" data-action="win-minimize" aria-label="Minimize">
         <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
       </button>
@@ -50,6 +53,7 @@
       <div class="search-box">
         <span class="search-icon">🔍</span>
         <input type="text" id="searchInput" placeholder="Search title or artist…" data-i18n-placeholder="toolbar.search" aria-label="Search albums" autocomplete="off">
+        <span class="search-counter" id="searchCounter"></span>
       </div>
       <div class="custom-select" id="tagFilter">
         <button class="custom-select-trigger" id="tagFilterTrigger" data-i18n="toolbar.allTags">All Tags</button>
@@ -302,6 +306,18 @@
       <button class="modal-btn secondary" data-action="modal-cancel" data-i18n="modal.cancel">Cancel</button>
       <button class="modal-btn danger" id="deleteBtn" data-action="modal-delete" data-i18n="modal.delete">Delete</button>
       <button class="modal-btn primary" data-action="modal-save" data-i18n="modal.save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- 年度平均分弹窗 -->
+<div class="modal-overlay" id="yearlyStatsModal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="yearlyStatsTitle"></div>
+    <div class="yearly-stats-list" id="yearlyStatsList"></div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" data-action="yearly-stats-close" data-i18n="modal.cancel">Close</button>
     </div>
   </div>
 </div>

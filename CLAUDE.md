@@ -40,6 +40,7 @@ npm run tauri build              # 构建 MSI 安装包
 │   ├── modal.js           # 编辑弹窗、音轨评分
 │   ├── render.js          # 侧边栏 + 内容区渲染、HTML 缓存
 │   ├── drag.js            # 拖拽排序（Pointer Events + FLIP 动画）
+│   ├── dialog.js          # iOS 风格弹窗（showAlert / showConfirm / showPrompt）
 │   └── app.js             # 初始化、事件委托、主题切换、localStorage 持久化、Tauri 桌面版适配
 ├── gen.js                 # txt → JSON 解析器，嵌入数据到 index.html
 ├── dev-server.js          # Tauri 开发模式本地 HTTP 服务器
@@ -57,7 +58,7 @@ npm run tauri build              # 构建 MSI 安装包
         └── main.rs        # 系统托盘、全局快捷键、窗口管理、数据持久化命令、封面管理命令
 ```
 
-**JS 加载顺序**：`state.js` → `i18n.js` → `utils.js` → `filter.js` → `modal.js` → `render.js` → `drag.js` → `app.js`
+**JS 加载顺序**：`state.js` → `i18n.js` → `utils.js` → `dialog.js` → `filter.js` → `modal.js` → `render.js` → `drag.js` → `app.js`
 
 ## localStorage 键值
 
@@ -79,19 +80,19 @@ npm run tauri build              # 构建 MSI 安装包
 - JSON.parse(localStorage 数据) 有 try-catch 防护，损坏数据不阻断保存
 - Rust 端 `save_data_to_disk` JSON 解析失败时返回错误拒绝写入，写入前自动备份到 `.json.bak`
 - `load_data_from_disk` 主文件不可用时自动尝试 `.bak` 备份文件
-- **即时保存（v1.3.1）**：托盘"退出"不再直接 `app.exit(0)`，改为发送 `request-shutdown` 事件给前端，前端 `await saveData()` 确保磁盘写入完成后调用 `graceful_exit` 延迟 500ms 退出；5秒强制退出保底防卡死
+- **即时保存（v1.3.2）**：托盘"退出"不再直接 `app.exit(0)`，改为发送 `request-shutdown` 事件给前端，前端 `await saveData()` 确保磁盘写入完成后调用 `graceful_exit` 延迟 500ms 退出；5秒强制退出保底防卡死
 - 桌面版启动时优先从磁盘加载，加载成功后同步到 localStorage
 
 **桌面版（Tauri v2）**：
 - 前端通过 `window.__TAURI__` 检测桌面环境，`app.js` 末尾的 `initTauriDesktop()` 自动激活桌面功能
 - `css/macos.css` 通过 `[data-desktop="true"]` 选择器提供桌面版专属样式（UI 放大 20%），不影响网页版
-- **自定义标题栏**（`decorations: false`）：38px 毛玻璃标题栏，左侧版本号，右侧窗口控件（📌置顶 / □最大化 / —最小化 / ×关闭），标题栏通过 JS `start_window_drag` 拖拽（不使用 `-webkit-app-region: drag` 以避免系统右键菜单），关闭按钮 hover 变红，最大化/全屏时中间按钮自动切换为还原图标
+- **自定义标题栏**（`decorations: false`）：38px 毛玻璃标题栏，左侧版本号，右侧窗口控件（📌置顶 / ⬚全屏 / —最小化 / □最大化 / ×关闭），标题栏通过 JS `start_window_drag` 拖拽（不使用 `-webkit-app-region: drag` 以避免系统右键菜单），关闭按钮 hover 变红，最大化/全屏时中间按钮自动切换为还原图标。全屏按钮为四角取景框 SVG 图标，最大化状态下进入全屏先 `unmaximize()` 避免 WebView2 bug
 - **自定义右键菜单**：拦截系统右键菜单，显示毛玻璃风格自定义菜单（最小化/最大化还原/置顶/关闭），支持中英文
 - 窗口管理通过自定义 Tauri command：`minimize_window`、`toggle_maximize`、`close_window`、`start_window_drag`
 - 托盘事件通过 `tauriEvent.listen('menu-action')` 接收，映射到前端函数
 - 导出使用 Tauri 原生文件对话框（`__TAURI_PLUGIN_DIALOG__` + `__TAURI_PLUGIN_FS__`）
 - 快捷键：Ctrl+S 导出、Ctrl+D 主题、Ctrl+G 风格、Ctrl+O 导入、Ctrl+K 搜索、Ctrl+N 新建、Ctrl+T 置顶、F11 全屏
-- **设置按钮（v1.3.1）**：工具栏 stats 右侧 ⚙ 按钮，点击弹出 iOS 风格下拉菜单，集成深色模式/毛玻璃风格/语言三个开关，复用 `.toggle-switch` 样式，点击外部自动关闭
+- **设置按钮（v1.3.2）**：工具栏 stats 右侧 ⚙ 按钮，点击弹出 iOS 风格下拉菜单，集成深色模式/毛玻璃风格/语言/多选模式，复用 `.toggle-switch` 样式，点击选项保持展开，点击外部自动关闭
 - 系统托盘：左键显示/隐藏窗口，右键菜单（显示/置顶/主题/退出）
 - 点击 X 最小化到系统托盘（不退出），通过 `on_window_event` 拦截 `CloseRequested` 并 `api.prevent_close()` + `win.hide()`
 - 单实例模式：`tauri-plugin-single-instance` 确保只有一个窗口运行，第二次启动聚焦已有窗口
@@ -99,7 +100,9 @@ npm run tauri build              # 构建 MSI 安装包
 - `build-frontend.js` 构建时将 index.html/css/js/data.json 复制到 dist/，Tauri 打包进二进制
 - Tauri 插件：dialog、fs、global-shortcut、shell、single-instance
 
-**分数统计面板**：`render.js` 中 `updateGlobalStatsSidebar()` 在右侧固定位置渲染两个统计卡片（专辑 / 单曲），各自显示平均分、7 档分数分布柱状图（100 / 90-99 / 80-89 / 70-79 / 60-69 / 50-59 / 0-49）、已打分/未打分/条目数。所有标签均支持中英文切换，通过 `t()` 函数实现。每次数据变更后通过 `refreshAll()` 实时更新。
+**分数统计面板**：`render.js` 中 `updateGlobalStatsSidebar()` 在右侧固定位置渲染两个统计卡片（专辑 / 单曲），各自显示平均分、7 档分数分布柱状图（100 / 90-99 / 80-89 / 70-79 / 60-69 / 50-59 / 0-49）、已打分/未打分/条目数。所有标签均支持中英文切换，通过 `t()` 函数实现。每次数据变更后通过 `refreshAll()` 实时更新。**点击统计卡片弹出年度平均分弹窗**（`#yearlyStatsModal`），展示每一年的独立平均分和条目数，水平柱状图按最高分等比缩放，支持 ESC / 点击遮罩关闭。
+
+**搜索结果计数**：搜索框内右侧 `.search-counter` 显示 `当前/总数`，`applyFilters()` 初始化时设置，`goToNextResult()` / `goToPrevResult()` 翻页时同步更新，清空搜索时隐藏。
 
 **Shift+click 批量选择**：批量模式下，点击第一张卡片后 Shift+点击另一张卡片，自动选中两者之间的所有卡片。退出批量模式时清除选择记忆。
 
@@ -122,7 +125,13 @@ npm run tauri build              # 构建 MSI 安装包
 
 **侧边栏导航高亮**：滚动同步由 `setupScrollSync()` 实现，使用 `requestAnimationFrame` 节流。遍历所有 `[id^="group-"]` 元素，以 `getBoundingClientRect().top <= 60` 判断当前可视 group，精确到 group 级别（非 section 级别）。高亮只应用于当前 section 的导航项，其他 section 的 `.active` 被清除。点击导航项时通过事件委托（`data-action="nav-click"`）禁用滚动同步（`overview-scroll` 类，持续 1.7s），并用 `window._navActiveInterval/_navActiveTimeout/_navScrollDelay` 三个全局定时器管理强化周期，每次新点击前清除所有旧定时器，防止多 interval 累积导致多 group 同时高亮。
 
-**必听专辑**：Albums 分组中 `score >= mustHearThreshold` 的条目自动显示 `★Must Hear Album` 标记（Singles 不显示）。阈值默认 80，用户可通过工具栏弹出菜单自定义（0–100），并可通过开关关闭整个功能。开关和阈值均需点击「保存」后生效，持久化到 localStorage（key: `mustHearEnabled`、`mustHearThreshold`）。逻辑在 `renderAlbumCard()` 中通过 `showMustHear` 控制。
+**必听专辑**：Albums 分组中 `score >= mustHearThreshold` 的条目自动显示 `★Must Hear Album` 标记（Singles 不显示）。阈值默认 80，用户可通过工具栏弹出菜单自定义（0–100），并可通过开关关闭整个功能。开关和阈值均需点击「保存」后生效，持久化到 localStorage（key: `mustHearEnabled`、`mustHearThreshold`）。逻辑在 `renderAlbumCard()` 中通过 `showMustHear` 控制。**点击框外丢弃未保存的修改**，恢复为已保存值，重新打开时输入框显示正确的当前阈值。保存时调用 `updateMustHearBadges()` 只更新每张卡片上的标记，不全量重建 DOM。
+
+**封面 URL 输入**：点击「URL」按钮弹出 iOS 风格 `showPrompt` 弹窗（`dialog.js`），替代浏览器原生 `prompt()`，支持中英文标题。
+
+**语言切换优化（v1.3.2）**：`toggleLang()` 调用 `updateLangTexts()` 只更新分组标题（`.group-title`）、Must Hear 标记、统计面板和侧边栏，跳过 `renderContent()` 全量重建。
+
+**z-index 层级（桌面版 v1.3.2）**：统计面板 `z-index: 40`，toolbar `z-index: 50`（低于模态弹窗遮罩 100，弹窗打开时 toolbar 会被模糊），设置下拉菜单 `z-index: 150`（在 toolbar 内部，有效层级 50，高于统计面板）。
 
 **筛选系统**：`currentFilter` 为数组，支持多选标签。分数筛选支持 100、90+、80+、70+、60+、50+、<50、NR、AOTY（同时匹配 `isAoty` 和 `isSoty`）。标签下拉多选（选择后保持展开），分数下拉单选（选择后关闭）。
 
@@ -133,6 +142,10 @@ npm run tauri build              # 构建 MSI 安装包
 **编辑弹窗**：`populateSectionSelector()` 始终为每个 section 列出 Albums 和 Singles 两个选项。`saveEntry()` 中 `JSON.parse(selectedSectionValue)` 有 try-catch 防护。Shift+回车快速保存。
 
 **拖拽排序**：Pointer Events 实现，FLIP 动画技术平滑"挤开"效果。拖拽时原卡片 `opacity: 0` + `height: 0` 隐藏，占位符（`.drag-placeholder`）占据原位置，幽灵元素（`.drag-ghost`）跟随鼠标。动画参数 `0.25s cubic-bezier(0.2, 0, 0, 1)`。仅限同组内排序，AOTY 卡片不参与。
+
+**AOTY/SOTY 卡片宽度（v1.3.2）**：桌面版 AOTY/SOTY 卡片通过 `:has(.aoty-card)` 让 `.group-cards-list` 允许溢出，再设置 `width: calc(100% + 20px)` + `margin-left: -10px` 居中扩展，左右各比普通卡片宽 20px。
+
+**编辑保存优化（v1.3.2）**：`saveEntry()` 编辑已有条目时，如果未跨组移动，调用 `updateCardInPlace(entryId)` 只替换单张卡片 DOM，跳过全量 `renderContent()`，配合 CSS `fadeInUp` 动画提供视觉反馈。跨组移动或新建条目仍走 `refreshAll()` 全量重建。
 
 **EscapeHtml**：转义 `&`、`<`、`>`、`"`、`'`，防止 HTML 注入。所有 innerHTML 中的用户数据（data 属性值、id 属性值、显示文本）均经过 `escapeHtml()` 处理。
 
