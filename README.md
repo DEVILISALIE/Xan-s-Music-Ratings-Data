@@ -100,13 +100,13 @@ node gen.js path/to/your/file.txt
 
 ---
 
-## 桌面版（v1.3.2）
+## 桌面版（v1.3.3）
 
 基于 [Tauri v2](https://v2.tauri.app/)（Rust + WebView2）构建的 Windows 原生应用，共享同一套前端代码。
 
 ### 下载安装
 
-前往 [Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 `Xan's Music Ratings_1.3.2_x64_en-US.msi`，双击安装即可。
+前往 [Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 `Xan's Music Ratings_1.3.3_x64_en-US.msi`，双击安装即可。
 
 ### 桌面版专属功能
 
@@ -130,6 +130,7 @@ node gen.js path/to/your/file.txt
 - **并发保存锁** — `saveData()` 内置锁机制，快速连续操作不会丢失数据
 - **封面 URL iOS 弹窗** — 点击「URL」按钮弹出 iOS 风格输入弹窗，替代浏览器原生 prompt
 - **编辑保存优化** — 编辑已有条目保存时只更新单张卡片，跳过全量 DOM 重建，流畅无卡顿
+- **新建自动排序** — 1990-2024 年份分区新建条目保存后自动按标题排序插入到正确位置，AOTY/SOTY 永远置顶
 - **分组标题中英文** — Albums/Singles 标题随语言切换显示「专辑/单曲」
 - **Shift+click 批量选择** — 批量模式下点击第一张卡片后 Shift+点击另一张，自动选中中间所有卡片
 

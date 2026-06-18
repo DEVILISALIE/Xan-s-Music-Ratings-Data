@@ -701,6 +701,101 @@ function updateCardInPlace(entryId) {
   if (cached) cached.card = newCard;
 }
 
+function insertNewCardInSection(entry, sel) {
+  const sectionId = sel.sectionId;
+  const groupName = sel.groupName;
+  const groupId = getGroupId(sectionId, groupName);
+  const sectionEl = document.getElementById('section-' + sectionId);
+  if (!sectionEl) { _lastContentHtml = ''; renderContent(); return; }
+
+  const isAoty = entry.isAoty || entry.isSoty;
+  const tmp = document.createElement('div');
+  if (isAoty) {
+    tmp.innerHTML = renderAotyCard(entry, sectionId, groupId, true, groupName);
+  } else {
+    // 计算正确序号
+    const groupCards = document.querySelectorAll('.album-card[data-group="' + groupId + '"]');
+    const newIdx = groupCards.length + 1;
+    tmp.innerHTML = renderAlbumCard(entry, newIdx, sectionId, groupId, groupName, true);
+  }
+  const newCard = tmp.firstElementChild;
+
+  // 找到目标 group 的卡片列表
+  const groupLists = sectionEl.querySelectorAll('.group-cards-list');
+  let targetList = null;
+  for (const list of groupLists) {
+    const firstCard = list.querySelector('[data-group="' + groupId + '"]');
+    if (firstCard) { targetList = list; break; }
+  }
+  if (!targetList) {
+    // group 不存在，全量重建
+    _lastContentHtml = '';
+    renderContent();
+    return;
+  }
+
+  // 插入新卡片到正确位置
+  targetList.appendChild(newCard);
+  allCards.push({ card: newCard, entry: entry });
+  _lastContentHtml = '';
+}
+
+function reorderGroupCards(entry, sel) {
+  for (const section of appData.sections) {
+    if (section.id !== sel.sectionId) continue;
+    for (const group of section.groups) {
+      if (group.name !== sel.groupName) continue;
+      const idx = group.entries.findIndex(e => e.id === entry.id);
+      if (idx === -1) continue;
+      const special = group.entries.filter(e => e.isAoty || e.isSoty);
+      const normal = group.entries.filter(e => !e.isAoty && !e.isSoty);
+      normal.sort((a, b) => {
+        const ta = (a.title || '');
+        const tb = (b.title || '');
+        const oa = charPriority(ta.charAt(0));
+        const ob = charPriority(tb.charAt(0));
+        if (oa !== ob) return oa - ob;
+        if (oa === 3) return ta.localeCompare(tb, 'zh-CN');
+        return ta.localeCompare(tb, undefined, { numeric: true });
+      });
+      group.entries = [...special, ...normal];
+      const groupId = getGroupId(section.id, group.name);
+      const list = document.querySelector('.group-cards-list [data-group="' + groupId + '"]')?.closest('.group-cards-list');
+      if (!list) { _lastContentHtml = ''; renderContent(); return; }
+
+      // 重建被编辑的卡片（可能类型变了：aoty ↔ 普通）
+      const oldCard = list.querySelector('[data-entry-id="' + entry.id + '"]');
+      if (oldCard) oldCard.remove();
+      const isAoty = entry.isAoty || entry.isSoty;
+      const tmp = document.createElement('div');
+      if (isAoty) {
+        tmp.innerHTML = renderAotyCard(entry, section.id, groupId, true, group.name);
+      } else {
+        tmp.innerHTML = renderAlbumCard(entry, 1, section.id, groupId, group.name, true);
+      }
+      const newCard = tmp.firstElementChild;
+      const cached = allCards.find(c => c.entry && c.entry.id === entry.id);
+      if (cached) cached.card = newCard;
+      else allCards.push({ card: newCard, entry: entry });
+
+      // 按排序顺序重排整个 group 的 DOM
+      for (const e of group.entries) {
+        if (e.id === entry.id) {
+          list.appendChild(newCard);
+        } else {
+          const card = list.querySelector('[data-entry-id="' + e.id + '"]');
+          if (card) list.appendChild(card);
+        }
+      }
+      // 更新序号
+      const normalCards = list.querySelectorAll('.album-card[data-group="' + groupId + '"]');
+      normalCards.forEach((c, i) => { const el = c.querySelector('.album-index'); if (el) el.textContent = i + 1; });
+      _lastContentHtml = '';
+      return;
+    }
+  }
+}
+
 function toggleReview(btn) {
   const id = btn.dataset.entryId;
   const el = document.getElementById('review-' + id);

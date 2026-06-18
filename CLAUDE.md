@@ -80,7 +80,7 @@ npm run tauri build              # 构建 MSI 安装包
 - JSON.parse(localStorage 数据) 有 try-catch 防护，损坏数据不阻断保存
 - Rust 端 `save_data_to_disk` JSON 解析失败时返回错误拒绝写入，写入前自动备份到 `.json.bak`
 - `load_data_from_disk` 主文件不可用时自动尝试 `.bak` 备份文件
-- **即时保存（v1.3.2）**：托盘"退出"不再直接 `app.exit(0)`，改为发送 `request-shutdown` 事件给前端，前端 `await saveData()` 确保磁盘写入完成后调用 `graceful_exit` 延迟 500ms 退出；5秒强制退出保底防卡死
+- **即时保存（v1.3.3）**：托盘"退出"不再直接 `app.exit(0)`，改为发送 `request-shutdown` 事件给前端，前端 `await saveData()` 确保磁盘写入完成后调用 `graceful_exit` 延迟 500ms 退出；5秒强制退出保底防卡死
 - 桌面版启动时优先从磁盘加载，加载成功后同步到 localStorage
 
 **桌面版（Tauri v2）**：
@@ -92,7 +92,7 @@ npm run tauri build              # 构建 MSI 安装包
 - 托盘事件通过 `tauriEvent.listen('menu-action')` 接收，映射到前端函数
 - 导出使用 Tauri 原生文件对话框（`__TAURI_PLUGIN_DIALOG__` + `__TAURI_PLUGIN_FS__`）
 - 快捷键：Ctrl+S 导出、Ctrl+D 主题、Ctrl+G 风格、Ctrl+O 导入、Ctrl+K 搜索、Ctrl+N 新建、Ctrl+T 置顶、F11 全屏
-- **设置按钮（v1.3.2）**：工具栏 stats 右侧 ⚙ 按钮，点击弹出 iOS 风格下拉菜单，集成深色模式/毛玻璃风格/语言/多选模式，复用 `.toggle-switch` 样式，点击选项保持展开，点击外部自动关闭
+- **设置按钮（v1.3.3）**：工具栏 stats 右侧 ⚙ 按钮，点击弹出 iOS 风格下拉菜单，集成深色模式/毛玻璃风格/语言/多选模式，复用 `.toggle-switch` 样式，点击选项保持展开，点击外部自动关闭
 - 系统托盘：左键显示/隐藏窗口，右键菜单（显示/置顶/主题/退出）
 - 点击 X 最小化到系统托盘（不退出），通过 `on_window_event` 拦截 `CloseRequested` 并 `api.prevent_close()` + `win.hide()`
 - 单实例模式：`tauri-plugin-single-instance` 确保只有一个窗口运行，第二次启动聚焦已有窗口
@@ -129,9 +129,9 @@ npm run tauri build              # 构建 MSI 安装包
 
 **封面 URL 输入**：点击「URL」按钮弹出 iOS 风格 `showPrompt` 弹窗（`dialog.js`），替代浏览器原生 `prompt()`，支持中英文标题。
 
-**语言切换优化（v1.3.2）**：`toggleLang()` 调用 `updateLangTexts()` 只更新分组标题（`.group-title`）、Must Hear 标记、统计面板和侧边栏，跳过 `renderContent()` 全量重建。
+**语言切换优化（v1.3.3）**：`toggleLang()` 调用 `updateLangTexts()` 只更新分组标题（`.group-title`）、Must Hear 标记、统计面板和侧边栏，跳过 `renderContent()` 全量重建。
 
-**z-index 层级（桌面版 v1.3.2）**：统计面板 `z-index: 40`，toolbar `z-index: 50`（低于模态弹窗遮罩 100，弹窗打开时 toolbar 会被模糊），设置下拉菜单 `z-index: 150`（在 toolbar 内部，有效层级 50，高于统计面板）。
+**z-index 层级（桌面版 v1.3.3）**：统计面板 `z-index: 40`，toolbar `z-index: 50`（低于模态弹窗遮罩 100，弹窗打开时 toolbar 会被模糊），设置下拉菜单 `z-index: 150`（在 toolbar 内部，有效层级 50，高于统计面板）。
 
 **筛选系统**：`currentFilter` 为数组，支持多选标签。分数筛选支持 100、90+、80+、70+、60+、50+、<50、NR、AOTY（同时匹配 `isAoty` 和 `isSoty`）。标签下拉多选（选择后保持展开），分数下拉单选（选择后关闭）。
 
@@ -143,9 +143,11 @@ npm run tauri build              # 构建 MSI 安装包
 
 **拖拽排序**：Pointer Events 实现，FLIP 动画技术平滑"挤开"效果。拖拽时原卡片 `opacity: 0` + `height: 0` 隐藏，占位符（`.drag-placeholder`）占据原位置，幽灵元素（`.drag-ghost`）跟随鼠标。动画参数 `0.25s cubic-bezier(0.2, 0, 0, 1)`。仅限同组内排序，AOTY 卡片不参与。
 
-**AOTY/SOTY 卡片宽度（v1.3.2）**：桌面版 AOTY/SOTY 卡片通过 `:has(.aoty-card)` 让 `.group-cards-list` 允许溢出，再设置 `width: calc(100% + 20px)` + `margin-left: -10px` 居中扩展，左右各比普通卡片宽 20px。
+**AOTY/SOTY 卡片宽度（v1.3.3）**：桌面版 AOTY/SOTY 卡片通过 `:has(.aoty-card)` 让 `.group-cards-list` 允许溢出，再设置 `width: calc(100% + 20px)` + `margin-left: -10px` 居中扩展，左右各比普通卡片宽 20px。
 
-**编辑保存优化（v1.3.2）**：`saveEntry()` 编辑已有条目时，如果未跨组移动，调用 `updateCardInPlace(entryId)` 只替换单张卡片 DOM，跳过全量 `renderContent()`，配合 CSS `fadeInUp` 动画提供视觉反馈。跨组移动或新建条目仍走 `refreshAll()` 全量重建。
+**编辑保存优化（v1.3.4）**：`saveEntry()` 编辑已有条目时，如果未跨组移动，调用 `updateCardInPlace(entryId)` 只替换单张卡片 DOM，跳过全量 `renderContent()`，配合 CSS `fadeInUp` 动画提供视觉反馈。跨组移动仍走 `refreshAll()` 全量重建。新建条目在 1990-2024 年的 section 中走 `reorderGroupCards()` 自动排序并插入到正确位置，其他年份走 `insertNewCardInSection()` 直接追加。
+
+**自动排序（v1.3.3）**：1990-2024 年的 section 新建或编辑条目后自动按标题排序，优先级：符号 → 数字 → 英文 → 中文拼音（`localeCompare('zh-CN')`），AOTY/SOTY 永远置顶不参与排序。编辑时调用 `reorderGroupCards()` 重排整个 group 的 DOM 并更新序号，AOTY/SOTY 状态变化时自动重建卡片类型。1980s 及以前的 section 不受影响。`charPriority(ch)` 在 `filter.js` 中定义。
 
 **EscapeHtml**：转义 `&`、`<`、`>`、`"`、`'`，防止 HTML 注入。所有 innerHTML 中的用户数据（data 属性值、id 属性值、显示文本）均经过 `escapeHtml()` 处理。
 

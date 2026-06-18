@@ -1,4 +1,14 @@
 // Filter and search logic
+// 排序优先级：符号=0 数字=1 英文=2 中文=3
+function charPriority(ch) {
+  if (!ch) return 4;
+  const c = ch.charCodeAt(0);
+  if (c >= 0x4E00 && c <= 0x9FFF) return 3;
+  if (/[a-zA-Z]/.test(ch)) return 2;
+  if (/\d/.test(ch)) return 1;
+  return 0;
+}
+
 let searchResults = [];
 let searchIndex = -1;
 let allCards = []; // 缓存所有卡片元素及其对应 entry，避免每次 applyFilters 全量查询 DOM

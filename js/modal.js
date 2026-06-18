@@ -195,6 +195,9 @@ async function saveEntry() {
     return;
   }
 
+  let sel;
+  try { sel = JSON.parse(selectedSectionValue); } catch (_) { closeModal(); return; }
+
   const scoreVal = document.getElementById('editScore').value;
   const score = scoreVal !== '' ? parseInt(scoreVal) : null;
   const tags = [];
@@ -221,8 +224,6 @@ async function saveEntry() {
     Object.assign(editingEntry, data);
 
     // 检查是否需要移动到其他年份/分组
-    let sel;
-    try { sel = JSON.parse(selectedSectionValue); } catch (_) { closeModal(); return; }
     const targetGroupName = sel.groupName;
     const mergedId = sel.sectionId;
     const targetSection = findOrCreateSection(mergedId);
@@ -259,8 +260,6 @@ async function saveEntry() {
     }
   } else {
     // Add new
-    let sel;
-    try { sel = JSON.parse(selectedSectionValue); } catch (_) { closeModal(); return; }
     const section = findOrCreateSection(sel.sectionId);
     let group = section.groups.find(g => g.name === sel.groupName);
     if (!group) {
@@ -268,15 +267,53 @@ async function saveEntry() {
       section.groups.push(group);
     }
     group.entries.push(data);
+    // 1990-2024 年自动按标题排序（符号 > 数字 > 英文 > 中文拼音），AOTY/SOTY 置顶
+    const year = parseInt(section.id);
+    if (!isNaN(year) && year >= 1990 && year <= 2024) {
+      const special = group.entries.filter(e => e.isAoty || e.isSoty);
+      const normal = group.entries.filter(e => !e.isAoty && !e.isSoty);
+      normal.sort((a, b) => {
+        const ta = (a.title || '');
+        const tb = (b.title || '');
+        const oa = charPriority(ta.charAt(0));
+        const ob = charPriority(tb.charAt(0));
+        if (oa !== ob) return oa - ob;
+        if (oa === 3) return ta.localeCompare(tb, 'zh-CN');
+        return ta.localeCompare(tb, undefined, { numeric: true });
+      });
+      group.entries = [...special, ...normal];
+    }
   }
 
   debugAotyCount('saveEntry 后');
-  // 如果条目没有跨组移动，只更新单张卡片，不全量重建
-  if (didMove || !editingEntry) {
+  if (didMove) {
+    // 跨组移动需要全量重建
     await refreshAll();
-  } else {
+  } else if (editingEntry) {
+    // 编辑已有条目：只更新单张卡片
     buildEntryIndex();
-    updateCardInPlace(editingEntry.id);
+    const secYear = parseInt(sel.sectionId);
+    const needsReorder = !isNaN(secYear) && secYear >= 1990 && secYear <= 2024;
+    // AOTY/SOTY 状态变化时需要重建卡片类型
+    const aotyChanged = editingEntry.isAoty !== (document.querySelector('[data-entry-id="' + editingEntry.id + '"]')?.classList.contains('aoty-card'));
+    if (needsReorder || aotyChanged) {
+      reorderGroupCards(editingEntry, sel);
+    } else {
+      updateCardInPlace(editingEntry.id);
+    }
+    renderSidebar();
+    updateGlobalStatsSidebar();
+    await saveData();
+  } else {
+    // 新建条目
+    buildEntryIndex();
+    const secYear = parseInt(sel.sectionId);
+    if (!isNaN(secYear) && secYear >= 1990 && secYear <= 2024) {
+      // 1990-2024：走 reorderGroupCards 重新排序并插入到正确位置
+      reorderGroupCards(data, sel);
+    } else {
+      insertNewCardInSection(data, sel);
+    }
     renderSidebar();
     updateGlobalStatsSidebar();
     await saveData();
