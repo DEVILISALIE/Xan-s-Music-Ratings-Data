@@ -111,6 +111,18 @@ async function loadDataFromDisk() {
         const totalAoty = parsed.sections.reduce((sum, s) =>
           sum + s.groups.reduce((gs, g) => gs + (g.entries ? g.entries.filter(e => e.isAoty).length : 0), 0), 0);
         if (isDev()) logMsg('[Disk] 恢复成功: ' + totalEntries + ' 条, AOTY: ' + totalAoty);
+        // 确保 1950s 分区存在（入口，不触碰现有数据）
+        if (!parsed.sections.some(s => s.id === '1950s')) {
+          parsed.sections.push({
+            id: '1950s',
+            title: '1950s',
+            groups: [
+              { name: 'Albums', entries: [] },
+              { name: 'Singles', entries: [] }
+            ]
+          });
+          if (isDev()) logMsg('[Disk] 已注入 1950s 空分区');
+        }
         return parsed;
       }
       if (isDev()) logMsg('[Disk] 数据结构异常或为空，跳过');
@@ -173,6 +185,10 @@ async function init() {
           s.groups && s.groups.some(g => g.entries && g.entries.length > 0));
         if (hasEntries) {
           appData = savedData;
+          // 确保 1950s 分区存在
+          if (!appData.sections.some(s => s.id === '1950s')) {
+            appData.sections.push({ id: '1950s', title: '1950s', groups: [{ name: 'Albums', entries: [] }, { name: 'Singles', entries: [] }] });
+          }
           // localStorage 有数据但磁盘没有，写入磁盘
           await saveData();
         } else {
@@ -194,8 +210,11 @@ async function init() {
           // 使用内置数据
           if (__MUSIC_DATA__ && __MUSIC_DATA__.sections && __MUSIC_DATA__.sections.length > 0 &&
               __MUSIC_DATA__.sections.some(s => s.groups && s.groups.some(g => g.entries && g.entries.length > 0))) {
-            appData = __MUSIC_DATA__;
+            appData = JSON.parse(JSON.stringify(__MUSIC_DATA__));
             if (isDev()) logMsg('[Init] 使用内置数据');
+            if (!appData.sections.some(s => s.id === '1950s')) {
+              appData.sections.push({ id: '1950s', title: '1950s', groups: [{ name: 'Albums', entries: [] }, { name: 'Singles', entries: [] }] });
+            }
             await saveData();
           } else {
             appData = { meta: { title: "Xan's Music Ratings", lastUpdated: new Date().toISOString().slice(0, 10) }, sections: [] };
