@@ -340,8 +340,9 @@ function renderContent() {
   const mergedSections = getMergedSections();
   for (const section of mergedSections) {
     html += `<div class="section" id="section-${escapeHtml(section.id)}">`;
-    const sectionYear = (section.title || '').match(/^\d{4}/)?.[0] || section.title;
-    html += `<h2 class="section-title">${escapeHtml(sectionYear)}</h2>`;
+    // 沿用侧边栏的显示逻辑（年代 sections 直接取 title，整十年份显示为 xxxxs）
+    const displayYear = getSectionDisplayName(section);
+    html += `<h2 class="section-title">${escapeHtml(displayYear)}</h2>`;
 
     // 动态重组：AOTY 条目(isAoty)归入 Albums 顶部，SOTY 条目(isSoty)归入 Singles 顶部
     const aotyAlbumEntries = [];
@@ -749,7 +750,34 @@ function reorderGroupCards(entry, sel) {
       if (idx === -1) continue;
       const special = group.entries.filter(e => e.isAoty || e.isSoty);
       const normal = group.entries.filter(e => !e.isAoty && !e.isSoty);
+      const year = parseInt(section.id);
+      const isFuture = !isNaN(year) && year >= 2025;
+      const isOld = !isNaN(year) && year <= 1989;
       normal.sort((a, b) => {
+        if (isFuture) {
+          const da = a.date || '';
+          const db = b.date || '';
+          const aHas = !!da, bHas = !!db;
+          if (!aHas && !bHas) { /* fall through to title */ }
+          else if (!aHas) return 1;
+          else if (!bHas) return -1;
+          else {
+            const aDot = da.includes('.');
+            const bDot = db.includes('.');
+            if (aDot && !bDot) return -1;
+            if (!aDot && bDot) return 1;
+            if (aDot && bDot) {
+              if (da !== db) return da.localeCompare(db);
+            } else {
+              if (da !== db) return db.localeCompare(da); // 年份越新越靠前
+            }
+          }
+        }
+        if (isOld) {
+          const ya = a.date || '9999';
+          const yb = b.date || '9999';
+          if (ya !== yb) return yb.localeCompare(ya); // 年份越新越靠前
+        }
         const ta = (a.title || '');
         const tb = (b.title || '');
         const oa = charPriority(ta.charAt(0));
@@ -760,7 +788,9 @@ function reorderGroupCards(entry, sel) {
       });
       group.entries = [...special, ...normal];
       const groupId = getGroupId(section.id, group.name);
-      const list = document.querySelector('.group-cards-list [data-group="' + groupId + '"]')?.closest('.group-cards-list');
+      // 修复：在当前 section 中查找，避免跨 section 的全局查询错误
+      const sectionEl = document.getElementById('section-' + section.id);
+      const list = sectionEl?.querySelector('.group-cards-list [data-group="' + groupId + '"]')?.closest('.group-cards-list');
       if (!list) { _lastContentHtml = ''; renderContent(); return; }
 
       // 重建被编辑的卡片（可能类型变了：aoty ↔ 普通）

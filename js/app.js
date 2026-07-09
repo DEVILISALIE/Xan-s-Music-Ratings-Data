@@ -252,6 +252,7 @@ async function init() {
   bindMustHear();
   bindSidebar();
   bindTrackList();
+  bindModalTrackButtons();
   bindContentArea();
   setupCoverEvents();
 }
@@ -608,8 +609,20 @@ function bindTrackList() {
     const removeBtn = e.target.closest('[data-action="remove-track"]');
     if (removeBtn) { removeTrack(parseInt(removeBtn.dataset.trackIndex)); return; }
     const addBtn = e.target.closest('[data-action="add-track-to-disc"]');
-    if (addBtn) addTrackToDisc(parseInt(addBtn.dataset.disc));
+    if (addBtn) { addTrackToDisc(parseInt(addBtn.dataset.disc)); return; }
+    const batchBtn = e.target.closest('[data-action="batch-add-tracks"]');
+    if (batchBtn) { batchAddTracks(parseInt(batchBtn.dataset.disc)); return; }
+    const batchToDiscBtn = e.target.closest('[data-action="batch-add-to-disc"]');
+    if (batchToDiscBtn) { batchAddTracks(parseInt(batchToDiscBtn.dataset.disc)); return; }
   });
+}
+
+// 全局"批量添加曲目"按钮（在 trackList 外部）
+function bindModalTrackButtons() {
+  const batchBtn = document.querySelector('#editModal [data-action="batch-add-tracks"]');
+  if (batchBtn) {
+    batchBtn.addEventListener('click', () => batchAddTracks(null));
+  }
 }
 
 // ===== 事件绑定：内容区（卡片点击 / 乐评展开） =====
@@ -1154,7 +1167,17 @@ init();
         invoke('is_window_maximized'),
         invoke('is_window_fullscreen')
       ]);
-      maximizeBtn.innerHTML = (isMax || isFs) ? restoreSvg : maximizeSvg;
+      if (isFs) {
+        maximizeBtn.innerHTML = maximizeSvg;
+        maximizeBtn.disabled = true;
+        maximizeBtn.style.pointerEvents = 'none';
+        maximizeBtn.style.opacity = '0.3';
+      } else {
+        maximizeBtn.innerHTML = isMax ? restoreSvg : maximizeSvg;
+        maximizeBtn.disabled = false;
+        maximizeBtn.style.pointerEvents = '';
+        maximizeBtn.style.opacity = '';
+      }
     } catch (_) {}
   }
 
@@ -1168,7 +1191,8 @@ init();
     invoke('minimize_window');
   });
   document.querySelector('[data-action="win-close"]')?.addEventListener('click', () => {
-    invoke('close_window');
+    console.log('[Titlebar] close clicked');
+    invoke('close_window').catch(err => console.error('[Titlebar] close_window error:', err));
   });
 
   // 标题栏拖拽（替代 -webkit-app-region: drag，避免系统右键菜单）
@@ -1266,7 +1290,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.3.3");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.3.4");
         break;
     }
   });

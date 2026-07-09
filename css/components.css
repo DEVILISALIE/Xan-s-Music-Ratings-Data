@@ -695,6 +695,22 @@ textarea.form-input::-webkit-scrollbar-corner {
   background: var(--hover-bg);
 }
 
+.track-disc-actions {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.track-disc-actions .track-add-inline {
+  flex: 1;
+  width: auto;
+}
+
+.track-batch-add {
+  opacity: 0.7;
+  font-size: 11px;
+}
+
 .track-add {
   display: flex;
   align-items: center;

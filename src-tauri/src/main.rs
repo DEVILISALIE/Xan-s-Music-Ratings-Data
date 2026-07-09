@@ -77,8 +77,12 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
             {
                 let app = tray.app_handle();
                 if let Some(win) = get_main_window(app) {
-                    let _ = win.show();
-                    let _ = win.set_focus();
+                    if !win.is_visible().unwrap_or(false) {
+                        let _ = win.show();
+                        let _ = win.set_focus();
+                    } else {
+                        let _ = win.hide();
+                    }
                 }
             }
         })
@@ -137,6 +141,7 @@ fn toggle_maximize(app: AppHandle) {
 fn close_window(app: AppHandle) {
     if let Some(win) = get_main_window(&app) {
         let _ = win.hide();
+        let _ = write_log(app, format!("[Rust] close_window: hidden={}", !win.is_visible().unwrap_or(false)));
     }
 }
 
@@ -445,7 +450,7 @@ fn main() {
                 let _ = win.show();
                 let _ = win.set_focus();
 
-                // 点击 X 只隐藏窗口，不退出应用
+                // 点击 X 只最小化窗口，不退出应用
                 let app_handle = app.handle().clone();
                 win.on_window_event(move |event| {
                     if let tauri::WindowEvent::CloseRequested { api, .. } = event {

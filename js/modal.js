@@ -109,7 +109,10 @@ function renderTracks() {
       </div>`;
     }
     // 每个 disc 底部添加曲目按钮
+    html += `<div class="track-disc-actions">`;
     html += `<button type="button" class="track-add-inline" data-action="add-track-to-disc" data-disc="${disc}">+ ${t('modal.addTrack').replace('+ ', '')}</button>`;
+    html += `<button type="button" class="track-add-inline track-batch-add" data-action="batch-add-to-disc" data-disc="${disc}">${t('modal.batchAddTracks')}</button>`;
+    html += `</div>`;
   }
   container.innerHTML = html;
   updateTrackSummary();
@@ -121,6 +124,56 @@ function addTrack() {
   renderTracks();
   const rows = document.querySelectorAll('#trackList .track-row');
   if (rows.length) rows[rows.length - 1].querySelector('input').focus();
+}
+
+async function batchAddTracks(disc) {
+  const count = await showPrompt(t('modal.batchAddTracks'), t('modal.batchAddPrompt'), '', t('modal.batchAddPlaceholder'));
+  if (!count) return;
+  const num = parseInt(count);
+  if (isNaN(num) || num <= 0 || num > 999) return;
+
+  const targetDisc = disc || (editingTracks.length > 0 ? (editingTracks[editingTracks.length - 1].disc || 1) : 1);
+
+  // 收集该 disc 的现有曲目
+  const existing = editingTracks.filter(t => (t.disc || 1) === targetDisc);
+  if (existing.length === num) { renderTracks(); return; } // 数量相同，不做任何事
+
+  if (existing.length > num) {
+    // 减少：从该 disc 末尾删除多余的
+    let removeCount = existing.length - num;
+    for (let i = editingTracks.length - 1; i >= 0 && removeCount > 0; i--) {
+      if ((editingTracks[i].disc || 1) === targetDisc) {
+        editingTracks.splice(i, 1);
+        removeCount--;
+      }
+    }
+  } else {
+    // 增加：在最后一个该 disc 曲目后追加空白曲目
+    let insertIdx = editingTracks.length;
+    for (let i = editingTracks.length - 1; i >= 0; i--) {
+      if ((editingTracks[i].disc || 1) === targetDisc) {
+        insertIdx = i + 1;
+        break;
+      }
+    }
+    for (let n = 0; n < num - existing.length; n++) {
+      editingTracks.splice(insertIdx + n, 0, { name: '', score: null, disc: targetDisc });
+    }
+  }
+
+  renderTracks();
+
+  // 聚焦到该 disc 第一个空白曲目（新增的）
+  const rows = document.querySelectorAll('#trackList .track-row');
+  for (const row of rows) {
+    const idx = parseInt(row.dataset.trackIndex);
+    if (idx >= 0 && editingTracks[idx] && (editingTracks[idx].disc || 1) === targetDisc) {
+      if (!editingTracks[idx].name && editingTracks[idx].score == null) {
+        row.querySelector('input').focus();
+        break;
+      }
+    }
+  }
 }
 
 function addTrackToDisc(disc) {
@@ -267,12 +320,40 @@ async function saveEntry() {
       section.groups.push(group);
     }
     group.entries.push(data);
-    // 1990-2024 年自动按标题排序（符号 > 数字 > 英文 > 中文拼音），AOTY/SOTY 置顶
+    // 2025及以后：MM.DD 按日期排序，XXXX 按年份排序（新在前），无日期按标题排序
+    // 1990-2024：按标题排序；1980s及以前按年份排序（新在前）
     const year = parseInt(section.id);
-    if (!isNaN(year) && year >= 1990 && year <= 2024) {
+    const isFuture = !isNaN(year) && year >= 2025;
+    const isOld = !isNaN(year) && year <= 1989;
+    const needsSort = isFuture || (!isNaN(year) && year >= 1990 && year <= 2024) || isOld;
+    if (needsSort) {
       const special = group.entries.filter(e => e.isAoty || e.isSoty);
       const normal = group.entries.filter(e => !e.isAoty && !e.isSoty);
       normal.sort((a, b) => {
+        if (isFuture) {
+          const da = a.date || '';
+          const db = b.date || '';
+          const aHas = !!da, bHas = !!db;
+          if (!aHas && !bHas) { /* fall through to title */ }
+          else if (!aHas) return 1;
+          else if (!bHas) return -1;
+          else {
+            const aDot = da.includes('.');
+            const bDot = db.includes('.');
+            if (aDot && !bDot) return -1;
+            if (!aDot && bDot) return 1;
+            if (aDot && bDot) {
+              if (da !== db) return da.localeCompare(db);
+            } else {
+              if (da !== db) return db.localeCompare(da); // 年份越新越靠前
+            }
+          }
+        }
+        if (isOld) {
+          const ya = a.date || '9999';
+          const yb = b.date || '9999';
+          if (ya !== yb) return yb.localeCompare(ya); // 年份越新越靠前
+        }
         const ta = (a.title || '');
         const tb = (b.title || '');
         const oa = charPriority(ta.charAt(0));
@@ -293,7 +374,7 @@ async function saveEntry() {
     // 编辑已有条目：只更新单张卡片
     buildEntryIndex();
     const secYear = parseInt(sel.sectionId);
-    const needsReorder = !isNaN(secYear) && secYear >= 1990 && secYear <= 2024;
+    const needsReorder = !isNaN(secYear) && (secYear >= 2025 || (secYear >= 1990 && secYear <= 2024) || secYear <= 1989);
     // AOTY/SOTY 状态变化时需要重建卡片类型
     const aotyChanged = editingEntry.isAoty !== (document.querySelector('[data-entry-id="' + editingEntry.id + '"]')?.classList.contains('aoty-card'));
     if (needsReorder || aotyChanged) {
@@ -308,8 +389,8 @@ async function saveEntry() {
     // 新建条目
     buildEntryIndex();
     const secYear = parseInt(sel.sectionId);
-    if (!isNaN(secYear) && secYear >= 1990 && secYear <= 2024) {
-      // 1990-2024：走 reorderGroupCards 重新排序并插入到正确位置
+    if (!isNaN(secYear) && (secYear >= 2025 || (secYear >= 1990 && secYear <= 2024) || secYear <= 1989)) {
+      // 所有年份：走 reorderGroupCards 重新排序并插入到正确位置
       reorderGroupCards(data, sel);
     } else {
       insertNewCardInSection(data, sel);

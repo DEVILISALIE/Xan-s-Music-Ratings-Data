@@ -147,7 +147,7 @@ npm run tauri build              # 构建 MSI 安装包
 
 **编辑保存优化（v1.3.4）**：`saveEntry()` 编辑已有条目时，如果未跨组移动，调用 `updateCardInPlace(entryId)` 只替换单张卡片 DOM，跳过全量 `renderContent()`，配合 CSS `fadeInUp` 动画提供视觉反馈。跨组移动仍走 `refreshAll()` 全量重建。新建条目在 1990-2024 年的 section 中走 `reorderGroupCards()` 自动排序并插入到正确位置，其他年份走 `insertNewCardInSection()` 直接追加。
 
-**自动排序（v1.3.3）**：1990-2024 年的 section 新建或编辑条目后自动按标题排序，优先级：符号 → 数字 → 英文 → 中文拼音（`localeCompare('zh-CN')`），AOTY/SOTY 永远置顶不参与排序。编辑时调用 `reorderGroupCards()` 重排整个 group 的 DOM 并更新序号，AOTY/SOTY 状态变化时自动重建卡片类型。1980s 及以前的 section 不受影响。`charPriority(ch)` 在 `filter.js` 中定义。
+**自动排序（v1.3.3）**：1990-2024 年的 section 新建或编辑条目后自动按标题排序，优先级：符号 → 数字 → 英文 → 中文拼音（`localeCompare('zh-CN')`），AOTY/SOTY 永远置顶不参与排序。2025 及以后的 section 根据日期格式自动判断排序方式：`MM.DD` 格式按日期升序排在最前，`XXXX` 格式按年份降序（新在前）排在中间，无日期排最后按标题排序；MM.DD 条目始终在 XXXX 条目前面。1980s 及以前的 section 按年份降序（新在前），无年份排最后，同一年份再按标题排序。编辑时调用 `reorderGroupCards()` 重排整个 group 的 DOM 并更新序号，AOTY/SOTY 状态变化时自动重建卡片类型。`charPriority(ch)` 在 `filter.js` 中定义。
 
 **EscapeHtml**：转义 `&`、`<`、`>`、`"`、`'`，防止 HTML 注入。所有 innerHTML 中的用户数据（data 属性值、id 属性值、显示文本）均经过 `escapeHtml()` 处理。
 
