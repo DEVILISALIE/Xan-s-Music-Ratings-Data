@@ -1290,7 +1290,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.3.4");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.3.5");
         break;
     }
   });

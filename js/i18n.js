@@ -3,7 +3,7 @@ const I18N = {
   en: {
     // Sidebar
     'sidebar.title': "Xan's Music Ratings",
-    'sidebar.subtitle': '1960s–Now',
+    'sidebar.subtitle': '1950s–Now',
     'sidebar.newYear': '+ New Year',
     'sidebar.export': 'Export JSON',
     'sidebar.import': 'Import JSON',
@@ -144,7 +144,7 @@ const I18N = {
   zh: {
     // Sidebar
     'sidebar.title': '乐评档案',
-    'sidebar.subtitle': '1960年代–现在',
+    'sidebar.subtitle': '1950年代–现在',
     'sidebar.newYear': '+ 新年份',
     'sidebar.export': '导出 JSON',
     'sidebar.import': '导入 JSON',

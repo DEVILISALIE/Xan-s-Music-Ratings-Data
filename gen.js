@@ -153,7 +153,7 @@ function finalizeAoty() {
 const headerMap = {
   "2024: Part": "2024"
 };
-const decadeMap = { "1980s": "1980s", "1979 to 1975": "1979-1975", "1974 to 1970": "1974-1970", "1960s": "1960s" };
+const decadeMap = { "1980s": "1980s", "1979 to 1975": "1979-1975", "1974 to 1970": "1974-1970", "1960s": "1960s", "1950s": "1950s" };
 
 const unmatchedLines = [];
 
