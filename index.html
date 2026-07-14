@@ -128,6 +128,22 @@
               <span data-i18n="settings.batchMode">多选模式</span>
               <span class="settings-value" id="settingsBatchValue">OFF</span>
             </div>
+            <div class="settings-palette" id="settingsPaletteSection">
+              <div class="settings-palette-header">
+                <span data-i18n="settings.bgHue">背景色调</span>
+                <button type="button" class="settings-palette-reset" id="bgHueReset" data-action="bg-hue-reset" data-i18n="settings.bgHueReset">默认</button>
+              </div>
+              <div class="bg-hue-presets" id="bgHuePresets" role="listbox" aria-label="Background hue presets">
+                <button type="button" class="bg-hue-swatch is-default" data-action="bg-hue-preset" data-hue="default" title="Default" aria-label="Default"></button>
+                <button type="button" class="bg-hue-swatch" data-action="bg-hue-preset" data-hue="350" style="--swatch: #F5D0D6" title="Rose" aria-label="Rose"></button>
+                <button type="button" class="bg-hue-swatch" data-action="bg-hue-preset" data-hue="25" style="--swatch: #F5DCC8" title="Peach" aria-label="Peach"></button>
+                <button type="button" class="bg-hue-swatch" data-action="bg-hue-preset" data-hue="50" style="--swatch: #F0ECC0" title="Lemon" aria-label="Lemon"></button>
+                <button type="button" class="bg-hue-swatch" data-action="bg-hue-preset" data-hue="140" style="--swatch: #C8E6D0" title="Mint" aria-label="Mint"></button>
+                <button type="button" class="bg-hue-swatch" data-action="bg-hue-preset" data-hue="200" style="--swatch: #C8DCF0" title="Sky" aria-label="Sky"></button>
+                <button type="button" class="bg-hue-swatch" data-action="bg-hue-preset" data-hue="270" style="--swatch: #DCC8F0" title="Lavender" aria-label="Lavender"></button>
+              </div>
+              <input type="range" class="bg-hue-slider" id="bgHueSlider" min="0" max="360" value="0" aria-label="Background hue">
+            </div>
           </div>
         </div>
       </div>

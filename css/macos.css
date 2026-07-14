@@ -282,12 +282,29 @@
 }
 
 [data-desktop="true"] .custom-select-menu {
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(40px) saturate(200%);
-  -webkit-backdrop-filter: blur(40px) saturate(200%);
-  border: 0.5px solid var(--separator);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(60px) saturate(200%);
+  -webkit-backdrop-filter: blur(60px) saturate(200%);
+  border: 0.5px solid rgba(255, 255, 255, 0.38);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.14), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
   padding: 4px;
+}
+
+[data-desktop="true"][data-theme="dark"] .custom-select-menu {
+  background: rgba(40, 40, 44, 0.3);
+  border: 0.5px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.42), 0 0 0 0.5px rgba(0, 0, 0, 0.2);
+}
+
+[data-desktop="true"][data-style="glass"] .custom-select-menu {
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(72px) saturate(220%);
+  -webkit-backdrop-filter: blur(72px) saturate(220%);
+}
+
+[data-desktop="true"][data-style="glass"][data-theme="dark"] .custom-select-menu {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 [data-desktop="true"] .custom-select-option {
@@ -331,11 +348,18 @@
 }
 
 [data-desktop="true"] .must-hear-popover {
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 14px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12), 0 0 0 0.5px rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(40px) saturate(200%);
-  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(60px) saturate(200%);
+  -webkit-backdrop-filter: blur(60px) saturate(200%);
+  border: 0.5px solid rgba(255, 255, 255, 0.38);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.14), 0 0 0 0.5px rgba(0, 0, 0, 0.04);
+}
+
+[data-desktop="true"][data-theme="dark"] .must-hear-popover {
+  background: rgba(40, 40, 44, 0.3);
+  border: 0.5px solid rgba(255, 255, 255, 0.14);
 }
 
 [data-desktop="true"] .must-hear-toggle-row {
@@ -386,9 +410,9 @@
 }
 
 /* ===== macOS Settings Dropdown ===== */
-[data-desktop="true"] .settings-dropdown {
+[data-desktop="true"] .custom-select-menu.settings-dropdown {
   border-radius: 14px;
-  min-width: 220px;
+  min-width: 240px;
 }
 
 [data-desktop="true"] .settings-item {
@@ -413,6 +437,40 @@
 
 [data-desktop="true"] .settings-item .toggle-switch input:checked + .toggle-slider::before {
   transform: translateX(19px);
+}
+
+
+[data-desktop="true"] .settings-palette {
+  gap: 12px;
+  padding: 12px 14px 14px;
+}
+
+[data-desktop="true"] .settings-palette-header {
+  font-size: 15px;
+}
+
+[data-desktop="true"] .settings-palette-reset {
+  font-size: 13px;
+  padding: 5px 12px;
+}
+
+[data-desktop="true"] .bg-hue-swatch {
+  width: 24px;
+  height: 24px;
+}
+
+[data-desktop="true"] .bg-hue-slider {
+  height: 9px;
+}
+
+[data-desktop="true"] .bg-hue-slider::-webkit-slider-thumb {
+  width: 20px;
+  height: 20px;
+}
+
+[data-desktop="true"] .bg-hue-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
 }
 
 /* ===== macOS Content Area ===== */
@@ -795,14 +853,32 @@
   position: fixed;
   min-width: 200px;
   padding: 6px;
-  border-radius: 10px;
-  background: var(--card-bg);
-  border: 0.5px solid var(--separator);
-  backdrop-filter: blur(40px) saturate(200%);
-  -webkit-backdrop-filter: blur(40px) saturate(200%);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 0 0 0.5px rgba(0,0,0,0.06);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 0.5px solid rgba(255, 255, 255, 0.38);
+  backdrop-filter: blur(60px) saturate(200%);
+  -webkit-backdrop-filter: blur(60px) saturate(200%);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.14), 0 0 0 0.5px rgba(0,0,0,0.04);
   z-index: 10000;
   font-size: 13px;
+  transform: translateZ(0);
+  will-change: backdrop-filter;
+}
+
+[data-desktop="true"][data-theme="dark"] .context-menu {
+  background: rgba(40, 40, 44, 0.3);
+  border: 0.5px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.42), 0 0 0 0.5px rgba(0,0,0,0.2);
+}
+
+[data-desktop="true"][data-style="glass"] .context-menu {
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(72px) saturate(220%);
+  -webkit-backdrop-filter: blur(72px) saturate(220%);
+}
+
+[data-desktop="true"][data-style="glass"][data-theme="dark"] .context-menu {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 [data-desktop="true"] .context-menu.open {

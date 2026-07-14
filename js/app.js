@@ -149,14 +149,253 @@ async function loadDataFromDiskWithRetry(maxRetries) {
   return null;
 }
 
-// ===== 下拉菜单统一关闭 =====
+// ===== 下拉菜单 portal（挂到 body，保证 backdrop-filter 生效） =====
+
+const _portalHome = new WeakMap();
+
+function portalOpen(menu, anchor, opts = {}) {
+  if (!menu || !anchor) return;
+  if (!_portalHome.has(menu)) {
+    _portalHome.set(menu, { parent: menu.parentNode, next: menu.nextSibling });
+  }
+  if (menu.parentElement !== document.body) {
+    document.body.appendChild(menu);
+  }
+  menu.classList.add('portal-open');
+  if (opts.openClass) menu.classList.add(opts.openClass);
+
+  menu.style.visibility = 'hidden';
+  // 先清掉旧定位/宽度，便于测量
+  menu.style.top = '0px';
+  menu.style.left = '0px';
+  menu.style.right = 'auto';
+  menu.style.bottom = 'auto';
+  menu.style.width = '';
+  menu.style.minWidth = '';
+  menu.style.maxWidth = '';
+
+  const rect = anchor.getBoundingClientRect();
+  // matchAnchor: 与触发器同宽（标签/分数/编辑分组）
+  // 否则优先用 CSS 自带宽度，不把菜单强行拉宽
+  let mw;
+  if (opts.matchAnchor) {
+    mw = Math.max(rect.width, opts.minWidth || 0);
+    menu.style.boxSizing = 'border-box';
+    menu.style.width = mw + 'px';
+    menu.style.minWidth = mw + 'px';
+    menu.style.maxWidth = mw + 'px';
+  } else if (opts.minWidth != null) {
+    menu.style.minWidth = opts.minWidth + 'px';
+    mw = Math.max(menu.offsetWidth || 0, opts.minWidth);
+  } else {
+    mw = menu.offsetWidth || rect.width || 140;
+  }
+  if (opts.maxWidth != null && !opts.matchAnchor) {
+    menu.style.maxWidth = opts.maxWidth + 'px';
+    mw = Math.min(mw, opts.maxWidth);
+  }
+
+  const mh = menu.offsetHeight || 0;
+  const gap = opts.gap ?? 6;
+  const prefer = opts.prefer || 'below'; // below | above | auto
+
+  let top;
+  if (prefer === 'above') {
+    top = rect.top - mh - gap;
+    if (top < 8) top = rect.bottom + gap;
+  } else if (prefer === 'auto') {
+    const below = rect.bottom + gap;
+    const above = rect.top - mh - gap;
+    top = (below + mh <= window.innerHeight - 8 || above < 8) ? below : above;
+  } else {
+    top = rect.bottom + gap;
+    if (top + mh > window.innerHeight - 8) {
+      top = Math.max(8, rect.top - mh - gap);
+    }
+  }
+
+  let left;
+  if (opts.align === 'right') {
+    left = rect.right - mw;
+  } else if (opts.align === 'center') {
+    left = rect.left + rect.width / 2 - mw / 2;
+  } else {
+    left = rect.left;
+  }
+  left = Math.max(8, Math.min(left, window.innerWidth - mw - 8));
+  top = Math.max(8, Math.min(top, window.innerHeight - Math.min(mh, window.innerHeight - 16) - 8));
+
+  menu.style.top = top + 'px';
+  menu.style.left = left + 'px';
+  menu.style.visibility = '';
+}
+
+function portalClose(menu, opts = {}) {
+  if (!menu) return;
+  menu.classList.remove('portal-open');
+  if (opts.openClass) menu.classList.remove(opts.openClass);
+  menu.style.top = '';
+  menu.style.left = '';
+  menu.style.right = '';
+  menu.style.bottom = '';
+  menu.style.width = '';
+  menu.style.minWidth = '';
+  menu.style.maxWidth = '';
+  menu.style.boxSizing = '';
+  menu.style.visibility = '';
+  const home = _portalHome.get(menu);
+  if (home && home.parent && menu.parentElement === document.body) {
+    if (home.next && home.next.parentNode === home.parent) {
+      home.parent.insertBefore(menu, home.next);
+    } else {
+      home.parent.appendChild(menu);
+    }
+  }
+}
 
 function closeAllDropdowns() {
-  document.getElementById('scoreFilter').classList.remove('open');
-  document.getElementById('tagFilter').classList.remove('open');
-  document.getElementById('editSectionSelect').classList.remove('open');
-  document.getElementById('mustHearPopover').classList.remove('open');
-  document.getElementById('settingsSelect').classList.remove('open');
+  const score = document.getElementById('scoreFilter');
+  const tag = document.getElementById('tagFilter');
+  const section = document.getElementById('editSectionSelect');
+  const mustHear = document.getElementById('mustHearPopover');
+  const settings = document.getElementById('settingsSelect');
+  if (score) score.classList.remove('open');
+  if (tag) tag.classList.remove('open');
+  if (section) section.classList.remove('open');
+  if (settings) settings.classList.remove('open');
+
+  portalClose(document.getElementById('scoreFilterMenu'));
+  portalClose(document.getElementById('tagFilterMenu'));
+  portalClose(document.getElementById('editSectionMenu'));
+  portalClose(mustHear, { openClass: 'open' });
+  closeSettingsMenu();
+}
+
+function openSettingsMenu() {
+  const select = document.getElementById('settingsSelect');
+  const menu = document.getElementById('settingsMenu');
+  const btn = document.getElementById('settingsBtn');
+  if (!select || !menu || !btn) return;
+  select.classList.add('open');
+  // 设置菜单保持自身 min-width（CSS 200/240），不跟按钮同宽
+  portalOpen(menu, btn, { openClass: 'open', align: 'right', prefer: 'below' });
+  syncSettingsToggles();
+}
+
+function closeSettingsMenu() {
+  const select = document.getElementById('settingsSelect');
+  const menu = document.getElementById('settingsMenu');
+  if (select) select.classList.remove('open');
+  portalClose(menu, { openClass: 'open' });
+}
+
+function openAnchoredMenu(selectId, menuId, triggerId, opts = {}) {
+  const select = document.getElementById(selectId);
+  const menu = document.getElementById(menuId);
+  const trigger = document.getElementById(triggerId);
+  if (!select || !menu || !trigger) return;
+  select.classList.add('open');
+  portalOpen(menu, trigger, opts);
+}
+
+function repositionOpenPortals() {
+  if (document.getElementById('settingsSelect')?.classList.contains('open')) {
+    const menu = document.getElementById('settingsMenu');
+    const btn = document.getElementById('settingsBtn');
+    if (menu && btn) portalOpen(menu, btn, { openClass: 'open', align: 'right', prefer: 'below' });
+  }
+  if (document.getElementById('scoreFilter')?.classList.contains('open')) {
+    portalOpen(document.getElementById('scoreFilterMenu'), document.getElementById('scoreFilterTrigger'), {
+      align: 'left', prefer: 'below', matchAnchor: true
+    });
+  }
+  if (document.getElementById('tagFilter')?.classList.contains('open')) {
+    portalOpen(document.getElementById('tagFilterMenu'), document.getElementById('tagFilterTrigger'), {
+      align: 'left', prefer: 'below', matchAnchor: true
+    });
+  }
+  if (document.getElementById('editSectionSelect')?.classList.contains('open')) {
+    const trigger = document.getElementById('editSectionTrigger');
+    const menu = document.getElementById('editSectionMenu');
+    if (trigger && menu) {
+      const rect = trigger.getBoundingClientRect();
+      const modal = document.querySelector('#editModal .modal');
+      const modalRect = modal?.getBoundingClientRect();
+      // 触发框滚出弹窗可视区时关闭
+      const outOfView = !modalRect ||
+        rect.bottom < modalRect.top + 8 ||
+        rect.top > modalRect.bottom - 8 ||
+        rect.right < modalRect.left + 8 ||
+        rect.left > modalRect.right - 8;
+      if (outOfView) {
+        document.getElementById('editSectionSelect').classList.remove('open');
+        portalClose(menu);
+      } else {
+        portalOpen(menu, trigger, { align: 'left', prefer: 'below', matchAnchor: true });
+      }
+    }
+  }
+  if (document.getElementById('mustHearPopover')?.classList.contains('portal-open')) {
+    openMustHearPopover();
+  }
+  // 封面移除确认
+  const coverDd = document.getElementById('coverRemoveDropdown');
+  if (coverDd && (coverDd.classList.contains('active') || coverDd.classList.contains('portal-open'))) {
+    const btn = document.querySelector('[data-action="cover-remove"]');
+    if (btn) {
+      const rect = btn.getBoundingClientRect();
+      const modal = document.querySelector('#editModal .modal');
+      const modalRect = modal?.getBoundingClientRect();
+      const outOfView = !modalRect ||
+        rect.bottom < modalRect.top + 8 ||
+        rect.top > modalRect.bottom - 8;
+      if (outOfView) {
+        portalClose(coverDd, { openClass: 'active' });
+      } else {
+        portalOpen(coverDd, btn, { openClass: 'active', align: 'center', prefer: 'above', gap: 6 });
+      }
+    }
+  }
+}
+
+let _portalRepositionRaf = 0;
+function schedulePortalReposition() {
+  if (_portalRepositionRaf) return;
+  _portalRepositionRaf = requestAnimationFrame(() => {
+    _portalRepositionRaf = 0;
+    repositionOpenPortals();
+  });
+}
+
+function openMustHearPopover() {
+  const popover = document.getElementById('mustHearPopover');
+  const trigger = document.getElementById('mustHearTrigger');
+  if (!popover || !trigger) return;
+  // 与按钮同宽，左对齐
+  portalOpen(popover, trigger, {
+    openClass: 'open',
+    align: 'left',
+    matchAnchor: true,
+    prefer: 'below'
+  });
+}
+
+function openBatchMenu(menuId, triggerEl) {
+  const menu = document.getElementById(menuId);
+  if (!menu || !triggerEl) return;
+  // 标签 140 / 移动 180，交给 CSS min-width，不强制跟按钮同宽
+  portalOpen(menu, triggerEl, {
+    openClass: 'active',
+    align: 'center',
+    prefer: 'above',
+    gap: 8
+  });
+}
+
+function closeBatchDropdowns() {
+  ['batchTagAddMenu', 'batchTagRemoveMenu', 'batchMoveMenu'].forEach(id => {
+    portalClose(document.getElementById(id), { openClass: 'active' });
+  });
 }
 
 // ===== 初始化入口 =====
@@ -295,14 +534,61 @@ function bindStaticButtons() {
     const select = document.getElementById('settingsSelect');
     const wasOpen = select.classList.contains('open');
     closeAllDropdowns();
-    if (!wasOpen) {
-      select.classList.add('open');
-      syncSettingsToggles();
-    }
+    if (!wasOpen) openSettingsMenu();
   });
+  // 菜单内点击不关闭
+  const settingsMenuEl = document.getElementById('settingsMenu');
+  if (settingsMenuEl) {
+    settingsMenuEl.addEventListener('click', (e) => e.stopPropagation());
+  }
+  window.addEventListener('resize', schedulePortalReposition);
+  // 编辑弹窗内滚动时，portal 下拉跟随触发框
+  const editModalEl = document.getElementById('editModal');
+  const editModalSheet = editModalEl?.querySelector('.modal');
+  if (editModalSheet) {
+    editModalSheet.addEventListener('scroll', schedulePortalReposition, { passive: true });
+  }
+  // 捕获阶段：覆盖弹窗内嵌套滚动容器（如曲目列表）
+  if (editModalEl) {
+    editModalEl.addEventListener('scroll', schedulePortalReposition, { passive: true, capture: true });
+  }
+  // 主内容区滚动时也同步工具栏下拉
+  const mainContent = document.getElementById('mainContent');
+  if (mainContent) {
+    mainContent.addEventListener('scroll', schedulePortalReposition, { passive: true });
+  }
+  window.addEventListener('scroll', schedulePortalReposition, { passive: true, capture: true });
   document.getElementById('settingsThemeToggle').addEventListener('change', () => { toggleTheme(); });
   document.getElementById('settingsStyleToggle').addEventListener('change', () => { toggleStyle(); });
   document.querySelector('[data-action="settings-lang"]').addEventListener('click', () => { toggleLang(); });
+
+  // 背景色调（仅浅色）
+  const bgHuePresets = document.getElementById('bgHuePresets');
+  if (bgHuePresets) {
+    bgHuePresets.addEventListener('click', (e) => {
+      const swatch = e.target.closest('[data-action="bg-hue-preset"]');
+      if (!swatch) return;
+      e.stopPropagation();
+      const hue = swatch.dataset.hue;
+      setBgHue(hue === 'default' ? 'default' : Number(hue));
+    });
+  }
+  const bgHueSlider = document.getElementById('bgHueSlider');
+  if (bgHueSlider) {
+    bgHueSlider.addEventListener('input', (e) => {
+      e.stopPropagation();
+      setBgHue(Number(e.target.value));
+    });
+    bgHueSlider.addEventListener('click', (e) => e.stopPropagation());
+    bgHueSlider.addEventListener('pointerdown', (e) => e.stopPropagation());
+  }
+  const bgHueReset = document.getElementById('bgHueReset');
+  if (bgHueReset) {
+    bgHueReset.addEventListener('click', (e) => {
+      e.stopPropagation();
+      setBgHue('default');
+    });
+  }
 
   // 批量操作按钮
   document.querySelector('[data-action="settings-batch"]').addEventListener('click', () => { toggleBatchMode(); });
@@ -314,43 +600,94 @@ function bindStaticButtons() {
   // 批量下拉菜单切换
   document.querySelector('[data-action="batch-toggle-tag-add"]').addEventListener('click', (e) => {
     e.stopPropagation();
-    const wasOpen = document.getElementById('batchTagAddMenu').classList.contains('active');
+    const menu = document.getElementById('batchTagAddMenu');
+    const wasOpen = menu.classList.contains('active') || menu.classList.contains('portal-open');
     closeBatchDropdowns();
-    if (!wasOpen) document.getElementById('batchTagAddMenu').classList.add('active');
+    if (!wasOpen) openBatchMenu('batchTagAddMenu', e.currentTarget);
   });
 
   document.querySelector('[data-action="batch-toggle-tag-remove"]').addEventListener('click', (e) => {
     e.stopPropagation();
-    const wasOpen = document.getElementById('batchTagRemoveMenu').classList.contains('active');
+    const menu = document.getElementById('batchTagRemoveMenu');
+    const wasOpen = menu.classList.contains('active') || menu.classList.contains('portal-open');
     closeBatchDropdowns();
-    if (!wasOpen) document.getElementById('batchTagRemoveMenu').classList.add('active');
+    if (!wasOpen) openBatchMenu('batchTagRemoveMenu', e.currentTarget);
   });
 
   document.querySelector('[data-action="batch-toggle-move"]').addEventListener('click', (e) => {
     e.stopPropagation();
-    const wasOpen = document.getElementById('batchMoveMenu').classList.contains('active');
+    const menu = document.getElementById('batchMoveMenu');
+    const wasOpen = menu.classList.contains('active') || menu.classList.contains('portal-open');
     closeBatchDropdowns();
     if (!wasOpen) {
       populateBatchMoveMenu();
-      document.getElementById('batchMoveMenu').classList.add('active');
+      openBatchMenu('batchMoveMenu', e.currentTarget);
     }
   });
 
   // 标签下拉菜单点击事件
   document.getElementById('batchTagAddMenu').addEventListener('click', (e) => {
+    e.stopPropagation();
     const item = e.target.closest('.batch-dropdown-item');
     if (item) batchAddTag(item.dataset.tag);
   });
 
   document.getElementById('batchTagRemoveMenu').addEventListener('click', (e) => {
+    e.stopPropagation();
     const item = e.target.closest('.batch-dropdown-item');
     if (item) batchRemoveTag(item.dataset.tag);
   });
 
   // 点击外部关闭下拉菜单
   document.addEventListener('click', (e) => {
-    if (!e.target.closest('.batch-dropdown')) {
+    if (
+      !e.target.closest('.batch-dropdown') &&
+      !e.target.closest('.batch-dropdown-menu')
+    ) {
       closeBatchDropdowns();
+    }
+    if (
+      !e.target.closest('#settingsBtn') &&
+      !e.target.closest('#settingsMenu') &&
+      document.getElementById('settingsSelect')?.classList.contains('open')
+    ) {
+      closeSettingsMenu();
+    }
+    if (
+      !e.target.closest('#scoreFilter') &&
+      !e.target.closest('#scoreFilterMenu') &&
+      document.getElementById('scoreFilter')?.classList.contains('open')
+    ) {
+      document.getElementById('scoreFilter').classList.remove('open');
+      portalClose(document.getElementById('scoreFilterMenu'));
+    }
+    if (
+      !e.target.closest('#tagFilter') &&
+      !e.target.closest('#tagFilterMenu') &&
+      document.getElementById('tagFilter')?.classList.contains('open')
+    ) {
+      document.getElementById('tagFilter').classList.remove('open');
+      portalClose(document.getElementById('tagFilterMenu'));
+    }
+    if (
+      !e.target.closest('#editSectionSelect') &&
+      !e.target.closest('#editSectionMenu') &&
+      document.getElementById('editSectionSelect')?.classList.contains('open')
+    ) {
+      document.getElementById('editSectionSelect').classList.remove('open');
+      portalClose(document.getElementById('editSectionMenu'));
+    }
+    if (
+      !e.target.closest('#mustHearSelect') &&
+      !e.target.closest('#mustHearPopover') &&
+      (document.getElementById('mustHearPopover')?.classList.contains('open') ||
+        document.getElementById('mustHearPopover')?.classList.contains('portal-open'))
+    ) {
+      const input = document.getElementById('mustHearInput');
+      const toggle = document.getElementById('mustHearToggle');
+      if (input) input.value = mustHearThreshold;
+      if (toggle) toggle.checked = mustHearEnabled;
+      portalClose(document.getElementById('mustHearPopover'), { openClass: 'open' });
     }
   });
 }
@@ -366,10 +703,11 @@ function bindScoreFilter() {
     e.stopPropagation();
     const wasOpen = select.classList.contains('open');
     closeAllDropdowns();
-    if (!wasOpen) select.classList.add('open');
+    if (!wasOpen) openAnchoredMenu('scoreFilter', 'scoreFilterMenu', 'scoreFilterTrigger', { align: 'left', prefer: 'below', matchAnchor: true });
   });
 
   menu.addEventListener('click', (e) => {
+    e.stopPropagation();
     const opt = e.target.closest('.custom-select-option');
     if (!opt) return;
     menu.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('active'));
@@ -378,6 +716,7 @@ function bindScoreFilter() {
     currentScoreFilter = opt.dataset.value;
     applyFilters();
     select.classList.remove('open');
+    portalClose(menu);
   });
 }
 
@@ -392,7 +731,7 @@ function bindTagFilter() {
     e.stopPropagation();
     const wasOpen = select.classList.contains('open');
     closeAllDropdowns();
-    if (!wasOpen) select.classList.add('open');
+    if (!wasOpen) openAnchoredMenu('tagFilter', 'tagFilterMenu', 'tagFilterTrigger', { align: 'left', prefer: 'below', matchAnchor: true });
   });
 
   menu.addEventListener('click', (e) => {
@@ -420,6 +759,8 @@ function bindTagFilter() {
     const activeCount = currentFilter.length;
     trigger.textContent = activeCount === 0 ? t('toolbar.allTags') : activeCount + (currentLang === 'zh' ? ' 个标签' : ' tag' + (activeCount > 1 ? 's' : ''));
     applyFilters();
+    // 多选保持展开，重新定位
+    portalOpen(menu, trigger, { align: 'left', prefer: 'below', matchAnchor: true });
   });
 }
 
@@ -432,10 +773,26 @@ function bindSectionSelector() {
 
   trigger.addEventListener('click', (e) => {
     e.stopPropagation();
-    select.classList.toggle('open');
+    const wasOpen = select.classList.contains('open');
+    // 只关其他，不关自己
+    document.getElementById('scoreFilter')?.classList.remove('open');
+    document.getElementById('tagFilter')?.classList.remove('open');
+    document.getElementById('settingsSelect')?.classList.remove('open');
+    portalClose(document.getElementById('scoreFilterMenu'));
+    portalClose(document.getElementById('tagFilterMenu'));
+    portalClose(document.getElementById('mustHearPopover'), { openClass: 'open' });
+    closeSettingsMenu();
+    if (wasOpen) {
+      select.classList.remove('open');
+      portalClose(menu);
+    } else {
+      select.classList.add('open');
+      portalOpen(menu, trigger, { align: 'left', prefer: 'below', matchAnchor: true });
+    }
   });
 
   menu.addEventListener('click', (e) => {
+    e.stopPropagation();
     const opt = e.target.closest('.custom-select-option');
     if (!opt) return;
     menu.querySelectorAll('.custom-select-option').forEach(o => o.classList.remove('active'));
@@ -443,6 +800,7 @@ function bindSectionSelector() {
     trigger.textContent = opt.textContent;
     selectedSectionValue = opt.dataset.value;
     select.classList.remove('open');
+    portalClose(menu);
     // 根据分组切换 AOTY/SOTY 标签
     try {
       const sel = JSON.parse(selectedSectionValue);
@@ -480,12 +838,13 @@ function bindMustHear() {
 
   trigger.addEventListener('click', (e) => {
     e.stopPropagation();
-    const wasOpen = popover.classList.contains('open');
+    const wasOpen = popover.classList.contains('open') || popover.classList.contains('portal-open');
     closeAllDropdowns();
-    if (!wasOpen) popover.classList.add('open');
+    if (!wasOpen) openMustHearPopover();
   });
 
-  saveBtn.addEventListener('click', () => {
+  saveBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
     mustHearEnabled = toggle.checked;
     localStorage.setItem('mustHearEnabled', mustHearEnabled);
     const v = parseInt(input.value);
@@ -494,19 +853,12 @@ function bindMustHear() {
       localStorage.setItem('mustHearThreshold', v);
     }
     trigger.textContent = t('toolbar.mustHear');
-    popover.classList.remove('open');
+    portalClose(popover, { openClass: 'open' });
     // 只更新 Must Hear 标记，不全量重建 DOM
     updateMustHearBadges();
   });
 
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('#mustHearSelect') && popover.classList.contains('open')) {
-      // 关闭时丢弃未保存的修改，恢复为已保存的值
-      input.value = mustHearThreshold;
-      toggle.checked = mustHearEnabled;
-      popover.classList.remove('open');
-    }
-  });
+  // 外部点击关闭逻辑已统一在 bindStaticButtons 的 document click 中
 }
 
 function updateMustHearBadges() {
@@ -801,10 +1153,6 @@ function updateBatchBar() {
   }
 }
 
-function closeBatchDropdowns() {
-  document.querySelectorAll('.batch-dropdown-menu').forEach(m => m.classList.remove('active'));
-}
-
 async function batchDelete() {
   if (batchSelectedIds.size === 0) {
     showAlert(t('batch.noSelection'));
@@ -941,6 +1289,88 @@ async function batchMoveToSection(targetSectionId) {
 
 // ===== 主题与风格切换 =====
 
+const DEFAULT_SOLID_BG = '#F2F2F7';
+const DEFAULT_GLASS_THEME_COLOR = '#c1dfc4';
+
+function clampBgHue(value) {
+  const n = Math.round(Number(value));
+  if (!Number.isFinite(n)) return 0;
+  // 滑条 0–360：右端保留 360，不回绕到 0
+  return Math.max(0, Math.min(360, n));
+}
+
+function readBgHue() {
+  const raw = localStorage.getItem('bgHue');
+  if (raw == null || raw === '' || raw === 'default') return 'default';
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return 'default';
+  return clampBgHue(n);
+}
+
+function solidBgFromHue(hue) {
+  // CSS hsl 中 360 与 0 等价，但滑条位置仍保留 360
+  return `hsl(${hue} 22% 94%)`;
+}
+
+function glassThemeColorFromHue(hue) {
+  // 默认渐变起点偏绿，用同向 hue-rotate 后的近似主题色
+  return `hsl(${(120 + hue) % 360} 35% 82%)`;
+}
+
+function applyBgHue(value = readBgHue()) {
+  const root = document.documentElement;
+  const isDefault = value === 'default';
+  const hue = isDefault ? 0 : clampBgHue(value);
+
+  if (isDefault) {
+    root.style.setProperty('--bg-hue-rotate', '0deg');
+    root.style.setProperty('--light-bg', DEFAULT_SOLID_BG);
+  } else {
+    root.style.setProperty('--bg-hue-rotate', `${hue}deg`);
+    root.style.setProperty('--light-bg', solidBgFromHue(hue));
+  }
+
+  syncBgHueControls(isDefault ? 'default' : hue);
+  updateThemeColor();
+}
+
+function setBgHue(value) {
+  if (value === 'default' || value == null) {
+    localStorage.setItem('bgHue', 'default');
+    applyBgHue('default');
+    return;
+  }
+  const hue = clampBgHue(value);
+  localStorage.setItem('bgHue', String(hue));
+  applyBgHue(hue);
+}
+
+function syncBgHueControls(value = readBgHue()) {
+  const isDefault = value === 'default';
+  const hue = isDefault ? 0 : Number(value);
+  const slider = document.getElementById('bgHueSlider');
+  if (slider) {
+    slider.value = String(isDefault ? 0 : hue);
+    // 默认态滑条可拖，一拖即进入自定义
+    slider.disabled = false;
+  }
+  const resetBtn = document.getElementById('bgHueReset');
+  if (resetBtn) resetBtn.classList.toggle('is-default', isDefault);
+
+  document.querySelectorAll('.bg-hue-swatch').forEach(sw => {
+    const key = sw.dataset.hue;
+    let active = false;
+    if (key === 'default') {
+      active = isDefault;
+    } else if (!isDefault) {
+      const preset = Number(key);
+      const diff = Math.min(Math.abs(hue - preset), 360 - Math.abs(hue - preset));
+      active = diff <= 6;
+    }
+    sw.classList.toggle('active', active);
+  });
+}
+
 function applyTheme() {
   const saved = localStorage.getItem('theme');
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -953,6 +1383,8 @@ function applyTheme() {
   document.documentElement.setAttribute('data-style', savedStyle);
   const styleCb = document.getElementById('settingsStyleToggle');
   if (styleCb) styleCb.checked = savedStyle === 'glass';
+
+  applyBgHue();
 }
 
 function updateLangTexts() {
@@ -979,6 +1411,7 @@ function toggleTheme() {
   localStorage.setItem('theme', next);
   const cb = document.getElementById('settingsThemeToggle');
   if (cb) cb.checked = next === 'dark';
+  applyBgHue();
   updateThemeColor();
 }
 
@@ -995,11 +1428,17 @@ function toggleStyle() {
 function updateThemeColor() {
   const theme = document.documentElement.getAttribute('data-theme');
   const style = document.documentElement.getAttribute('data-style');
-  let color = '#F2F2F7';
+  const hue = readBgHue();
+  let color = DEFAULT_SOLID_BG;
   if (theme === 'dark' && style === 'glass') color = '#0f2027';
   else if (theme === 'dark') color = '#000000';
-  else if (style === 'glass') color = '#c1dfc4';
-  document.querySelector('meta[name="theme-color"]').setAttribute('content', color);
+  else if (style === 'glass') {
+    color = hue === 'default' ? DEFAULT_GLASS_THEME_COLOR : glassThemeColorFromHue(hue);
+  } else if (hue !== 'default') {
+    color = solidBgFromHue(hue);
+  }
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute('content', color);
 }
 
 function syncSettingsToggles() {
@@ -1011,6 +1450,7 @@ function syncSettingsToggles() {
   if (themeCb) themeCb.checked = theme === 'dark';
   if (styleCb) styleCb.checked = style === 'glass';
   if (langVal) langVal.textContent = currentLang === 'zh' ? '中文' : 'English';
+  syncBgHueControls();
 }
 
 // ===== 弹窗全局事件 =====
@@ -1309,7 +1749,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.3.5");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.4.0");
         break;
     }
   });

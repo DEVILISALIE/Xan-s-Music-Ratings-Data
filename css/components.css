@@ -553,46 +553,68 @@ textarea.form-input::-webkit-scrollbar-corner {
   border-radius: 10px;
 }
 
-#editSectionGroup .custom-select-menu {
+/* 用 #editSectionMenu，portal 到 body 后选择器仍生效 */
+#editSectionMenu {
   position: absolute;
   left: 0;
   right: 0;
   top: calc(100% + 4px);
   max-height: 240px;
   overflow: hidden auto;
-  background: var(--card-bg);
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(48px) saturate(180%);
+  -webkit-backdrop-filter: blur(48px) saturate(180%);
   border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-  border: 1px solid var(--separator);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   padding: 4px;
   z-index: 10;
+  transform: translateZ(0);
+  will-change: backdrop-filter;
+  text-align: left;
+  box-sizing: border-box;
 }
 
-[data-theme="dark"] #editSectionGroup .custom-select-menu {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
-}
-
-[data-style="glass"] #editSectionGroup .custom-select-menu {
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-}
-
-[data-style="glass"][data-theme="dark"] #editSectionGroup .custom-select-menu {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-}
-
-#editSectionGroup .custom-select-option {
-  font-size: 14px;
-  padding: 10px 14px 10px 10px;
+#editSectionMenu.portal-open {
+  position: fixed !important;
+  left: auto;
+  right: auto;
+  top: auto;
+  z-index: 10050;
+  max-height: min(50vh, 320px);
   text-align: left;
 }
 
-#editSectionGroup .custom-select-menu::-webkit-scrollbar { width: 6px; }
-#editSectionGroup .custom-select-menu::-webkit-scrollbar-track {
+[data-theme="dark"] #editSectionMenu {
+  background: rgba(40, 40, 44, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+}
+
+[data-style="glass"] #editSectionMenu {
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(56px) saturate(200%);
+  -webkit-backdrop-filter: blur(56px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+[data-style="glass"][data-theme="dark"] #editSectionMenu {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+#editSectionMenu .custom-select-option {
+  font-size: 14px;
+  padding: 10px 14px 10px 10px;
+  text-align: left !important;
+  justify-content: flex-start;
+}
+
+#editSectionMenu::-webkit-scrollbar { width: 6px; }
+#editSectionMenu::-webkit-scrollbar-track {
   margin: 8px 0;
 }
-#editSectionGroup .custom-select-menu::-webkit-scrollbar-thumb {
+#editSectionMenu::-webkit-scrollbar-thumb {
   background: var(--text-tertiary);
   border-radius: 3px;
 }
@@ -1002,11 +1024,13 @@ textarea.form-input::-webkit-scrollbar-corner {
   position: absolute;
   bottom: calc(100% + 8px);
   left: 50%;
-  transform: translateX(-50%);
-  background: var(--card-bg);
-  border: 1px solid var(--separator);
+  transform: translateX(-50%) translateY(8px) translateZ(0);
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(48px) saturate(180%);
+  -webkit-backdrop-filter: blur(48px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
   min-width: 140px;
   max-height: 200px;
   overflow-y: auto;
@@ -1014,24 +1038,45 @@ textarea.form-input::-webkit-scrollbar-corner {
   display: none;
   z-index: 100;
   opacity: 0;
-  transform: translateX(-50%) translateY(8px);
   transition: opacity 0.2s, transform 0.2s;
+  will-change: backdrop-filter;
 }
 
 .batch-dropdown-menu.active {
   display: block;
   opacity: 1;
-  transform: translateX(-50%) translateY(0);
+  transform: translateX(-50%) translateY(0) translateZ(0);
+}
+
+.batch-dropdown-menu.portal-open {
+  position: fixed !important;
+  left: auto;
+  bottom: auto;
+  top: auto;
+  right: auto;
+  z-index: 10050;
+  display: block;
+  opacity: 1;
+  transform: none !important;
+  max-height: min(50vh, 320px);
 }
 
 [data-style="glass"] .batch-dropdown-menu {
-  backdrop-filter: blur(30px) saturate(180%);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(56px) saturate(200%);
+  -webkit-backdrop-filter: blur(56px) saturate(200%);
   border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 [data-style="glass"][data-theme="dark"] .batch-dropdown-menu {
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+[data-theme="dark"] .batch-dropdown-menu {
+  background: rgba(40, 40, 44, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
 }
 
 .batch-dropdown-item {
@@ -1329,34 +1374,52 @@ textarea.form-input::-webkit-scrollbar-corner {
   position: absolute;
   bottom: calc(100% + 6px);
   left: 50%;
-  transform: translateX(-50%);
-  background: var(--card-bg);
-  border: 1px solid var(--separator);
+  transform: translateX(-50%) translateZ(0);
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(48px) saturate(180%);
+  -webkit-backdrop-filter: blur(48px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 10px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
   padding: 4px;
   z-index: 100;
   min-width: 80px;
   flex-direction: column;
   gap: 2px;
+  will-change: backdrop-filter;
 }
 
 .cover-remove-dropdown.active {
   display: flex;
 }
 
+.cover-remove-dropdown.portal-open {
+  position: fixed !important;
+  left: auto;
+  bottom: auto;
+  top: auto;
+  right: auto;
+  z-index: 10050;
+  display: flex;
+  transform: none !important;
+}
+
 [data-theme="dark"] .cover-remove-dropdown {
-  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  background: rgba(40, 40, 44, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
 }
 
 [data-style="glass"] .cover-remove-dropdown {
-  backdrop-filter: blur(30px) saturate(180%);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
-  border: 1px solid rgba(255,255,255,0.4);
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(56px) saturate(200%);
+  -webkit-backdrop-filter: blur(56px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
 }
 
 [data-style="glass"][data-theme="dark"] .cover-remove-dropdown {
-  border-color: rgba(255,255,255,0.1);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
 .cover-dropdown-item {

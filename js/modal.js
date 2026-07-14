@@ -71,7 +71,14 @@ function openAddModal() {
 function closeModal() {
   document.getElementById('editModal').classList.remove('active');
   document.getElementById('editSectionSelect').classList.remove('open');
-  document.getElementById('coverRemoveDropdown').classList.remove('active');
+  const sectionMenu = document.getElementById('editSectionMenu');
+  const coverDd = document.getElementById('coverRemoveDropdown');
+  if (typeof portalClose === 'function') {
+    portalClose(sectionMenu);
+    portalClose(coverDd, { openClass: 'active' });
+  } else {
+    if (coverDd) coverDd.classList.remove('active');
+  }
   editingEntry = null;
 }
 
@@ -550,7 +557,16 @@ function setupCoverEvents() {
   section.querySelector('[data-action="cover-remove"]').addEventListener('click', (e) => {
     e.stopPropagation();
     const dropdown = document.getElementById('coverRemoveDropdown');
-    dropdown.classList.toggle('active');
+    const btn = e.currentTarget;
+    const wasOpen = dropdown.classList.contains('active') || dropdown.classList.contains('portal-open');
+    if (wasOpen) {
+      if (typeof portalClose === 'function') portalClose(dropdown, { openClass: 'active' });
+      else dropdown.classList.remove('active');
+    } else if (typeof portalOpen === 'function') {
+      portalOpen(dropdown, btn, { openClass: 'active', align: 'center', prefer: 'above', gap: 6 });
+    } else {
+      dropdown.classList.add('active');
+    }
   });
 
   // 确认移除
@@ -564,19 +580,27 @@ function setupCoverEvents() {
     editingEntry.cover = null;
     coverCache.delete(editingEntry.id);
     clearCoverPreview();
+    const dropdown = document.getElementById('coverRemoveDropdown');
+    if (typeof portalClose === 'function') portalClose(dropdown, { openClass: 'active' });
+    else dropdown.classList.remove('active');
   });
 
   // 取消移除
   section.querySelector('[data-action="cover-remove-cancel"]').addEventListener('click', () => {
-    document.getElementById('coverRemoveDropdown').classList.remove('active');
+    const dropdown = document.getElementById('coverRemoveDropdown');
+    if (typeof portalClose === 'function') portalClose(dropdown, { openClass: 'active' });
+    else dropdown.classList.remove('active');
   });
 
   // 点击外部关闭移除 dropdown
   document.addEventListener('click', (e) => {
     const dropdown = document.getElementById('coverRemoveDropdown');
     const removeWrap = document.getElementById('coverRemoveWrap');
-    if (dropdown.classList.contains('active') && !removeWrap.contains(e.target)) {
-      dropdown.classList.remove('active');
+    if (!dropdown) return;
+    const open = dropdown.classList.contains('active') || dropdown.classList.contains('portal-open');
+    if (open && !removeWrap?.contains(e.target) && !dropdown.contains(e.target)) {
+      if (typeof portalClose === 'function') portalClose(dropdown, { openClass: 'active' });
+      else dropdown.classList.remove('active');
     }
   });
 

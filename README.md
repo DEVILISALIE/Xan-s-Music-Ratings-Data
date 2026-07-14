@@ -102,13 +102,13 @@ node gen.js path/to/your/file.txt
 
 ---
 
-## 桌面版（v1.3.5）
+## 桌面版（v1.4.0）
 
 基于 [Tauri v2](https://v2.tauri.app/)（Rust + WebView2）构建的 Windows 原生应用，共享同一套前端代码。
 
 ### 下载安装
 
-前往 [Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 `Xan's Music Ratings_1.3.5_x64_en-US.msi`，双击安装即可。
+前往 [Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 `Xan's Music Ratings_1.4.0_x64_en-US.msi`，双击安装即可。
 
 ### 桌面版专属功能
 
@@ -126,6 +126,13 @@ node gen.js path/to/your/file.txt
 - **1950s 分区** — 新增 1950s 年代分区；桌面版从磁盘/localStorage/内置数据加载时若缺失会自动注入空分区
 - **UI 放大** — 桌面版侧边栏、工具栏、弹窗、AOTY 卡片等 UI 元素等比放大 20%，适配大屏显示器
 - **独立样式** — 通过 `css/macos.css` 提供桌面版专属样式，通过 `[data-desktop="true"]` 选择器限定，不影响网页版
+
+### v1.4.0 大版本更新
+
+- **浅色背景色调** — 仅浅色模式：设置菜单内预设色板 + 完整可见光色谱滑条，可改纯色底与毛玻璃大背景；偏好写入 `localStorage`（`bgHue`），支持一键恢复默认
+- **统一无色高模糊下拉** — 标签/分数/必听/设置/分组/批量/封面移除/右键菜单统一毛玻璃；菜单 portal 到 `body`，避免父级 `backdrop-filter` 导致模糊失效
+- **下拉定位与宽度** — 标签/分数/必听/编辑分组与触发器同宽；设置菜单独立 min-width；弹窗滚动时分组下拉跟随，滚出可视区自动收起
+- **设置菜单增强** — 浅色显示背景色调区；色相滑条 0–360 不回绕；全色谱轨道显示
 
 ### 功能一览新增
 

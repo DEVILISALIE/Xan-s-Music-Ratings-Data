@@ -4,6 +4,15 @@
 
 对话中必须使用中文回答用户，代码注释和解释说明也使用中文。
 
+## 工作规则（必须遵守）
+
+1. **默认只指桌面版**：用户说「修改」、提出问题或反馈，默认都只针对桌面版 exe（Tauri 应用），不是网页版。排查、改动、验证都以桌面版为准。
+2. **桌面 exe 覆盖**：涉及桌面版改动并完成修改后，必须重新打包，并覆盖本机 exe：
+   `C:\Users\lilxanyy\Desktop\music-ratings-main\src-tauri\target\release\music-ratings.exe`
+   - 构建命令：`npm run tauri build`（或等价流程）
+   - 目标是让上述路径的 exe 始终是当前最新可运行版本
+3. **GitHub 发布权限**：只有用户明确说要发布/上传 GitHub（如「发布 github」「上传 github」「更新 release」）时，才允许 `git push`、创建/更新 GitHub Release、上传安装包。未明确要求时，禁止发布到 GitHub。
+
 ## 项目简介
 
 模块化交互式乐评网页应用，iOS 风格，纯前端无依赖。用户可在浏览器中直接编辑分数、评论、标签。支持中英文切换、亮/暗主题、纯色/毛玻璃风格。
@@ -70,10 +79,15 @@ npm run tauri build              # 构建 MSI 安装包
 | `style` | `"solid"` / `"glass"` | 纯色/毛玻璃风格（默认 glass） |
 | `mustHearThreshold` | 数字字符串 | 必听专辑分数阈值，默认 `80` |
 | `mustHearEnabled` | `"true"` / `"false"` | 必听专辑功能开关，默认 `true` |
+| `bgHue` | `"default"` / `0–360` 数字字符串 | 浅色背景色调（仅浅色生效），默认 `default` |
 
 ## 关键技术细节
 
 **数据流**：桌面版优先从磁盘文件加载（`AppData/Roaming/com.xan.music-ratings/music-data.json`），再 fallback 到 localStorage 和 `__MUSIC_DATA__`。网页版优先 localStorage。`ensureDefaultGroups()` 在数据加载后和导入后调用，确保每个 section 都有 Albums/Singles 两个分组。`migrateVolSections()` 自动合并旧版 vol sections。**1950s 分区（v1.3.5）**：桌面版在磁盘加载、localStorage 恢复、内置数据三条路径上都会检查 `sections` 是否已有 `id === '1950s'`；缺失时注入空分区 `{ id: '1950s', title: '1950s', groups: [Albums, Singles] }`，不覆盖已有数据。
+
+**浅色背景色调（v1.4.0）**：仅浅色模式在设置菜单显示「背景色调」区（预设色板 + 0–360 全色谱滑条 + 恢复默认）。纯色改 `--light-bg`，毛玻璃对 `body::before` 做 `hue-rotate`；深色不生效。偏好键 `bgHue`。
+
+**下拉毛玻璃 portal（v1.4.0）**：所有下拉（标签/分数/必听/设置/分组/批量/封面移除/右键）统一无色高模糊；打开时挂到 `body` + `position: fixed`，避免嵌在已有 `backdrop-filter` 的父级里导致模糊失效。宽度：标签/分数/必听/编辑分组 `matchAnchor` 与触发器同宽；设置菜单用自身 min-width。编辑弹窗滚动时 portal 跟随，触发框滚出可视区自动收起。
 
 **数据保护机制**：
 - `saveData()` 为 async 函数，内置并发锁（`_saveLock` / `_saveQueued`）防止多次保存冲突，确保最新数据始终被写入
@@ -99,7 +113,7 @@ npm run tauri build              # 构建 MSI 安装包
 - 桌面版 localStorage 域名与网页版隔离，需单独导入一次数据
 - `build-frontend.js` 构建时将 index.html/css/js/data.json 复制到 dist/，Tauri 打包进二进制
 - Tauri 插件：dialog、fs、global-shortcut、shell、single-instance
-- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.3.5`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.3.5`
+- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.4.0`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.4.0`
 
 **分数统计面板**：`render.js` 中 `updateGlobalStatsSidebar()` 在右侧固定位置渲染两个统计卡片（专辑 / 单曲），各自显示平均分、7 档分数分布柱状图（100 / 90-99 / 80-89 / 70-79 / 60-69 / 50-59 / 0-49）、已打分/未打分/条目数。所有标签均支持中英文切换，通过 `t()` 函数实现。每次数据变更后通过 `refreshAll()` 实时更新。**点击统计卡片弹出年度平均分弹窗**（`#yearlyStatsModal`），展示每一年的独立平均分和条目数，水平柱状图按最高分等比缩放，支持 ESC / 点击遮罩关闭。
 

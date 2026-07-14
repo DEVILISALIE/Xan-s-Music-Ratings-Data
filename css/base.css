@@ -4,6 +4,8 @@
 :root {
   color-scheme: light;
   --bg: #F2F2F7;
+  --light-bg: #F2F2F7;
+  --bg-hue-rotate: 0deg;
   --card-bg: #FFFFFF;
   --sidebar-bg: rgba(242, 242, 247, 0.72);
   --text: #1C1C1E;
@@ -72,6 +74,11 @@ body {
   touch-action: manipulation;
 }
 
+/* 浅色纯色模式：可用调色盘改写 --light-bg */
+:root:not([data-theme="dark"]) {
+  --bg: var(--light-bg);
+}
+
 /* ===== Glassmorphism Preset ===== */
 [data-style="glass"] {
   --card-bg: rgba(255, 255, 255, 0.45);
@@ -99,10 +106,17 @@ body {
   background: linear-gradient(135deg, #c1dfc4 0%, #deecdd 30%, #d4e4f7 60%, #e8dff5 100%);
   z-index: -1;
   pointer-events: none;
+  transition: filter 0.3s ease;
+}
+
+/* 浅色毛玻璃：仅对大背景做色相偏移，不影响卡片等内容 */
+[data-style="glass"]:not([data-theme="dark"]) body::before {
+  filter: hue-rotate(var(--bg-hue-rotate));
 }
 
 [data-style="glass"][data-theme="dark"] body::before {
   background: linear-gradient(135deg, #0f2027 0%, #203a43 40%, #2c5364 100%);
+  filter: none;
 }
 
 [data-style="glass"][data-theme="dark"] {
