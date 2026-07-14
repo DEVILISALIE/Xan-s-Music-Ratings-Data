@@ -73,7 +73,7 @@ npm run tauri build              # 构建 MSI 安装包
 
 ## 关键技术细节
 
-**数据流**：桌面版优先从磁盘文件加载（`AppData/Roaming/com.xan.music-ratings/music-data.json`），再 fallback 到 localStorage 和 `__MUSIC_DATA__`。网页版优先 localStorage。`ensureDefaultGroups()` 在数据加载后和导入后调用，确保每个 section 都有 Albums/Singles 两个分组。`migrateVolSections()` 自动合并旧版 vol sections。
+**数据流**：桌面版优先从磁盘文件加载（`AppData/Roaming/com.xan.music-ratings/music-data.json`），再 fallback 到 localStorage 和 `__MUSIC_DATA__`。网页版优先 localStorage。`ensureDefaultGroups()` 在数据加载后和导入后调用，确保每个 section 都有 Albums/Singles 两个分组。`migrateVolSections()` 自动合并旧版 vol sections。**1950s 分区（v1.3.5）**：桌面版在磁盘加载、localStorage 恢复、内置数据三条路径上都会检查 `sections` 是否已有 `id === '1950s'`；缺失时注入空分区 `{ id: '1950s', title: '1950s', groups: [Albums, Singles] }`，不覆盖已有数据。
 
 **数据保护机制**：
 - `saveData()` 为 async 函数，内置并发锁（`_saveLock` / `_saveQueued`）防止多次保存冲突，确保最新数据始终被写入
@@ -93,12 +93,13 @@ npm run tauri build              # 构建 MSI 安装包
 - 导出使用 Tauri 原生文件对话框（`__TAURI_PLUGIN_DIALOG__` + `__TAURI_PLUGIN_FS__`）
 - 快捷键：Ctrl+S 导出、Ctrl+D 主题、Ctrl+G 风格、Ctrl+O 导入、Ctrl+K 搜索、Ctrl+N 新建、Ctrl+T 置顶、F11 全屏
 - **设置按钮（v1.3.3）**：工具栏 stats 右侧 ⚙ 按钮，点击弹出 iOS 风格下拉菜单，集成深色模式/毛玻璃风格/语言/多选模式，复用 `.toggle-switch` 样式，点击选项保持展开，点击外部自动关闭
-- 系统托盘：左键显示/隐藏窗口，右键菜单（显示/置顶/主题/退出）
-- 点击 X 最小化到系统托盘（不退出），通过 `on_window_event` 拦截 `CloseRequested` 并 `api.prevent_close()` + `win.hide()`
+- 系统托盘：左键按 `is_visible` 切换显示/隐藏窗口，右键菜单（显示/置顶/主题/退出）
+- 点击 X 隐藏到系统托盘（任务栏按钮一并消失，仅保留托盘图标），通过 `on_window_event` 拦截 `CloseRequested` 并 `api.prevent_close()` + `win.hide()`
 - 单实例模式：`tauri-plugin-single-instance` 确保只有一个窗口运行，第二次启动聚焦已有窗口
 - 桌面版 localStorage 域名与网页版隔离，需单独导入一次数据
 - `build-frontend.js` 构建时将 index.html/css/js/data.json 复制到 dist/，Tauri 打包进二进制
 - Tauri 插件：dialog、fs、global-shortcut、shell、single-instance
+- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.3.5`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.3.5`
 
 **分数统计面板**：`render.js` 中 `updateGlobalStatsSidebar()` 在右侧固定位置渲染两个统计卡片（专辑 / 单曲），各自显示平均分、7 档分数分布柱状图（100 / 90-99 / 80-89 / 70-79 / 60-69 / 50-59 / 0-49）、已打分/未打分/条目数。所有标签均支持中英文切换，通过 `t()` 函数实现。每次数据变更后通过 `refreshAll()` 实时更新。**点击统计卡片弹出年度平均分弹窗**（`#yearlyStatsModal`），展示每一年的独立平均分和条目数，水平柱状图按最高分等比缩放，支持 ESC / 点击遮罩关闭。
 
@@ -141,17 +142,19 @@ npm run tauri build              # 构建 MSI 安装包
 
 **编辑弹窗**：`populateSectionSelector()` 始终为每个 section 列出 Albums 和 Singles 两个选项。`saveEntry()` 中 `JSON.parse(selectedSectionValue)` 有 try-catch 防护。Shift+回车快速保存。
 
+**批量添加曲目（v1.3.4）**：编辑弹窗每碟底部有「批量添加」按钮（`data-action="batch-add-to-disc"`），调用 `batchAddTracks(disc)`。通过 `showPrompt` 输入目标曲目数（1–999）：数量大于现有则在该 disc 末尾补空白曲目，小于现有则从该 disc 末尾删多余行，相等则无操作。完成后聚焦该 disc 第一个空白曲目输入框。i18n 键：`modal.batchAddTracks` / `modal.batchAddPrompt` / `modal.batchAddPlaceholder`。
+
 **拖拽排序**：Pointer Events 实现，FLIP 动画技术平滑"挤开"效果。拖拽时原卡片 `opacity: 0` + `height: 0` 隐藏，占位符（`.drag-placeholder`）占据原位置，幽灵元素（`.drag-ghost`）跟随鼠标。动画参数 `0.25s cubic-bezier(0.2, 0, 0, 1)`。仅限同组内排序，AOTY 卡片不参与。
 
 **AOTY/SOTY 卡片宽度（v1.3.3）**：桌面版 AOTY/SOTY 卡片通过 `:has(.aoty-card)` 让 `.group-cards-list` 允许溢出，再设置 `width: calc(100% + 20px)` + `margin-left: -10px` 居中扩展，左右各比普通卡片宽 20px。
 
-**编辑保存优化（v1.3.4）**：`saveEntry()` 编辑已有条目时，如果未跨组移动，调用 `updateCardInPlace(entryId)` 只替换单张卡片 DOM，跳过全量 `renderContent()`，配合 CSS `fadeInUp` 动画提供视觉反馈。跨组移动仍走 `refreshAll()` 全量重建。新建条目在 1990-2024 年的 section 中走 `reorderGroupCards()` 自动排序并插入到正确位置，其他年份走 `insertNewCardInSection()` 直接追加。
+**编辑保存优化（v1.3.4）**：`saveEntry()` 编辑已有条目时，如果未跨组移动，调用 `updateCardInPlace(entryId)` 只替换单张卡片 DOM，跳过全量 `renderContent()`，配合 CSS `fadeInUp` 动画提供视觉反馈。跨组移动仍走 `refreshAll()` 全量重建。新建/编辑后凡命中排序规则的 section 都走 `reorderGroupCards()` 自动排序并插入到正确位置。
 
-**自动排序（v1.3.3）**：1990-2024 年的 section 新建或编辑条目后自动按标题排序，优先级：符号 → 数字 → 英文 → 中文拼音（`localeCompare('zh-CN')`），AOTY/SOTY 永远置顶不参与排序。2025 及以后的 section 根据日期格式自动判断排序方式：`MM.DD` 格式按日期升序排在最前，`XXXX` 格式按年份降序（新在前）排在中间，无日期排最后按标题排序；MM.DD 条目始终在 XXXX 条目前面。1980s 及以前的 section 按年份降序（新在前），无年份排最后，同一年份再按标题排序。编辑时调用 `reorderGroupCards()` 重排整个 group 的 DOM 并更新序号，AOTY/SOTY 状态变化时自动重建卡片类型。`charPriority(ch)` 在 `filter.js` 中定义。
+**自动排序（v1.3.3 / v1.3.4 扩展）**：1990-2024 年的 section 新建或编辑条目后自动按标题排序，优先级：符号 → 数字 → 英文 → 中文拼音（`localeCompare('zh-CN')`），AOTY/SOTY 永远置顶不参与排序。2025 及以后的 section 根据日期格式自动判断排序方式：`MM.DD` 格式按日期升序排在最前，`XXXX` 格式按年份降序（新在前）排在中间，无日期排最后按标题排序；MM.DD 条目始终在 XXXX 条目前面。1980s 及以前（含 1950s）的 section 按年份降序（新在前），无年份排最后，同一年份再按标题排序。编辑时调用 `reorderGroupCards()` 重排整个 group 的 DOM 并更新序号，AOTY/SOTY 状态变化时自动重建卡片类型。`charPriority(ch)` 在 `filter.js` 中定义。
 
 **EscapeHtml**：转义 `&`、`<`、`>`、`"`、`'`，防止 HTML 注入。所有 innerHTML 中的用户数据（data 属性值、id 属性值、显示文本）均经过 `escapeHtml()` 处理。
 
-**事件委托**：全部交互事件通过 `data-action` 属性 + 事件委托实现，无内联 `onclick`/`onkeydown`/`oninput`/`onchange`。委托层级：侧边栏 `.sidebar` → 导出/导入按钮；`#sidebarNav` → 折叠/删除/导航跳转；`#contentArea` → 卡片点击/Enter 键/乐评展开；`#editModal` → 取消/删除/保存/添加曲目；`#trackList` → 曲目输入/分数输入/删除曲目。
+**事件委托**：全部交互事件通过 `data-action` 属性 + 事件委托实现，无内联 `onclick`/`onkeydown`/`oninput`/`onchange`。委托层级：侧边栏 `.sidebar` → 导出/导入按钮；`#sidebarNav` → 折叠/删除/导航跳转；`#contentArea` → 卡片点击/Enter 键/乐评展开；`#editModal` → 取消/删除/保存/添加曲目/批量添加曲目；`#trackList` → 曲目输入/分数输入/删除曲目。
 
 **HTML 缓存**：`renderSidebar()` 和 `renderContent()` 各维护一份 HTML 字符串缓存（`_lastSidebarHtml`、`_lastContentHtml`），内容未变化时跳过 DOM 重建。`refreshAll()` 中清除缓存强制重建。
 
