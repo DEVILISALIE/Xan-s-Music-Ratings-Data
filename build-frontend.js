@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 const root = __dirname;
+const sourceRoot = path.join(root, 'desktop-ui');
 const dist = path.join(root, 'dist');
 
 // 清理并创建 dist 目录
@@ -15,7 +16,7 @@ const filesToCopy = ['index.html', 'data.json'];
 const dirsToCopy = ['css', 'js'];
 
 for (const file of filesToCopy) {
-  const src = path.join(root, file);
+  const src = path.join(sourceRoot, file);
   if (fs.existsSync(src)) {
     fs.copyFileSync(src, path.join(dist, file));
   }
@@ -35,7 +36,7 @@ function copyDir(srcDir, destDir) {
 }
 
 for (const dir of dirsToCopy) {
-  const srcDir = path.join(root, dir);
+  const srcDir = path.join(sourceRoot, dir);
   if (fs.existsSync(srcDir)) {
     copyDir(srcDir, path.join(dist, dir));
   }

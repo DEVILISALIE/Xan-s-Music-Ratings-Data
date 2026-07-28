@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const dir = __dirname;
+const uiDir = path.join(dir, "desktop-ui");
 
 // 支持命令行参数指定输入文件，或自动查找项目根目录下的 .txt 文件
 let inputPath = process.argv[2];
@@ -322,7 +323,7 @@ if (unmatchedLines.length > 0) {
   }
 }
 
-const htmlPath = path.join(dir, "index.html");
+const htmlPath = path.join(uiDir, "index.html");
 let html;
 try {
   html = fs.readFileSync(htmlPath, "utf-8");
@@ -343,7 +344,7 @@ html = html.replace(marker, "const __MUSIC_DATA__ = " + dataJson + ";");
 
 // 同时写入独立的 data.json
 try {
-  fs.writeFileSync(path.join(dir, "data.json"), JSON.stringify(data, null, 2), "utf-8");
+  fs.writeFileSync(path.join(uiDir, "data.json"), JSON.stringify(data, null, 2), "utf-8");
   fs.writeFileSync(htmlPath, html, "utf-8");
   console.log("index.html updated with embedded data");
   console.log("data.json written");

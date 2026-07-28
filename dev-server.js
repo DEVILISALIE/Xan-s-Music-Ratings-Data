@@ -1,6 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const sourceRoot = path.join(__dirname, 'desktop-ui');
 
 const mime = {
   '.html': 'text/html',
@@ -14,7 +15,13 @@ const mime = {
 
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
-  const filePath = url === '/' ? 'index.html' : url.slice(1);
+  const relativePath = url === '/' ? 'index.html' : url.slice(1);
+  const filePath = path.resolve(sourceRoot, relativePath);
+  if (!filePath.startsWith(sourceRoot + path.sep) && filePath !== sourceRoot) {
+    res.writeHead(403);
+    res.end('Forbidden');
+    return;
+  }
   fs.readFile(filePath, (err, data) => {
     if (err) {
       res.writeHead(404);

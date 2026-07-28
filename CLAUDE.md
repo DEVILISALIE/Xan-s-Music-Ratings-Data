@@ -6,7 +6,7 @@
 
 ## 工作规则（必须遵守）
 
-1. **默认只指桌面版**：用户说「修改」、提出问题或反馈，默认都只针对桌面版 exe（Tauri 应用），不是网页版。排查、改动、验证都以桌面版为准。
+1. **仅维护桌面版**：本仓库只包含桌面版 exe（Tauri 应用）。用户说「修改」、提出问题或反馈，排查、改动、验证都以桌面版为准。
 2. **桌面 exe 覆盖**：涉及桌面版改动并完成修改后，必须重新打包，并覆盖本机 exe：
    `C:\Users\lilxanyy\Desktop\music-ratings-main\src-tauri\target\release\music-ratings.exe`
    - 构建命令：`npm run tauri build`（或等价流程）
@@ -15,11 +15,11 @@
 
 ## 项目简介
 
-模块化交互式乐评网页应用，iOS 风格，纯前端无依赖。用户可在浏览器中直接编辑分数、评论、标签。支持中英文切换、亮/暗主题、纯色/毛玻璃风格。
+Windows 桌面版交互式乐评管理应用，采用 iOS 风格界面。用户可在 Tauri WebView2 窗口中编辑分数、评论、标签和曲目，支持中英文切换、亮/暗主题、纯色/毛玻璃风格。
 
-通过 `node gen.js` 从 txt 源文件生成数据嵌入到 index.html。Vol sections 自动合并到对应年份。
+通过 `node gen.js` 从 txt 源文件生成数据并嵌入 `desktop-ui/index.html`。Vol sections 自动合并到对应年份。
 
-桌面版基于 Tauri v2（Rust + WebView2），Windows 专用，自定义标题栏（无原生菜单栏）、系统托盘、全局快捷键。桌面版与网页版完全独立，共享同一套前端代码。
+应用基于 Tauri v2（Rust + WebView2），Windows 专用，包含自定义标题栏（无原生菜单栏）、系统托盘和全局快捷键。`desktop-ui/` 仅是打包进 exe 的内嵌界面，不作为网页版发布。
 
 ## 常用命令
 
@@ -35,23 +35,15 @@ npm run tauri build              # 构建 MSI 安装包
 ## 架构
 
 ```
-├── index.html             # 入口，包含 __MUSIC_DATA__ 占位
-├── css/
-│   ├── base.css           # CSS 变量、Reset、主题（亮/暗/毛玻璃），含 --tag-bg 变量
-│   ├── layout.css         # 侧边栏、工具栏、下拉菜单布局
-│   ├── components.css     # 卡片、弹窗、标签、按钮、动画
-│   └── macos.css          # 桌面版专属样式（[data-desktop="true"]，UI 放大 20%）
-├── js/
-│   ├── state.js           # 全局状态（currentFilter 为数组，支持多选）
-│   ├── i18n.js            # 中英文翻译字典、t() 函数
-│   ├── utils.js           # 工具函数、ensureDefaultGroups()、populateSectionSelector()
-│   ├── filter.js          # 多选筛选、搜索、allCards 缓存
-│   ├── modal.js           # 编辑弹窗、音轨评分
-│   ├── render.js          # 侧边栏 + 内容区渲染、HTML 缓存
-│   ├── drag.js            # 拖拽排序（Pointer Events + FLIP 动画）
-│   ├── dialog.js          # iOS 风格弹窗（showAlert / showConfirm / showPrompt）
-│   └── app.js             # 初始化、事件委托、主题切换、localStorage 持久化、Tauri 桌面版适配
-├── gen.js                 # txt → JSON 解析器，嵌入数据到 index.html
+├── desktop-ui/            # 仅供桌面 WebView2 使用的内嵌界面
+│   ├── index.html         # 入口，包含 __MUSIC_DATA__ 占位
+│   ├── css/
+│   │   ├── base.css       # CSS 变量、Reset、主题
+│   │   ├── layout.css     # 侧边栏、工具栏、下拉菜单布局
+│   │   ├── components.css # 卡片、弹窗、标签、按钮、动画
+│   │   └── macos.css      # Tauri 窗口专属样式
+│   └── js/                # 状态、渲染、筛选、弹窗、拖拽与桌面适配
+├── gen.js                 # txt → JSON，嵌入 desktop-ui/index.html
 ├── dev-server.js          # Tauri 开发模式本地 HTTP 服务器
 ├── build-frontend.js      # Tauri 构建时复制前端资源到 dist/
 ├── dev-server.vbs         # VBScript 隐藏窗口启动开发服务器
@@ -73,7 +65,6 @@ npm run tauri build              # 构建 MSI 安装包
 
 | Key | 类型 | 说明 |
 |-----|------|------|
-| `musicData` | JSON 字符串 | 网页版完整 sections 数据 |
 | `musicData_desktop` | JSON 字符串 | 桌面版 localStorage 镜像；磁盘 JSON 仍是主数据源 |
 | `lang` | `"en"` / `"zh"` | 界面语言偏好 |
 | `theme` | `"light"` / `"dark"` | 亮/暗模式 |
@@ -91,7 +82,7 @@ GitHub 上一次正式 Release 为 `v1.4.0`（commit `ede5a58`，2026-07-14）�
 - **帧率监视器**：设置菜单新增桌面专属 `settingsFpsToggle`；标题栏版本号旁显示最近 600 帧平均 FPS 与 `1% LOW`，500ms 更新一次，至少收集 30 帧才显示；使用固定容量环形缓冲区，关闭后 `cancelAnimationFrame` 并清空样本，偏好键为 `showFps`
 - **搜索交互**：保留 200ms debounce，同时支持 Enter 和点击 `.search-icon` 立即调用 `doSearch()`；局部更新、新建和自动排序替换卡片后同步维护 `searchResults`、计数器和前后翻页按钮
 - **导入交互**：使用常驻 `#importFileInput` + `change` 监听，不再每次动态创建 input；选择完成后清空 value，允许连续导入同一个文件
-- **存储隔离**：`getStorageKey()` 让网页版使用 `musicData`、桌面版使用 `musicData_desktop`，磁盘 JSON 仍是桌面主数据源
+- **存储键迁移**：桌面版固定使用 `musicData_desktop`，避免旧版浏览器存储数据覆盖磁盘主数据
 - **封面缩略图**：Rust 新增 `read_cover_thumbnail`，用 `image` crate 生成最长边 256px 的 PNG 到 `covers/.thumbnails/`；前端通过 `IntersectionObserver` 在可视区前后 160px 内单并发加载，使用 96 项 LRU 缓存和请求去重
 - **封面预览生命周期**：编辑弹窗只在需要时读取原图，关闭时释放预览与查看器引用；`coverPreviewRequestId` 防止快速切换条目时旧请求覆盖新预览；上传/替换/移除时调用 `invalidateCoverThumbnail()`
 - **封面安全**：`validate_entry_id()` 拒绝空 ID、`.`、`..` 和路径分隔符；`find_cover_file()` 按完整 file stem 匹配，避免 `a1` 命中 `a10`；上传和原图读取统一 20MB 上限，缩略图读取上限 2MB；新增 2 个 Rust 单元测试
@@ -102,7 +93,7 @@ GitHub 上一次正式 Release 为 `v1.4.0`（commit `ede5a58`，2026-07-14）�
 
 ## 关键技术细节
 
-**数据流**：桌面版优先从磁盘文件加载（`AppData/Roaming/com.xan.music-ratings/music-data.json`），再 fallback 到 localStorage 的 `musicData_desktop` 和 `__MUSIC_DATA__`；网页版使用独立的 `musicData`。`getStorageKey()` 统一选择键名。`ensureDefaultGroups()` 在数据加载后和导入后调用，确保每个 section 都有 Albums/Singles 两个分组。`migrateVolSections()` 自动合并旧版 vol sections。**1950s 分区（v1.3.5）**：桌面版在磁盘加载、localStorage 恢复、内置数据三条路径上都会检查 `sections` 是否已有 `id === '1950s'`；缺失时注入空分区 `{ id: '1950s', title: '1950s', groups: [Albums, Singles] }`，不覆盖已有数据。
+**数据流**：桌面版优先从磁盘文件加载（`AppData/Roaming/com.xan.music-ratings/music-data.json`），再 fallback 到 localStorage 的 `musicData_desktop` 和 `__MUSIC_DATA__`。`ensureDefaultGroups()` 在数据加载后和导入后调用，确保每个 section 都有 Albums/Singles 两个分组。`migrateVolSections()` 自动合并旧版 vol sections。**1950s 分区（v1.3.5）**：桌面版在磁盘加载、localStorage 恢复、内置数据三条路径上都会检查 `sections` 是否已有 `id === '1950s'`；缺失时注入空分区 `{ id: '1950s', title: '1950s', groups: [Albums, Singles] }`，不覆盖已有数据。
 
 **浅色背景色调（v1.4.0）**：仅浅色模式在设置菜单显示「背景色调」区（预设色板 + 0–360 全色谱滑条 + 恢复默认）。纯色改 `--light-bg`，毛玻璃对 `body::before` 做 `hue-rotate`；深色不生效。偏好键 `bgHue`。
 
@@ -118,7 +109,7 @@ GitHub 上一次正式 Release 为 `v1.4.0`（commit `ede5a58`，2026-07-14）�
 
 **桌面版（Tauri v2）**：
 - 前端通过 `window.__TAURI__` 检测桌面环境，`app.js` 末尾的 `initTauriDesktop()` 自动激活桌面功能
-- `css/macos.css` 通过 `[data-desktop="true"]` 选择器提供桌面版专属样式（UI 放大 20%），不影响网页版
+- `desktop-ui/css/macos.css` 通过 `[data-desktop="true"]` 选择器提供桌面窗口专属样式（UI 放大 20%）
 - **自定义标题栏**（`decorations: false`）：38px 常驻毛玻璃标题栏，左侧版本号和可选 FPS/1% Low，右侧窗口控件（📌置顶 / ⬚全屏 / —最小化 / □最大化 / ×关闭）。标题栏通过 JS `start_window_drag` 拖拽（不使用 `-webkit-app-region: drag` 以避免系统右键菜单），关闭按钮 hover 变红，最大化/全屏时中间按钮自动切换为还原图标。全屏按钮为四角取景框 SVG 图标，最大化状态下进入全屏先 `unmaximize()` 避免 WebView2 bug
 - **自定义右键菜单**：拦截系统右键菜单，显示毛玻璃风格自定义菜单（最小化/最大化还原/置顶/关闭），支持中英文
 - 窗口管理通过自定义 Tauri command：`minimize_window`、`toggle_maximize`、`close_window`、`start_window_drag`
@@ -129,8 +120,8 @@ GitHub 上一次正式 Release 为 `v1.4.0`（commit `ede5a58`，2026-07-14）�
 - 系统托盘：左键按 `is_visible` 切换显示/隐藏窗口，右键菜单（显示/置顶/主题/退出）
 - 点击 X 隐藏到系统托盘（任务栏按钮一并消失，仅保留托盘图标），通过 `on_window_event` 拦截 `CloseRequested` 并 `api.prevent_close()` + `win.hide()`
 - 单实例模式：`tauri-plugin-single-instance` 确保只有一个窗口运行，第二次启动聚焦已有窗口
-- 桌面版通过 `musicData_desktop` 与网页版 `musicData` 显式隔离，首次使用仍需单独导入一次数据
-- `build-frontend.js` 构建时将 index.html/css/js/data.json 复制到 dist/，Tauri 打包进二进制
+- 桌面版固定使用 `musicData_desktop` 作为 WebView2 本地镜像
+- `build-frontend.js` 构建时将 `desktop-ui/index.html`、`desktop-ui/css`、`desktop-ui/js` 和可选 `desktop-ui/data.json` 复制到 `dist/`，再由 Tauri 打包进二进制
 - Tauri 插件：dialog、fs、global-shortcut、shell、single-instance；Rust 依赖 `base64` 与 `image`
 - **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.4.1`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.4.1`
 

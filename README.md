@@ -1,384 +1,166 @@
-# Xan's Music Ratings
+# Xan's Music Ratings Desktop
 
-> iOS 风格的交互式个人乐评管理工具 — 纯前端、零依赖、打开即用
+Windows 桌面版个人音乐评分与乐评管理工具，基于 Tauri v2、Rust 和 WebView2。
 
-一个模块化的音乐评分网页应用，支持在浏览器中直接编辑专辑分数、评论、标签和音轨评分。所有数据自动保存到浏览器本地存储，支持 JSON 导入导出实现跨设备同步。
+本仓库只维护桌面版源码，不提供网页版，也不用于静态网站部署。`desktop-ui/` 是打包进 exe 的 WebView2 界面资源，不是独立网页发行物。
 
----
+## 下载
 
-## 功能一览
+从 [GitHub Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载最新的 Windows MSI 安装包。
 
-### 浏览与导航
+当前版本：`v1.4.1`
 
-- 按年份/年代分组浏览，侧边栏快速跳转到任意年份或分组
-- 覆盖范围从 **1950s** 到最新年份；桌面版启动时若本地数据缺少 1950s，会自动补一个空分区（不覆盖已有数据）
-- 侧边栏带可见滚动条，紧贴顶部底部，大量年份时可快速翻动
-- 侧边栏高亮精确到 group 级别（AOTY/Albums/SOTY/Singles），滚动同步自动跟随
-- 每个年份/年代固定显示 **Albums** 和 **Singles** 两个分区，即使为空也保留标题
-- 侧边栏年份标题 hover 显示删除按钮，一键删除整年数据（带确认弹窗）
+## 主要功能
 
-### 搜索
+- 按年份和年代管理 Albums、Singles、AOTY 与 SOTY
+- 专辑和单曲评分、标签、日期、备注、长评与多碟曲目评分
+- 搜索、结果翻页、多条件筛选和年度平均分统计
+- 卡片拖拽排序、批量选择、批量标签及跨分组移动
+- 卡片复制粘贴，快速创建内容相近的条目
+- 本地封面上传、URL 封面、缩略图懒加载和全屏查看
+- 中英文切换、亮暗主题、纯色与毛玻璃风格、背景色调
+- 自定义 Windows 标题栏、窗口置顶、全屏、系统托盘和单实例运行
+- 全局快捷键与原生 JSON 导入、导出对话框
+- 可选平均 FPS 与 `1% LOW` 帧率显示
 
-- 工具栏搜索框实时搜索标题、艺术家、分数备注、笔记、乐评（200ms debounce）
-- 支持按 Enter 或点击搜索图标立即执行搜索，不必等待 debounce
-- 搜索时自动滚动到第一个结果并蓝色描边高亮
-- 右下角"下一个"按钮循环跳转所有搜索结果
+## 桌面数据
 
-### 多维筛选
+主数据保存在：
 
-- **标签筛选** — 下拉多选，支持 EP、Mixtape、Reissue、Soundtrack、Live、Compilation、Unofficial、DJ Mix、Video，选择后保持展开
-- **分数筛选** — 下拉单选，支持 100、90+、80+、70+、60+、50+、<50、NR（无分数）、AOTY（同时匹配年度专辑和年度单曲）
-- 两种筛选可叠加使用，结果计数实时更新
-- 切换下拉时其他已打开的自动收回
-
-### 编辑
-
-- 点击卡片打开编辑弹窗，可修改：标题、艺术家、分数、日期、分数备注、标签、AOTY/SOTY 标记、备注、音轨评分、乐评
-- **专辑封面** — 支持本地上传（jpg/png/webp/gif/bmp/avif，最大 20MB）和 URL 两种方式，封面存储在 AppData covers/ 目录，JSON 仅存引用；卡片左侧显示缩略图，编辑弹窗内显示大图预览；双击封面可进入全屏查看器，支持滚轮缩放（0.3x–5x，以鼠标位置为锚点）和按住拖拽平移；移除封面有二级确认菜单防误操作
-- **音轨评分** — 在弹窗内逐首添加曲目和分数，分数输入 `NR` 表示听过但无法给出分数的曲目，实时显示曲目数/已评分数/平均分；多碟专辑额外显示每碟独立平均分
-- **批量添加曲目** — 每碟底部可按碟号批量设置曲目数量（1–999），自动增删空白曲目行，适合快速录入整碟 tracklist
-- **曲目标签** — 卡片上的曲目数标签在多碟时显示碟数，如「2 Discs 28T」/「2碟 28首」，单碟时保持原样
-- **添加到分组** — 下拉选择目标年份和 Albums/Singles 分组，可跨年份移动条目
-- **AOTY/SOTY 开关** — Albums 组条目可标记为年度专辑（AOTY），Singles 组条目可标记为年度单曲（SOTY），编辑弹窗根据分组自动切换
-- **必听专辑** — Albums 分组中高分条目自动显示 ★Must Hear Album 标记，阈值和开关可在工具栏自定义，点击保存后生效
-- **卡片复制粘贴** — 卡片 hover 后点击复制图标，可把标题、艺术家、分数、日期、标签、乐评和曲目等内容粘贴到编辑弹窗，适合快速创建相近条目；封面不会随之复制
-- Shift + Enter 快速保存，Escape 关闭弹窗
-- 新增专辑通过右下角 FAB 按钮（+）触发
-
-### AOTY / SOTY（年度专辑 / 年度单曲）
-
-- Albums 组条目可通过编辑弹窗标记为 AOTY，Singles 组条目可标记为 SOTY
-- AOTY/SOTY 卡片使用独立大卡片样式，显示封面缩略图（96px）、标签、分数和乐评
-- 乐评支持展开/收起（超过 120px 自动截断，点击"展开更多"）
-- 侧边栏导航精确到 group 级别，点击跳转后高亮对应 AOTY/SOTY/Albums/Singles 导航项
-
-### 拖拽排序
-
-- 同组内卡片可通过拖拽重新排序（AOTY 卡片不参与）
-- Pointer Events 实现，FLIP 动画技术平滑"挤开"效果
-- 拖拽时幽灵元素跟随鼠标，原位置显示虚线占位符
-- 支持自动滚动（鼠标靠近屏幕边缘时自动滚屏）
-- 毛玻璃模式下拖拽期间自动禁用卡片的 backdrop-filter，保证动画流畅
-
-### 主题与风格
-
-- **亮/暗模式** — 一键切换，跟随系统偏好，状态持久化
-- **纯色/毛玻璃风格** — 独立于亮暗模式，可自由组合（共 4 种视觉组合）
-- 毛玻璃模式使用 backdrop-filter 实现 iOS 风格高斯模糊，经过专项性能优化
-- 工具栏右上角 ⚙ 设置菜单统一管理语言、亮暗模式、毛玻璃风格、多选模式；桌面版还可开启帧率显示
-
-### 国际化
-
-- 中英文一键切换，界面文字、placeholder、tooltip 同步更新
-- 语言偏好持久化到 localStorage
-
-### 数据管理
-
-- **磁盘持久化**（桌面版）— 数据自动保存到 `AppData/Roaming/com.xan.music-ratings/music-data.json`，每次写入前自动备份 `.bak` 文件，写入后校验文件完整性
-- **桌面版启动** — 优先从磁盘文件加载最新数据，确保重启不丢失任何编辑
-- **导出 JSON** — 一键下载完整数据文件
-- **导入 JSON** — 选择文件导入，自动补齐 Albums/Singles 分组
-- **从 txt 生成** — 通过 `node gen.js` 从源文件生成数据并嵌入到 index.html
-- Vol sections（如 `Vol. 1 - 2025`）解析时自动合并到对应年份
-- 桌面版数据加载优先级：`磁盘文件 > localStorage.musicData_desktop > __MUSIC_DATA__（嵌入数据）`；网页版使用独立的 `localStorage.musicData`
-
----
-
-## 快速开始
-
-```bash
-# 1. 将 txt 源文件放到项目根目录
-# 2. 生成数据（嵌入到 index.html + 写入 data.json）
-node gen.js
-
-# 3. 双击 index.html 即可使用
+```text
+%APPDATA%\com.xan.music-ratings\music-data.json
 ```
 
-也可以指定文件路径：
+每次写入前会自动生成 `.json.bak` 备份。桌面 WebView2 的 `localStorage.musicData_desktop` 只作为本地镜像，磁盘 JSON 始终是主要数据源。
+
+本地封面位于同一应用数据目录下的 `covers/`，缩略图位于 `covers/.thumbnails/`。
+
+## 开发
+
+环境要求：
+
+- Windows 10/11
+- Node.js 与 npm
+- Rust stable toolchain
+- WebView2 Runtime
+- Visual Studio C++ Build Tools
+
+安装依赖：
 
 ```bash
-node gen.js path/to/your/file.txt
-```
-
-浏览器中的所有编辑操作自动保存到 localStorage，无需服务器。
-
----
-
-## 桌面版（v1.4.1）
-
-基于 [Tauri v2](https://v2.tauri.app/)（Rust + WebView2）构建的 Windows 原生应用，共享同一套前端代码。
-
-### 下载安装
-
-前往 [Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 `Xan's Music Ratings_1.4.1_x64_en-US.msi`，双击安装即可。
-
-### 桌面版专属功能
-
-- **自定义标题栏** — 无原生菜单栏，38px 常驻毛玻璃标题栏，左侧版本号和可选帧率信息，右侧窗口控件（📌置顶 / ⬚全屏 / —最小化 / □最大化 / ×关闭），全屏按钮为四角取景框图标，最大化状态下进入全屏自动取消最大化
-- **自定义右键菜单** — 拦截系统右键菜单，显示毛玻璃风格菜单（最小化/最大化还原/置顶/关闭），支持中英文
-- **磁盘持久化** — 数据自动保存到 AppData，每次写入前备份 `.bak` 文件，写入后校验完整性，重启不丢失任何编辑
-- **即时保存** — 从托盘退出时先等待数据保存完成再关闭进程，彻底杜绝退出丢数据的问题
-- **系统托盘** — 点击窗口 X 按钮隐藏窗口（任务栏按钮一并消失，仅保留托盘图标）；左键托盘图标按当前可见状态切换显示/隐藏；右键菜单支持显示/置顶/主题切换/退出
-- **单实例模式** — 第二次点击 exe 只会聚焦已有窗口，不会打开多个实例
-- **全局快捷键** — `Ctrl+S` 导出、`Ctrl+O` 导入、`Ctrl+D` 主题、`Ctrl+G` 风格、`Ctrl+K` 搜索、`Ctrl+N` 新建、`Ctrl+T` 置顶、`F11` 全屏
-- **设置菜单** — 工具栏 ⚙ 按钮，集成深色模式/毛玻璃风格/帧率显示/语言/多选模式，iOS 风格毛玻璃下拉，点击选项保持展开，点击外部关闭
-- **年度平均分弹窗** — 点击右侧统计面板（专辑/单曲）弹出弹窗，展示每一年的独立平均分，水平柱状图直观对比
-- **搜索结果计数** — 搜索框内右侧显示 `当前/总数` 计数器，翻页时同步更新
-- **AOTY/SOTY 卡片加宽** — 年度最佳卡片左右各比普通卡片宽 20px，视觉上更突出
-- **1950s 分区** — 新增 1950s 年代分区；桌面版从磁盘/localStorage/内置数据加载时若缺失会自动注入空分区
-- **UI 放大** — 桌面版侧边栏、工具栏、弹窗、AOTY 卡片等 UI 元素等比放大 20%，适配大屏显示器
-- **独立样式** — 通过 `css/macos.css` 提供桌面版专属样式，通过 `[data-desktop="true"]` 选择器限定，不影响网页版
-
-### v1.4.1 更新
-
-本节只记录 [v1.4.0](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases/tag/v1.4.0) 发布之后的变更。
-
-#### 新增
-
-- **卡片复制粘贴** — 普通卡片和 AOTY/SOTY 卡片新增复制按钮，复制后可在编辑弹窗一键粘贴主要字段、标签、乐评和曲目，并用轻量 Toast 提示结果
-- **帧率监视器** — 设置菜单新增桌面专属「显示帧率」开关；标题栏显示最近 600 帧的平均 FPS 与 `1% LOW`，每 500ms 更新一次，关闭后取消采样循环；偏好键为 `showFps`
-- **封面缩略图管线** — Rust 后端生成最长边 256px 的 PNG 缩略图，卡片仅加载缩略图，编辑预览和全屏查看才读取原图
-- **搜索立即执行** — 搜索框支持 Enter 和点击放大镜立即搜索
-
-#### 性能优化
-
-- **高刷新率滚动** — 针对 165Hz 桌面优化：顶部工具栏固定为独立 GPU 合成层，滚动期间始终保留真实 `backdrop-filter` 毛玻璃，不再动态降级样式
-- **卡片绘制** — 桌面端卡片取消逐卡背景模糊、初始入场动画和常驻 `will-change`，改用半透明合成；固定面板模糊统一为 `20px / 180%`
-- **封面懒加载** — `IntersectionObserver` 只在可视区前后 160px 加载封面，单并发读取，96 项 LRU 缓存；编辑弹窗关闭时释放原图引用，避免大图长期占用内存
-- **滚动同步** — 缓存分组位置并使用二分查找，滚动监听为 passive 且约 30Hz 更新；内容尺寸变化时由 `ResizeObserver` 重建定位缓存
-- **拖拽性能** — Pointer Move 合并到 `requestAnimationFrame`，幽灵卡片使用 `translate3d`，自动滚动改为按时间增量计算；非被动 wheel 监听只在实际拖拽期间注册
-- **其他热路径** — 无 portal 打开时跳过下拉定位；默认背景色调不再执行整屏 `hue-rotate(0deg)`；卡片局部更新使用短 Web Animations 动画
-
-#### 修复与安全
-
-- **搜索状态一致性** — 编辑、新建和自动排序替换卡片后同步刷新 `searchResults` 引用、计数和前后翻页按钮，避免搜索导航跳过新卡片
-- **封面竞态** — 快速切换编辑条目时用请求序号阻止旧封面回写到新条目；上传、移除和替换封面时同步失效缩略图缓存
-- **封面文件匹配** — 后端按完整文件 stem 匹配 entry ID，避免 `a1` 误命中 `a10`；拒绝包含路径分隔符的非法 ID，并继续执行 20MB 大小限制
-- **导入可靠性** — 改用常驻隐藏 file input，同一个 JSON 文件可连续重复选择导入
-- **存储隔离** — 桌面版显式使用 `musicData_desktop`，网页版继续使用 `musicData`，避免同一来源下的数据互相覆盖
-
-### v1.4.0 大版本更新
-
-- **浅色背景色调** — 仅浅色模式：设置菜单内预设色板 + 完整可见光色谱滑条，可改纯色底与毛玻璃大背景；偏好写入 `localStorage`（`bgHue`），支持一键恢复默认
-- **统一无色高模糊下拉** — 标签/分数/必听/设置/分组/批量/封面移除/右键菜单统一毛玻璃；菜单 portal 到 `body`，避免父级 `backdrop-filter` 导致模糊失效
-- **下拉定位与宽度** — 标签/分数/必听/编辑分组与触发器同宽；设置菜单独立 min-width；弹窗滚动时分组下拉跟随，滚出可视区自动收起
-- **设置菜单增强** — 浅色显示背景色调区；色相滑条 0–360 不回绕；全色谱轨道显示
-
-### 功能一览新增
-
-- **分数统计面板** — 右侧固定显示两个统计卡片（专辑 / 单曲），各自显示平均分、7 档分数分布柱状图（100 / 90-99 / 80-89 / 70-79 / 60-69 / 50-59 / 0-49）、已打分/未打分/条目数，中英文切换实时生效
-- **并发保存锁** — `saveData()` 内置锁机制，快速连续操作不会丢失数据
-- **封面 URL iOS 弹窗** — 点击「URL」按钮弹出 iOS 风格输入弹窗，替代浏览器原生 prompt
-- **编辑保存优化** — 编辑已有条目保存时只更新单张卡片，跳过全量 DOM 重建，流畅无卡顿
-- **批量添加曲目** — 编辑弹窗内按碟号批量设置曲目数量，自动增删空白曲目行
-- **新建自动排序** — 各年份分区新建/编辑后自动排序：1990-2024 按标题；2025+ 按日期格式；1980s 及以前按年份降序；AOTY/SOTY 永远置顶
-- **分组标题中英文** — Albums/Singles 标题随语言切换显示「专辑/单曲」
-- **Shift+click 批量选择** — 批量模式下点击第一张卡片后 Shift+点击另一张，自动选中中间所有卡片
-
-### 构建
-
-```bash
-# 安装依赖
 npm install
+```
 
-# 开发模式（热重载）
+启动桌面开发模式：
+
+```bash
 npm run tauri dev
+```
 
-# 构建 MSI 安装包
+构建正式 MSI 和 exe：
+
+```bash
 npm run tauri build
-# 输出：src-tauri/target/release/bundle/msi/
 ```
 
-### 桌面版架构
+主要输出：
 
+```text
+src-tauri/target/release/music-ratings.exe
+src-tauri/target/release/bundle/msi/
 ```
-├── css/macos.css           # 桌面版专属样式（[data-desktop="true"]）
-├── build-frontend.js       # 构建时复制前端资源到 dist/
-├── dev-server.js           # 开发模式本地 HTTP 服务器
-├── dev-server.vbs          # VBScript 隐藏窗口启动开发服务器
-└── src-tauri/
-    ├── Cargo.toml          # Rust 依赖（tauri + 插件）
-    ├── tauri.conf.json     # 窗口大小、打包配置、插件声明
-    ├── capabilities/default.json    # Tauri v2 权限（dialog/fs/shell/shortcut/window）
-    ├── icons/              # 应用图标
-    └── src/
-        └── main.rs         # 系统托盘、单实例、窗口管理、数据持久化命令、封面管理命令
-```
-
-**Tauri 插件**：dialog（文件对话框）、fs（文件系统）、global-shortcut（全局快捷键）、shell（命令执行）、single-instance（单实例）；Rust 依赖：base64（封面图片编码）、image（封面解码与 256px 缩略图生成）
-
-## txt 源文件格式
-
-```
-2025
-1. Album Title - Artist Name <85> 12.15 EP
-2. Another Album - Another Artist <92>
-3. No Score Album - Someone <NR> Mixtape
-
-P.S.
-Single Title - Artist Name <88> 03.20
-Another Single - Another Artist <75>
-
-AOTY
-Best Album of the Year 95/100
-Great Artist
-乐评内容写在这里，可以多行...
-第二行评论...
-
-2024
-1. Classic Album - Legendary Artist <100>
-...
-
-Vol. 1 - 2025
-3. Extra Album - New Artist <88> 06.01
-```
-
-### 格式规则
-
-| 元素 | 格式 | 示例 |
-|------|------|------|
-| 年份标题 | 4 位数字单独一行 | `2025` |
-| Vol 标题 | `Vol. 编号 - 年份` | `Vol. 1 - 2025`（自动合并到对应年份） |
-| 专辑条目 | `序号. 标题 - 艺术家 <分数>` | `1. Album - Artist <85>` |
-| 带日期 | 行尾加 `MM.DD` | `1. Album - Artist <85> 12.15` |
-| 标签 | 行尾加标签名 | `... <85> EP` / `... <85> Mixtape` |
-| 无分数 | `<NR>` 或省略分数 | `1. Album - Artist <NR>` |
-| Singles | `P.S.` 开头的行之后 | 后续条目归入 Singles 分组 |
-| AOTY | `AOTY` + 标题 `分数/100` + 艺术家 + 乐评 | 见上方示例 |
-| 乐评 | AOTY 块中从第三行开始 | 支持多行，直到下一个标记出现 |
-
-支持的标签：EP、Mixtape、Reissue、Soundtrack、Live、Compilation、Unofficial、DJ Mix、Video
-
----
-
-## 数据结构
-
-```json
-{
-  "meta": { "title": "Xan's Music Ratings", "lastUpdated": "2026-05-24" },
-  "sections": [
-    {
-      "id": "2025",
-      "title": "2025",
-      "groups": [
-        {
-          "name": "Albums",
-          "entries": [
-            {
-              "id": "a1",
-              "title": "Album Title",
-              "artist": "Artist Name",
-              "score": 85,
-              "scoreNote": "",
-              "date": "12.15",
-              "tags": ["EP"],
-              "review": "写几句评论",
-              "isAoty": false,
-              "isSoty": false,
-              "notes": "",
-              "cover": "a1.jpg",
-              "tracks": [
-                { "name": "Song 1", "score": 90, "disc": 1 },
-                { "name": "Song 2", "score": 82, "disc": 1 },
-                { "name": "Song 3", "score": "NR", "disc": 2 }
-              ]
-            }
-          ]
-        },
-        { "name": "Singles", "entries": [] }
-      ]
-    }
-  ]
-}
-```
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| `score` | `number` / `null` | 0–100 整数，`null` 表示未评分 |
-| `scoreNote` | `string` | 特殊标记，如 `"NR"`、`"Top1"` |
-| `tags` | `string[]` | 标签数组，从预设列表中选取 |
-| `isAoty` | `boolean` | 年度专辑标记，渲染时动态归入 AOTY 组 |
-| `isSoty` | `boolean` | 年度单曲标记，渲染时动态归入 SOTY 组 |
-| `tracks` | `array` | 可选的音轨评分数组，每首曲目含 `name`、`score`（0–100 或 `"NR"`）和 `disc`（碟号，默认 1） |
-| `cover` | `string` / `null` | 封面图片：本地文件名（如 `"a1.jpg"`，存在 AppData covers/ 目录）或完整 URL；`null` 表示无封面 |
-| `review` | `string` | 乐评文本，AOTY 卡片中可展开/收起 |
-| `notes` | `string` | 附加备注 |
-
----
 
 ## 项目结构
 
-```
-├── index.html             # 入口文件，包含 __MUSIC_DATA__ 占位符
-├── css/
-│   ├── base.css           # CSS 变量、Reset、亮/暗/毛玻璃主题
-│   ├── layout.css         # 侧边栏、工具栏、下拉菜单布局
-│   ├── components.css     # 卡片、弹窗、标签、按钮、拖拽占位符、动画
-│   └── macos.css          # 桌面版专属样式（[data-desktop="true"]）
-├── js/
-│   ├── state.js           # 全局状态变量
-│   ├── i18n.js            # 中英文翻译字典、t() 函数
-│   ├── utils.js           # 工具函数、数据迁移、分组选择器
-│   ├── filter.js          # 多选筛选、搜索、卡片缓存
-│   ├── modal.js           # 编辑弹窗、音轨评分
-│   ├── render.js          # 侧边栏 + 内容区渲染、HTML 缓存
-│   ├── drag.js            # 拖拽排序（Pointer Events + FLIP 动画）
-│   └── app.js             # 初始化、事件委托、主题切换、localStorage 持久化、Tauri 桌面版适配
-├── gen.js                 # txt → JSON 解析器，嵌入数据到 index.html
-├── build-frontend.js      # Tauri 构建时复制前端资源到 dist/
-├── dev-server.js          # Tauri 开发模式本地 HTTP 服务器
-├── dev-server.vbs         # VBScript 隐藏窗口启动开发服务器
-├── package.json           # Tauri CLI 和插件依赖
-├── src-tauri/             # Tauri 桌面版（Rust 后端）
-│   ├── Cargo.toml
-│   ├── tauri.conf.json
-│   ├── capabilities/default.json
-│   ├── icons/
-│   └── src/main.rs
-├── README.md
+```text
+├── desktop-ui/               # 仅供桌面 WebView2 使用的内嵌界面
+│   ├── index.html
+│   ├── css/
+│   │   ├── base.css
+│   │   ├── layout.css
+│   │   ├── components.css
+│   │   └── macos.css         # Tauri 桌面窗口专属样式
+│   └── js/
+│       ├── state.js
+│       ├── i18n.js
+│       ├── utils.js
+│       ├── dialog.js
+│       ├── filter.js
+│       ├── modal.js
+│       ├── render.js
+│       ├── drag.js
+│       └── app.js
+├── src-tauri/                # Rust 后端、窗口、托盘和原生命令
+├── build-frontend.js         # 将 desktop-ui 复制到 Tauri dist
+├── dev-server.js             # 桌面开发模式资源服务器
+├── dev-server.vbs
+├── gen.js                    # 从 txt 生成桌面内置数据
+├── package.json
 └── CLAUDE.md
 ```
 
-JS 加载顺序：`state.js` → `i18n.js` → `utils.js` → `dialog.js` → `filter.js` → `modal.js` → `render.js` → `drag.js` → `app.js`
+## 数据生成
 
----
+将源 `.txt` 文件放在项目根目录，运行：
 
-## 技术栈
+```bash
+node gen.js
+```
 
-前端为纯原生 HTML / CSS / JavaScript，无框架和前端运行时依赖；桌面端由 Tauri v2、WebView2 与 Rust 构建。
+或指定源文件：
 
-- **设计语言** — iOS 15（SF Pro 字体、圆角卡片、半透明层叠）
-- **持久化** — localStorage，编辑即时自动保存
-- **拖拽** — Pointer Events + FLIP 动画（`0.25s cubic-bezier(0.2, 0, 0, 1)`）
-- **毛玻璃** — 固定工具栏使用真实 `backdrop-filter` 和独立 GPU 合成层；桌面卡片使用半透明背景降低滚动重采样开销
-- **背景** — `position: fixed` 伪元素渐变背景，替代 `background-attachment: fixed` 提升滚动性能
-- **国际化** — `data-i18n` 属性标记 + `applyI18nToDOM()` 批量替换
-- **事件委托** — 全部交互通过 `data-action` 属性 + 事件委托，零内联处理器
-- **安全** — innerHTML 中所有用户数据经过 `escapeHtml()` 转义；JSON 导入深度校验；localStorage 容量监控
-- **性能** — HTML/卡片缓存、封面缩略图懒加载、滚动位置二分查找、拖拽 rAF 合并及可选 FPS/1% Low 监视器
+```bash
+node gen.js path/to/source.txt
+```
 
----
+生成器会更新 `desktop-ui/index.html` 中的 `__MUSIC_DATA__`，并写入被 Git 忽略的 `desktop-ui/data.json`。
 
-## localStorage 键值
+## v1.4.1
 
-| Key | 类型 | 说明 |
-|-----|------|------|
-| `musicData` | JSON 字符串 | 网页版完整 sections 数据，编辑后自动保存 |
-| `musicData_desktop` | JSON 字符串 | 桌面版 localStorage 镜像；磁盘文件仍是桌面版主数据源 |
-| `lang` | `"en"` / `"zh"` | 界面语言偏好 |
-| `theme` | `"light"` / `"dark"` | 亮/暗模式 |
-| `style` | `"solid"` / `"glass"` | 纯色/毛玻璃风格（默认 glass） |
-| `mustHearThreshold` | 数字字符串 | 必听专辑分数阈值，默认 `80` |
-| `mustHearEnabled` | `"true"` / `"false"` | 必听专辑功能开关，默认 `true` |
-| `bgHue` | `"default"` / `0–360` 数字字符串 | 浅色背景色调，默认 `default` |
-| `showFps` | `"true"` / `"false"` | 桌面版标题栏帧率监视器开关，默认关闭 |
+相对 `v1.4.0` 的桌面版更新：
 
----
+### 新增
 
-## 键盘快捷键
+- 普通卡片和 AOTY/SOTY 卡片支持复制，编辑弹窗支持粘贴主要字段、标签、乐评和曲目
+- 设置菜单新增帧率显示开关，标题栏显示平均 FPS 与 `1% LOW`
+- Rust 后端生成最长边 256px 的 PNG 封面缩略图
+- 搜索支持 Enter 和点击图标立即执行
+
+### 性能
+
+- 针对 165Hz 显示器优化滚动和合成路径
+- 顶部工具栏滚动时始终保留真实毛玻璃效果
+- 卡片取消逐卡模糊、入场动画和常驻 `will-change`
+- 封面通过 `IntersectionObserver` 懒加载，单并发读取并使用 96 项 LRU 缓存
+- 滚动导航缓存分组位置并使用二分查找
+- 拖拽 Pointer Move 合并到 `requestAnimationFrame`，幽灵卡片使用 `translate3d`
+
+### 修复
+
+- 编辑、新建和排序后同步刷新搜索结果引用与计数
+- 使用请求序号避免封面异步串图
+- 封面按完整文件 stem 匹配，避免相似 ID 误命中
+- 导入同一个 JSON 文件时可以连续重复触发
+- 桌面数据固定使用 `musicData_desktop`，避免旧浏览器数据覆盖桌面磁盘数据
+
+## 快捷键
 
 | 快捷键 | 功能 |
-|--------|------|
-| Shift + Enter | 编辑弹窗内快速保存 |
-| Shift + 点击 | 批量模式下范围选择 |
-| Escape | 关闭编辑弹窗 |
+|---|---|
+| `Ctrl+S` | 导出 JSON |
+| `Ctrl+O` | 导入 JSON |
+| `Ctrl+D` | 切换亮暗主题 |
+| `Ctrl+G` | 切换纯色/毛玻璃 |
+| `Ctrl+K` | 聚焦搜索 |
+| `Ctrl+N` | 新建条目 |
+| `Ctrl+T` | 窗口置顶 |
+| `F11` | 全屏 |
+| `Shift+Enter` | 保存编辑 |
+
+## 安全与可靠性
+
+- Rust 写盘前校验 JSON，写入前自动备份，主文件异常时尝试恢复备份
+- 前端保存使用并发锁，退出应用前等待最新数据落盘
+- JSON 导入执行结构和字段类型校验
+- 用户内容进入 HTML 前统一转义
+- 封面限制为支持的图片格式和 20MB 大小，并校验 entry ID
