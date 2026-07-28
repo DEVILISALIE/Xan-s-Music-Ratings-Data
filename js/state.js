@@ -14,3 +14,6 @@ let mustHearEnabled = localStorage.getItem('mustHearEnabled') !== 'false';
 // 批量操作状态
 let batchMode = false;
 let batchSelectedIds = new Set();
+
+// 复制粘贴
+let clipboardEntry = null;

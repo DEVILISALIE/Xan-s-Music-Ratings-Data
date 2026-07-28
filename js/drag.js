@@ -22,6 +22,8 @@ document.addEventListener('DOMContentLoaded', () => {
     ghost: null,
     placeholder: null,
     scrollAnimId: null,
+    moveAnimId: null,
+    pendingPointer: null,
     lastClientY: 0,
     lastMoveX: 0,
     lastMoveY: 0,
@@ -43,14 +45,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function startAutoScroll() {
     stopAutoScroll();
-    const zone = 80, maxSpeed = 12;
-    function tick() {
+    const zone = 80;
+    const maxSpeedPerSecond = 720;
+    let previousTime = 0;
+    function tick(timestamp) {
       if (!state.active) { stopAutoScroll(); return; }
+      if (!previousTime) previousTime = timestamp;
+      const deltaSeconds = Math.min((timestamp - previousTime) / 1000, 0.034);
+      previousTime = timestamp;
       const cy = state.lastClientY;
       let speed = 0;
-      if (cy < zone) speed = -maxSpeed * (1 - cy / zone);
-      else if (cy > window.innerHeight - zone) speed = maxSpeed * (1 - (window.innerHeight - cy) / zone);
-      if (speed !== 0) { mainEl.scrollBy(0, speed); state.scrollAnimId = requestAnimationFrame(tick); }
+      if (cy < zone) speed = -maxSpeedPerSecond * (1 - cy / zone);
+      else if (cy > window.innerHeight - zone) speed = maxSpeedPerSecond * (1 - (window.innerHeight - cy) / zone);
+      if (speed !== 0) {
+        mainEl.scrollBy(0, speed * deltaSeconds);
+        state.scrollAnimId = requestAnimationFrame(tick);
+      }
       else stopAutoScroll();
     }
     state.scrollAnimId = requestAnimationFrame(tick);
@@ -66,6 +76,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function stopAutoScroll() {
     if (state.scrollAnimId) { cancelAnimationFrame(state.scrollAnimId); state.scrollAnimId = null; }
+  }
+
+  function onDragWheel(e) {
+    if (!state.active) return;
+    e.preventDefault();
+    mainEl.scrollTop += e.deltaY;
+    updateAutoScroll(state.lastClientY);
   }
 
   // ===== 创建空位占位符 =====
@@ -197,8 +214,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateGhostPosition(clientX, clientY) {
     if (!state.ghost) return;
-    state.ghost.style.left = (clientX - state.offsetX) + 'px';
-    state.ghost.style.top = (clientY - state.offsetY) + 'px';
+    const x = clientX - state.offsetX;
+    const y = clientY - state.offsetY;
+    state.ghost.style.transform = `translate3d(${x}px, ${y}px, 0) scale(1.03) rotate(0.8deg)`;
   }
 
   // ===== Pointer Handlers =====
@@ -224,11 +242,11 @@ document.addEventListener('DOMContentLoaded', () => {
     card.setPointerCapture(e.pointerId);
   }
 
-  function onPointerMove(e) {
-    if (!state.card) return;
+  function processPointerMove(clientX, clientY) {
+    if (!state.card || state.isAnimating) return;
 
-    const dx = e.clientX - state.startX;
-    const dy = e.clientY - state.startY;
+    const dx = clientX - state.startX;
+    const dy = clientY - state.startY;
     const dist = Math.sqrt(dx * dx + dy * dy);
 
     if (!state.active) {
@@ -237,28 +255,28 @@ document.addEventListener('DOMContentLoaded', () => {
       state.active = true;
       state.group = findSourceGroup(state.entryId);
       if (!state.group) { cancelDrag(); return; }
-      state.lastMoveX = e.clientX;
-      state.lastMoveY = e.clientY;
+      state.lastMoveX = clientX;
+      state.lastMoveY = clientY;
 
-      // 拖拽期间禁用所有卡片的 backdrop-filter，降低 GPU 负担
       contentArea.classList.add('is-dragging');
+      document.addEventListener('wheel', onDragWheel, { passive: false });
 
       const card = state.card;
       const rect = card.getBoundingClientRect();
       const parent = card.parentNode;
 
-      // 创建幽灵元素（跟随鼠标）
       const ghost = card.cloneNode(true);
       ghost.classList.add('drag-ghost');
       ghost.style.cssText = `
         position: fixed;
         width: ${rect.width}px;
-        left: ${e.clientX - state.offsetX}px;
-        top: ${e.clientY - state.offsetY}px;
+        left: 0;
+        top: 0;
         z-index: 10000;
         pointer-events: none;
         transition: none;
-        transform: scale(1.03) rotate(0.8deg);
+        transform: translate3d(${clientX - state.offsetX}px, ${clientY - state.offsetY}px, 0) scale(1.03) rotate(0.8deg);
+        will-change: transform;
         box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         border-radius: 12px;
         opacity: 0.92;
@@ -267,46 +285,51 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.appendChild(ghost);
       state.ghost = ghost;
 
-      // 创建占位符（高度已正确）
       const placeholder = createPlaceholder(rect.height);
       state.placeholder = placeholder;
 
-      // 隐藏原卡片（先隐藏，再插入占位符，避免抖动）
       card.style.opacity = '0';
       card.style.pointerEvents = 'none';
-
-      // 在原卡片位置插入占位符（原卡片仍占据布局空间）
       parent.insertBefore(placeholder, card);
-
-      // 现在原卡片和占位符都占据空间，移除原卡片的布局影响
-      // 使用 height:0 + margin:0 让原卡片"消失"但不触发 FLIP
       card.style.height = '0';
       card.style.margin = '0';
       card.style.padding = '0';
       card.style.overflow = 'hidden';
       card.style.border = 'none';
       card.style.boxShadow = 'none';
-
       return;
     }
 
-    e.preventDefault();
-    state.lastMoveX = e.clientX;
-    state.lastMoveY = e.clientY;
+    state.lastMoveX = clientX;
+    state.lastMoveY = clientY;
+    updateGhostPosition(clientX, clientY);
+    updateAutoScroll(clientY);
 
-    updateGhostPosition(e.clientX, e.clientY);
-    updateAutoScroll(e.clientY);
-
-    // 查找插入位置
-    const ghostCenterY = e.clientY - state.offsetY + state.origHeight / 2;
+    const ghostCenterY = clientY - state.offsetY + state.origHeight / 2;
     const pos = findInsertPosition(ghostCenterY);
+    if (pos) updatePlaceholderPosition(pos);
+  }
 
-    if (pos) {
-      updatePlaceholderPosition(pos);
-    }
+  function onPointerMove(e) {
+    if (!state.card || state.isAnimating) return;
+    if (state.active) e.preventDefault();
+    state.pendingPointer = { x: e.clientX, y: e.clientY };
+    if (state.moveAnimId) return;
+    state.moveAnimId = requestAnimationFrame(() => {
+      state.moveAnimId = null;
+      const point = state.pendingPointer;
+      state.pendingPointer = null;
+      if (point) processPointerMove(point.x, point.y);
+    });
   }
 
   function onPointerUp(e) {
+    if (state.moveAnimId) {
+      cancelAnimationFrame(state.moveAnimId);
+      state.moveAnimId = null;
+    }
+    state.pendingPointer = null;
+    processPointerMove(e.clientX, e.clientY);
     const card = state.card;
     if (!card) return;
 
@@ -323,6 +346,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function onPointerCancel(e) {
     if (!state.card) return;
+    if (state.moveAnimId) {
+      cancelAnimationFrame(state.moveAnimId);
+      state.moveAnimId = null;
+    }
+    state.pendingPointer = null;
     try { state.card.releasePointerCapture(e.pointerId); } catch (_) {}
     if (state.active) cancelDrag();
     else resetState();
@@ -528,6 +556,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function resetState() {
+    if (state.moveAnimId) cancelAnimationFrame(state.moveAnimId);
+    document.removeEventListener('wheel', onDragWheel);
     state.active = false;
     state.entryId = null;
     state.group = null;
@@ -535,6 +565,8 @@ document.addEventListener('DOMContentLoaded', () => {
     state.ghost = null;
     state.placeholder = null;
     state.scrollAnimId = null;
+    state.moveAnimId = null;
+    state.pendingPointer = null;
     state.isAnimating = false;
     state.currentInsertTarget = null;
   }
@@ -550,10 +582,4 @@ document.addEventListener('DOMContentLoaded', () => {
     if (state.card) e.preventDefault();
   });
 
-  document.addEventListener('wheel', (e) => {
-    if (!state.active) return;
-    e.preventDefault();
-    mainEl.scrollTop += e.deltaY;
-    updateAutoScroll(state.lastClientY);
-  }, { passive: false });
 });

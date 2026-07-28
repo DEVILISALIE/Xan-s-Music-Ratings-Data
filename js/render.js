@@ -2,16 +2,189 @@
 let _lastSidebarHtml = '';
 let _lastContentHtml = '';
 
-// 封面缓存：entryId → dataUrl (base64) 或 URL
-const coverCache = new Map();
+// 卡片只缓存小尺寸缩略图，原图由编辑弹窗按需读取并在关闭时释放
+const coverThumbnailCache = new Map();
+const coverThumbnailLoads = new Map();
+const COVER_THUMBNAIL_CACHE_LIMIT = 96;
+const COVER_THUMBNAIL_LOAD_CONCURRENCY = 1;
+const coverThumbnailQueue = [];
+let activeCoverThumbnailLoads = 0;
+let coverThumbnailObserver = null;
 
-// 滚动同步用的元素缓存（renderContent / renderSidebar 后刷新，避免每帧 querySelectorAll）
+function drainCoverThumbnailQueue() {
+  while (activeCoverThumbnailLoads < COVER_THUMBNAIL_LOAD_CONCURRENCY && coverThumbnailQueue.length > 0) {
+    const task = coverThumbnailQueue.shift();
+    activeCoverThumbnailLoads++;
+    window.__TAURI__.core.invoke('read_cover_thumbnail', { entryId: task.entryId })
+      .then(task.resolve, task.reject)
+      .finally(() => {
+        activeCoverThumbnailLoads--;
+        drainCoverThumbnailQueue();
+      });
+  }
+}
+
+function requestCoverThumbnail(entryId) {
+  return new Promise((resolve, reject) => {
+    coverThumbnailQueue.push({ entryId, resolve, reject });
+    drainCoverThumbnailQueue();
+  });
+}
+
+function cacheCoverThumbnail(entryId, dataUrl) {
+  coverThumbnailCache.delete(entryId);
+  coverThumbnailCache.set(entryId, dataUrl);
+  while (coverThumbnailCache.size > COVER_THUMBNAIL_CACHE_LIMIT) {
+    coverThumbnailCache.delete(coverThumbnailCache.keys().next().value);
+  }
+}
+
+function invalidateCoverThumbnail(entryId) {
+  coverThumbnailCache.delete(entryId);
+}
+
+function applyCoverThumbnail(entryId, dataUrl) {
+  document.querySelectorAll('.album-cover-thumb[data-cover-id]').forEach(img => {
+    if (img.dataset.coverId === entryId) {
+      img.src = dataUrl;
+      img.removeAttribute('data-cover-id');
+    }
+  });
+}
+
+async function loadLocalCoverThumbnail(entryId) {
+  const cached = coverThumbnailCache.get(entryId);
+  if (cached) {
+    cacheCoverThumbnail(entryId, cached);
+    applyCoverThumbnail(entryId, cached);
+    return;
+  }
+
+  let request = coverThumbnailLoads.get(entryId);
+  if (!request) {
+    request = requestCoverThumbnail(entryId);
+    coverThumbnailLoads.set(entryId, request);
+  }
+  try {
+    const dataUrl = await request;
+    cacheCoverThumbnail(entryId, dataUrl);
+    applyCoverThumbnail(entryId, dataUrl);
+  } catch (_) {
+    document.querySelectorAll('.album-cover-thumb[data-cover-id]').forEach(img => {
+      if (img.dataset.coverId === entryId) img.classList.add('cover-load-failed');
+    });
+  } finally {
+    if (coverThumbnailLoads.get(entryId) === request) {
+      coverThumbnailLoads.delete(entryId);
+    }
+  }
+}
+
+function loadObservedCover(img) {
+  const remoteUrl = img.dataset.coverUrl;
+  if (remoteUrl) {
+    img.src = remoteUrl;
+    img.removeAttribute('data-cover-url');
+    return;
+  }
+  const entryId = img.dataset.coverId;
+  if (entryId && window.__TAURI__) loadLocalCoverThumbnail(entryId);
+}
+
+function observeCoverThumbnails(root) {
+  const images = root.querySelectorAll('.album-cover-thumb[data-cover-id], .album-cover-thumb[data-cover-url]');
+  if (!('IntersectionObserver' in window)) {
+    images.forEach(loadObservedCover);
+    return;
+  }
+  if (!coverThumbnailObserver) {
+    coverThumbnailObserver = new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        coverThumbnailObserver.unobserve(entry.target);
+        loadObservedCover(entry.target);
+      }
+    }, {
+      root: document.getElementById('mainContent'),
+      rootMargin: '160px 0px'
+    });
+  }
+  images.forEach(img => coverThumbnailObserver.observe(img));
+}
+
+// 滚动同步缓存：滚动帧只做二分查找，避免反复读取所有分组布局
 let _cachedNavItems = [];
 let _cachedGroupEls = [];
+let _cachedGroupPositions = [];
+let _navItemByGroup = new Map();
+let _activeNavItem = null;
+let _scrollActivationOffset = 0;
+let _scrollCacheRaf = 0;
+let _contentResizeObserver = null;
 
 function rebuildScrollCache() {
+  if (_scrollCacheRaf) cancelAnimationFrame(_scrollCacheRaf);
+  _scrollCacheRaf = 0;
+  const main = document.getElementById('mainContent');
   _cachedNavItems = [...document.querySelectorAll('.nav-item[data-nav]')];
   _cachedGroupEls = [...document.querySelectorAll('[id^="group-"]')];
+  _navItemByGroup = new Map(_cachedNavItems.map(item => [item.dataset.nav, item]));
+  _activeNavItem = document.querySelector('.nav-item.active');
+
+  if (!main) {
+    _cachedGroupPositions = [];
+    return;
+  }
+
+  const mainRect = main.getBoundingClientRect();
+  _scrollActivationOffset = Math.max(0, 60 - mainRect.top);
+  _cachedGroupPositions = _cachedGroupEls.map(el => ({
+    id: el.id.slice(6),
+    top: el.getBoundingClientRect().top - mainRect.top + main.scrollTop
+  })).sort((a, b) => a.top - b.top);
+}
+
+function animateCardChange(card) {
+  if (!card || document.documentElement.dataset.desktop !== 'true' || !card.animate) return;
+  card.animate([
+    { opacity: 0.72, transform: 'translate3d(0, 5px, 0)' },
+    { opacity: 1, transform: 'translate3d(0, 0, 0)' }
+  ], {
+    duration: 180,
+    easing: 'cubic-bezier(0.2, 0, 0, 1)'
+  });
+}
+
+function scheduleScrollCacheRebuild() {
+  if (_scrollCacheRaf) return;
+  _scrollCacheRaf = requestAnimationFrame(rebuildScrollCache);
+}
+
+function setActiveNavItem(target) {
+  if (_activeNavItem === target) return;
+  if (_activeNavItem?.isConnected) {
+    _activeNavItem.classList.remove('active');
+  } else {
+    document.querySelectorAll('.nav-item.active').forEach(item => item.classList.remove('active'));
+  }
+  target?.classList.add('active');
+  _activeNavItem = target || null;
+}
+
+function findCurrentScrollGroup(scrollTop) {
+  let low = 0;
+  let high = _cachedGroupPositions.length - 1;
+  let match = '';
+  while (low <= high) {
+    const mid = (low + high) >> 1;
+    if (_cachedGroupPositions[mid].top <= scrollTop) {
+      match = _cachedGroupPositions[mid].id;
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+  return match;
 }
 
 // 获取所有 sections 并按年份降序排列
@@ -186,6 +359,7 @@ function renderSidebar() {
   if (html === _lastSidebarHtml) return;
   _lastSidebarHtml = html;
   nav.innerHTML = html;
+  scheduleScrollCacheRebuild();
 }
 
 function toggleNavGroup(el) {
@@ -235,12 +409,10 @@ async function addNewYear() {
 
 // 搜索结果跳转时激活侧边栏对应导航项
 function activateNavItem(groupId) {
-  // 移除所有 active
-  document.querySelectorAll('.nav-item').forEach(function(n){ n.classList.remove('active') });
   // 找到目标导航项并激活
   var target = document.querySelector('.nav-item[data-nav="' + groupId + '"]');
   if (!target) return;
-  target.classList.add('active');
+  setActiveNavItem(target);
   // 展开所属 section（如果折叠了）
   var sectionId = groupId.split('-')[0];
   var group = document.querySelector('.nav-group[data-section="' + sectionId + '"]');
@@ -275,42 +447,27 @@ function setupScrollSync() {
   if (main._scrollSyncBound) return;
   main._scrollSyncBound = true;
   let ticking = false;
+  let lastSyncTime = -Infinity;
 
   main.addEventListener('scroll', () => {
+    const now = performance.now();
+    if (now - lastSyncTime < 32) return;
     if (ticking) return;
     ticking = true;
     requestAnimationFrame(() => {
+      lastSyncTime = performance.now();
       // 点击期间完全跳过滚动同步
       if (document.getElementById('contentArea').classList.contains('overview-scroll')) {
         ticking = false;
         return;
       }
 
-      const navItems = _cachedNavItems;
-      const groupEls = _cachedGroupEls;
-
-      let currentGroup = '';
-      for (const grp of groupEls) {
-        if (grp.getBoundingClientRect().top <= 60) {
-          currentGroup = grp.id.replace('group-', '');
-        }
-      }
+      const currentGroup = findCurrentScrollGroup(main.scrollTop + _scrollActivationOffset);
 
       // 找到当前激活 group 所在的 section
       const currentSectionId = currentGroup ? currentGroup.split('-')[0] : '';
 
-      navItems.forEach(item => {
-        // 只处理当前 section 的导航项，避免跨 section 高亮
-        const itemNavId = item.dataset.nav;
-        const itemSectionId = itemNavId ? itemNavId.split('-')[0] : '';
-
-        if (itemSectionId === currentSectionId) {
-          item.classList.toggle('active', itemNavId === currentGroup);
-        } else {
-          // 清除不属于当前 section 的高亮，防止多 group 同时高亮
-          item.classList.remove('active');
-        }
-      });
+      setActiveNavItem(_navItemByGroup.get(currentGroup));
 
       // 自动展开当前 group 所在 section 的侧边栏
       if (currentGroup) {
@@ -326,7 +483,13 @@ function setupScrollSync() {
       }
       ticking = false;
     });
-  });
+  }, { passive: true });
+
+  const content = document.getElementById('contentArea');
+  if (content && 'ResizeObserver' in window && !_contentResizeObserver) {
+    _contentResizeObserver = new ResizeObserver(scheduleScrollCacheRebuild);
+    _contentResizeObserver.observe(content);
+  }
 }
 
 
@@ -432,6 +595,7 @@ function renderContent() {
   _lastContentHtml = html;
 
   area.innerHTML = html;
+  observeCoverThumbnails(area);
   rebuildCardCache();
   rebuildScrollCache();
 
@@ -583,21 +747,11 @@ function openYearlyStats(type) {
 function getCoverHtml(entry) {
   if (!entry.cover) return '';
   if (entry.cover.startsWith('http')) {
-    return '<img class="album-cover-thumb" src="' + escapeHtml(entry.cover) + '" alt="" loading="lazy">';
+    return '<img class="album-cover-thumb" data-cover-url="' + escapeHtml(entry.cover) + '" alt="" loading="lazy">';
   }
-  const cached = coverCache.get(entry.id);
+  const cached = coverThumbnailCache.get(entry.id);
   if (cached) {
     return '<img class="album-cover-thumb" src="' + escapeHtml(cached) + '" alt="" loading="lazy">';
-  }
-  // 缓存未命中，返回带 data-cover-id 的占位 img，异步加载后更新
-  if (window.__TAURI__) {
-    const eid = entry.id;
-    window.__TAURI__.core.invoke('read_cover', { entryId: eid }).then(dataUrl => {
-      coverCache.set(eid, dataUrl);
-      document.querySelectorAll('.album-cover-thumb[data-cover-id]').forEach(img => {
-        if (img.dataset.coverId === eid) img.src = dataUrl;
-      });
-    }).catch(() => {});
   }
   return '<img class="album-cover-thumb" data-cover-id="' + escapeHtml(entry.id) + '" alt="" loading="lazy">';
 }
@@ -610,7 +764,7 @@ function buildCardMeta(entry) {
   const trackCount = entry.tracks && entry.tracks.length > 0 ? entry.tracks.length : 0;
   const discCount = trackCount > 0 ? new Set(entry.tracks.map(tr => tr.disc || 1)).size : 0;
   const discPrefix = discCount > 1 ? t('content.discLabel', { count: discCount }) : '';
-  const trackHtml = trackCount > 0 ? '<span class="track-count" title="' + t('content.trackTooltip') + '">' + discPrefix + trackCount + t('content.trackUnit') + '</span>' : '';
+  const trackHtml = trackCount > 0 ? '<span class="track-count" data-track-count="' + trackCount + '" data-disc-count="' + discCount + '" title="' + t('content.trackTooltip') + '">' + discPrefix + trackCount + t('content.trackUnit') + '</span>' : '';
   const tagsBlock = tagsHtml ? '<div class="album-tags">' + tagsHtml + '</div>' : '';
   return { noteHtml, tagsBlock, trackHtml };
 }
@@ -640,6 +794,9 @@ function renderAlbumCard(entry, idx, sectionId, groupId, groupName, visible) {
       <span class="album-date">${escapeHtml(entry.date || '')}</span>
       <span class="score-badge ${scoreClass}">${scoreText}</span>
       ${hasReview ? '<span class="review-indicator" title="' + t('content.reviewTooltip') + '"></span>' : ''}
+      <button class="card-copy-btn" data-action="copy-entry" data-entry-id="${escapeHtml(entry.id)}" title="${t('tooltip.copy')}">
+        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="3" ry="3"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      </button>
     </div>
   </div>`;
 }
@@ -670,6 +827,9 @@ function renderAotyCard(entry, sectionId, groupId, visible, groupName) {
         ${trackHtml}
         <span class="aoty-date">${escapeHtml(entry.date || '')}</span>
         <span class="aoty-score">${scoreText}</span>
+        <button class="card-copy-btn" data-action="copy-entry" data-entry-id="${escapeHtml(entry.id)}" title="${t('tooltip.copy')}">
+        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="3" ry="3"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+      </button>
       </div>
     </div>
   </div>`;
@@ -696,10 +856,15 @@ function updateCardInPlace(entryId) {
   }
   const newCard = tmp.firstElementChild;
   card.replaceWith(newCard);
+  observeCoverThumbnails(newCard);
+  animateCardChange(newCard);
 
   // 更新 allCards 缓存中对应条目
   const cached = allCards.find(c => c.entry && c.entry.id === entryId);
   if (cached) cached.card = newCard;
+  // 同步更新 searchResults 中的引用，避免搜索结果导航跳过这张卡片
+  const srIdx = searchResults.indexOf(card);
+  if (srIdx !== -1) searchResults[srIdx] = newCard;
 }
 
 function insertNewCardInSection(entry, sel) {
@@ -737,7 +902,26 @@ function insertNewCardInSection(entry, sel) {
 
   // 插入新卡片到正确位置
   targetList.appendChild(newCard);
+  observeCoverThumbnails(newCard);
+  animateCardChange(newCard);
   allCards.push({ card: newCard, entry: entry });
+  // 搜索态下：匹配则加入导航、不匹配则隐藏
+  if (searchQuery) {
+    if (matchesFilter(entry)) {
+      searchResults.push(newCard);
+      const nextBtn = document.getElementById('searchNextBtn');
+      const prevBtn = document.getElementById('searchPrevBtn');
+      if (nextBtn) nextBtn.style.display = 'flex';
+      if (prevBtn) prevBtn.style.display = 'flex';
+      const counter = document.getElementById('searchCounter');
+      if (counter && counter.textContent) {
+        const parts = counter.textContent.split('/');
+        if (parts.length === 2) counter.textContent = (parseInt(parts[0]) + 1) + '/' + (parseInt(parts[1]) + 1);
+      }
+    } else {
+      newCard.classList.add('hidden');
+    }
+  }
   _lastContentHtml = '';
 }
 
@@ -807,6 +991,25 @@ function reorderGroupCards(entry, sel) {
       const cached = allCards.find(c => c.entry && c.entry.id === entry.id);
       if (cached) cached.card = newCard;
       else allCards.push({ card: newCard, entry: entry });
+      const srIdx = searchResults.indexOf(oldCard);
+      if (srIdx !== -1) searchResults[srIdx] = newCard;
+      // 新条目：检查是否匹配当前搜索
+      if (!cached && searchQuery) {
+        if (matchesFilter(entry)) {
+          searchResults.push(newCard);
+          const sb = document.getElementById('searchNextBtn');
+          if (sb) sb.style.display = 'flex';
+          const pb = document.getElementById('searchPrevBtn');
+          if (pb) pb.style.display = 'flex';
+          const counter = document.getElementById('searchCounter');
+          if (counter && counter.textContent) {
+            const parts = counter.textContent.split('/');
+            if (parts.length === 2) counter.textContent = (parseInt(parts[0]) + 1) + '/' + (parseInt(parts[1]) + 1);
+          }
+        } else {
+          newCard.classList.add('hidden');
+        }
+      }
 
       // 按排序顺序重排整个 group 的 DOM
       for (const e of group.entries) {
@@ -817,6 +1020,8 @@ function reorderGroupCards(entry, sel) {
           if (card) list.appendChild(card);
         }
       }
+      observeCoverThumbnails(newCard);
+      animateCardChange(newCard);
       // 更新序号
       const normalCards = list.querySelectorAll('.album-card[data-group="' + groupId + '"]');
       normalCards.forEach((c, i) => { const el = c.querySelector('.album-index'); if (el) el.textContent = i + 1; });
@@ -839,6 +1044,7 @@ function toggleReview(btn) {
     el.style.maxHeight = 'none';
     btn.textContent = t('content.showLess');
   }
+  scheduleScrollCacheRebuild();
 }
 
 // ===== Delete Year Section =====

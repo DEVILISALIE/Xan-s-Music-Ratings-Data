@@ -72,8 +72,8 @@
   min-width: 288px;
   height: calc(100vh - 38px);
   border-right: 0.5px solid var(--separator);
-  backdrop-filter: blur(30px) saturate(200%);
-  -webkit-backdrop-filter: blur(30px) saturate(200%);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 [data-desktop="true"] .sidebar-header {
@@ -212,8 +212,11 @@
 [data-desktop="true"] .toolbar {
   padding: 10px 24px;
   background: var(--sidebar-bg);
-  backdrop-filter: blur(30px) saturate(200%);
-  -webkit-backdrop-filter: blur(30px) saturate(200%);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  /* 固定在独立合成层，滚动时持续保留毛玻璃并减少重复栅格化。 */
+  will-change: transform;
+  transform: translateZ(0);
   border-bottom: 0.5px solid var(--separator);
   gap: 8px;
   z-index: 50;
@@ -439,6 +442,50 @@
   transform: translateX(19px);
 }
 
+.desktop-only-setting,
+.fps-monitor {
+  display: none;
+}
+
+[data-desktop="true"] .desktop-only-setting {
+  display: flex;
+}
+
+[data-desktop="true"] .fps-monitor.active {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 166px;
+  height: 22px;
+  box-sizing: border-box;
+  padding-left: 10px;
+  border-left: 1px solid var(--separator);
+  pointer-events: none;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+
+[data-desktop="true"] .fps-monitor-label {
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+[data-desktop="true"] .fps-monitor-value {
+  min-width: 25px;
+  color: var(--text-secondary);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: right;
+}
+
+[data-desktop="true"] .fps-monitor-separator {
+  height: 12px;
+  width: 1px;
+  background: var(--separator);
+}
+
 
 [data-desktop="true"] .settings-palette {
   gap: 12px;
@@ -484,6 +531,28 @@
 [data-desktop="true"] .aoty-card {
   width: 100%;
   box-sizing: border-box;
+  animation: none;
+  will-change: auto;
+  touch-action: pan-y;
+}
+
+/* 桌面高刷新率模式：卡片使用半透明合成，避免滚动时逐卡重采样背景。 */
+[data-desktop="true"][data-style="glass"] .album-card,
+[data-desktop="true"][data-style="glass"] .aoty-card,
+[data-desktop="true"][data-style="glass"] .batch-mode .album-card.batch-selected,
+[data-desktop="true"][data-style="glass"] .batch-mode .aoty-card.batch-selected {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+[data-desktop="true"][data-style="glass"] .album-card {
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.055);
+}
+
+[data-desktop="true"][data-style="glass"][data-theme="dark"] .album-card {
+  background: rgba(44, 44, 46, 0.78);
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.18);
 }
 
 [data-desktop="true"] .section-title {
@@ -687,8 +756,8 @@
 /* ===== macOS Batch Bar ===== */
 [data-desktop="true"] .batch-bar {
   padding: 12px 19px;
-  backdrop-filter: blur(30px) saturate(200%);
-  -webkit-backdrop-filter: blur(30px) saturate(200%);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 [data-desktop="true"] .batch-bar-btn {
@@ -790,8 +859,8 @@
   height: 38px;
   padding: 0 4px 0 16px;
   background: var(--sidebar-bg);
-  backdrop-filter: blur(30px) saturate(200%);
-  -webkit-backdrop-filter: blur(30px) saturate(200%);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-bottom: 0.5px solid var(--separator);
   user-select: none;
   cursor: default;
@@ -802,6 +871,13 @@
   color: var(--text-tertiary);
   letter-spacing: 0.3px;
   pointer-events: none;
+}
+
+[data-desktop="true"] .titlebar-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 100%;
 }
 
 [data-desktop="true"] .titlebar-controls {

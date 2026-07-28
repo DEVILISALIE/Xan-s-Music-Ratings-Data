@@ -264,7 +264,9 @@
   transform: translateY(-50%);
   color: var(--text-tertiary);
   font-size: 14px;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
+  z-index: 1;
 }
 
 .search-counter {

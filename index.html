@@ -15,7 +15,16 @@
 <div class="app">
   <!-- 自定义标题栏（桌面版） -->
   <div class="titlebar" id="titleBar">
-    <span class="titlebar-version" id="appVersion"></span>
+    <div class="titlebar-status">
+      <span class="titlebar-version" id="appVersion"></span>
+      <div class="fps-monitor" id="fpsMonitor" aria-hidden="true">
+        <span class="fps-monitor-label" data-i18n="fps.average">平均</span>
+        <strong class="fps-monitor-value" id="fpsAverage">--</strong>
+        <span class="fps-monitor-separator"></span>
+        <span class="fps-monitor-label" data-i18n="fps.low">1% LOW</span>
+        <strong class="fps-monitor-value" id="fpsLow">--</strong>
+      </div>
+    </div>
     <div class="titlebar-controls">
       <button class="titlebar-btn titlebar-btn-pin" data-action="win-topmost" aria-label="Topmost">
         <svg class="pin-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="3" width="14" height="4.5" rx="2"/><line x1="12" y1="7.5" x2="12" y2="21" stroke-width="2.8"/></svg>
@@ -44,6 +53,7 @@
     <div class="sidebar-footer">
       <button data-action="export-json" data-i18n="sidebar.export">Export JSON</button>
       <button data-action="import-json" data-i18n="sidebar.import">Import JSON</button>
+      <input type="file" id="importFileInput" accept=".json" style="position:absolute;left:-9999px;">
     </div>
   </aside>
 
@@ -119,6 +129,10 @@
             <div class="settings-item">
               <span data-i18n="settings.glassStyle">毛玻璃风格</span>
               <label class="toggle-switch"><input type="checkbox" id="settingsStyleToggle"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-item desktop-only-setting">
+              <span data-i18n="settings.showFps">显示帧率</span>
+              <label class="toggle-switch"><input type="checkbox" id="settingsFpsToggle"><span class="toggle-slider"></span></label>
             </div>
             <div class="settings-item settings-item-click" data-action="settings-lang">
               <span data-i18n="settings.language">语言</span>
@@ -320,6 +334,7 @@
       <textarea class="form-input" id="editReview" name="review" autocomplete="off" placeholder="Write your review here…" data-i18n-placeholder="modal.placeholder.review"></textarea>
     </div>
     <div class="modal-actions">
+      <button class="modal-btn secondary" id="pasteBtn" data-action="paste-entry" data-i18n="modal.paste">Paste</button>
       <button class="modal-btn secondary" data-action="modal-cancel" data-i18n="modal.cancel">Cancel</button>
       <button class="modal-btn danger" id="deleteBtn" data-action="modal-delete" data-i18n="modal.delete">Delete</button>
       <button class="modal-btn primary" data-action="modal-save" data-i18n="modal.save">Save</button>

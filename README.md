@@ -20,6 +20,7 @@
 ### 搜索
 
 - 工具栏搜索框实时搜索标题、艺术家、分数备注、笔记、乐评（200ms debounce）
+- 支持按 Enter 或点击搜索图标立即执行搜索，不必等待 debounce
 - 搜索时自动滚动到第一个结果并蓝色描边高亮
 - 右下角"下一个"按钮循环跳转所有搜索结果
 
@@ -40,6 +41,7 @@
 - **添加到分组** — 下拉选择目标年份和 Albums/Singles 分组，可跨年份移动条目
 - **AOTY/SOTY 开关** — Albums 组条目可标记为年度专辑（AOTY），Singles 组条目可标记为年度单曲（SOTY），编辑弹窗根据分组自动切换
 - **必听专辑** — Albums 分组中高分条目自动显示 ★Must Hear Album 标记，阈值和开关可在工具栏自定义，点击保存后生效
+- **卡片复制粘贴** — 卡片 hover 后点击复制图标，可把标题、艺术家、分数、日期、标签、乐评和曲目等内容粘贴到编辑弹窗，适合快速创建相近条目；封面不会随之复制
 - Shift + Enter 快速保存，Escape 关闭弹窗
 - 新增专辑通过右下角 FAB 按钮（+）触发
 
@@ -63,7 +65,7 @@
 - **亮/暗模式** — 一键切换，跟随系统偏好，状态持久化
 - **纯色/毛玻璃风格** — 独立于亮暗模式，可自由组合（共 4 种视觉组合）
 - 毛玻璃模式使用 backdrop-filter 实现 iOS 风格高斯模糊，经过专项性能优化
-- 工具栏右上角三个按钮：语言切换 🌐、风格切换 💎、亮暗切换 🌙
+- 工具栏右上角 ⚙ 设置菜单统一管理语言、亮暗模式、毛玻璃风格、多选模式；桌面版还可开启帧率显示
 
 ### 国际化
 
@@ -78,7 +80,7 @@
 - **导入 JSON** — 选择文件导入，自动补齐 Albums/Singles 分组
 - **从 txt 生成** — 通过 `node gen.js` 从源文件生成数据并嵌入到 index.html
 - Vol sections（如 `Vol. 1 - 2025`）解析时自动合并到对应年份
-- 桌面版数据加载优先级：`磁盘文件 > localStorage > __MUSIC_DATA__（嵌入数据）> data.json`
+- 桌面版数据加载优先级：`磁盘文件 > localStorage.musicData_desktop > __MUSIC_DATA__（嵌入数据）`；网页版使用独立的 `localStorage.musicData`
 
 ---
 
@@ -102,30 +104,58 @@ node gen.js path/to/your/file.txt
 
 ---
 
-## 桌面版（v1.4.0）
+## 桌面版（v1.4.1）
 
 基于 [Tauri v2](https://v2.tauri.app/)（Rust + WebView2）构建的 Windows 原生应用，共享同一套前端代码。
 
 ### 下载安装
 
-前往 [Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 `Xan's Music Ratings_1.4.0_x64_en-US.msi`，双击安装即可。
+前往 [Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 `Xan's Music Ratings_1.4.1_x64_en-US.msi`，双击安装即可。
 
 ### 桌面版专属功能
 
-- **自定义标题栏** — 无原生菜单栏，38px 毛玻璃标题栏，左侧版本号，右侧窗口控件（📌置顶 / ⬚全屏 / —最小化 / □最大化 / ×关闭），全屏按钮为四角取景框图标，最大化状态下进入全屏自动取消最大化
+- **自定义标题栏** — 无原生菜单栏，38px 常驻毛玻璃标题栏，左侧版本号和可选帧率信息，右侧窗口控件（📌置顶 / ⬚全屏 / —最小化 / □最大化 / ×关闭），全屏按钮为四角取景框图标，最大化状态下进入全屏自动取消最大化
 - **自定义右键菜单** — 拦截系统右键菜单，显示毛玻璃风格菜单（最小化/最大化还原/置顶/关闭），支持中英文
 - **磁盘持久化** — 数据自动保存到 AppData，每次写入前备份 `.bak` 文件，写入后校验完整性，重启不丢失任何编辑
 - **即时保存** — 从托盘退出时先等待数据保存完成再关闭进程，彻底杜绝退出丢数据的问题
 - **系统托盘** — 点击窗口 X 按钮隐藏窗口（任务栏按钮一并消失，仅保留托盘图标）；左键托盘图标按当前可见状态切换显示/隐藏；右键菜单支持显示/置顶/主题切换/退出
 - **单实例模式** — 第二次点击 exe 只会聚焦已有窗口，不会打开多个实例
 - **全局快捷键** — `Ctrl+S` 导出、`Ctrl+O` 导入、`Ctrl+D` 主题、`Ctrl+G` 风格、`Ctrl+K` 搜索、`Ctrl+N` 新建、`Ctrl+T` 置顶、`F11` 全屏
-- **设置菜单** — 工具栏 ⚙ 按钮，集成深色模式/毛玻璃风格/语言/多选模式，iOS 风格毛玻璃下拉，点击选项保持展开，点击外部关闭
+- **设置菜单** — 工具栏 ⚙ 按钮，集成深色模式/毛玻璃风格/帧率显示/语言/多选模式，iOS 风格毛玻璃下拉，点击选项保持展开，点击外部关闭
 - **年度平均分弹窗** — 点击右侧统计面板（专辑/单曲）弹出弹窗，展示每一年的独立平均分，水平柱状图直观对比
 - **搜索结果计数** — 搜索框内右侧显示 `当前/总数` 计数器，翻页时同步更新
 - **AOTY/SOTY 卡片加宽** — 年度最佳卡片左右各比普通卡片宽 20px，视觉上更突出
 - **1950s 分区** — 新增 1950s 年代分区；桌面版从磁盘/localStorage/内置数据加载时若缺失会自动注入空分区
 - **UI 放大** — 桌面版侧边栏、工具栏、弹窗、AOTY 卡片等 UI 元素等比放大 20%，适配大屏显示器
 - **独立样式** — 通过 `css/macos.css` 提供桌面版专属样式，通过 `[data-desktop="true"]` 选择器限定，不影响网页版
+
+### v1.4.1 更新
+
+本节只记录 [v1.4.0](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases/tag/v1.4.0) 发布之后的变更。
+
+#### 新增
+
+- **卡片复制粘贴** — 普通卡片和 AOTY/SOTY 卡片新增复制按钮，复制后可在编辑弹窗一键粘贴主要字段、标签、乐评和曲目，并用轻量 Toast 提示结果
+- **帧率监视器** — 设置菜单新增桌面专属「显示帧率」开关；标题栏显示最近 600 帧的平均 FPS 与 `1% LOW`，每 500ms 更新一次，关闭后取消采样循环；偏好键为 `showFps`
+- **封面缩略图管线** — Rust 后端生成最长边 256px 的 PNG 缩略图，卡片仅加载缩略图，编辑预览和全屏查看才读取原图
+- **搜索立即执行** — 搜索框支持 Enter 和点击放大镜立即搜索
+
+#### 性能优化
+
+- **高刷新率滚动** — 针对 165Hz 桌面优化：顶部工具栏固定为独立 GPU 合成层，滚动期间始终保留真实 `backdrop-filter` 毛玻璃，不再动态降级样式
+- **卡片绘制** — 桌面端卡片取消逐卡背景模糊、初始入场动画和常驻 `will-change`，改用半透明合成；固定面板模糊统一为 `20px / 180%`
+- **封面懒加载** — `IntersectionObserver` 只在可视区前后 160px 加载封面，单并发读取，96 项 LRU 缓存；编辑弹窗关闭时释放原图引用，避免大图长期占用内存
+- **滚动同步** — 缓存分组位置并使用二分查找，滚动监听为 passive 且约 30Hz 更新；内容尺寸变化时由 `ResizeObserver` 重建定位缓存
+- **拖拽性能** — Pointer Move 合并到 `requestAnimationFrame`，幽灵卡片使用 `translate3d`，自动滚动改为按时间增量计算；非被动 wheel 监听只在实际拖拽期间注册
+- **其他热路径** — 无 portal 打开时跳过下拉定位；默认背景色调不再执行整屏 `hue-rotate(0deg)`；卡片局部更新使用短 Web Animations 动画
+
+#### 修复与安全
+
+- **搜索状态一致性** — 编辑、新建和自动排序替换卡片后同步刷新 `searchResults` 引用、计数和前后翻页按钮，避免搜索导航跳过新卡片
+- **封面竞态** — 快速切换编辑条目时用请求序号阻止旧封面回写到新条目；上传、移除和替换封面时同步失效缩略图缓存
+- **封面文件匹配** — 后端按完整文件 stem 匹配 entry ID，避免 `a1` 误命中 `a10`；拒绝包含路径分隔符的非法 ID，并继续执行 20MB 大小限制
+- **导入可靠性** — 改用常驻隐藏 file input，同一个 JSON 文件可连续重复选择导入
+- **存储隔离** — 桌面版显式使用 `musicData_desktop`，网页版继续使用 `musicData`，避免同一来源下的数据互相覆盖
 
 ### v1.4.0 大版本更新
 
@@ -175,7 +205,7 @@ npm run tauri build
         └── main.rs         # 系统托盘、单实例、窗口管理、数据持久化命令、封面管理命令
 ```
 
-**Tauri 插件**：dialog（文件对话框）、fs（文件系统）、global-shortcut（全局快捷键）、shell（命令执行）、single-instance（单实例）；Rust 依赖：base64（封面图片编码）
+**Tauri 插件**：dialog（文件对话框）、fs（文件系统）、global-shortcut（全局快捷键）、shell（命令执行）、single-instance（单实例）；Rust 依赖：base64（封面图片编码）、image（封面解码与 256px 缩略图生成）
 
 ## txt 源文件格式
 
@@ -315,17 +345,17 @@ JS 加载顺序：`state.js` → `i18n.js` → `utils.js` → `dialog.js` → `f
 
 ## 技术栈
 
-纯原生 HTML / CSS / JavaScript，无框架、无打包工具、无外部依赖。
+前端为纯原生 HTML / CSS / JavaScript，无框架和前端运行时依赖；桌面端由 Tauri v2、WebView2 与 Rust 构建。
 
 - **设计语言** — iOS 15（SF Pro 字体、圆角卡片、半透明层叠）
 - **持久化** — localStorage，编辑即时自动保存
 - **拖拽** — Pointer Events + FLIP 动画（`0.25s cubic-bezier(0.2, 0, 0, 1)`）
-- **毛玻璃** — `backdrop-filter: blur()` + `will-change: transform` + `contain: layout style paint` GPU 加速
+- **毛玻璃** — 固定工具栏使用真实 `backdrop-filter` 和独立 GPU 合成层；桌面卡片使用半透明背景降低滚动重采样开销
 - **背景** — `position: fixed` 伪元素渐变背景，替代 `background-attachment: fixed` 提升滚动性能
 - **国际化** — `data-i18n` 属性标记 + `applyI18nToDOM()` 批量替换
 - **事件委托** — 全部交互通过 `data-action` 属性 + 事件委托，零内联处理器
 - **安全** — innerHTML 中所有用户数据经过 `escapeHtml()` 转义；JSON 导入深度校验；localStorage 容量监控
-- **性能** — 侧边栏和内容区 HTML 缓存，未变化时跳过 DOM 重建
+- **性能** — HTML/卡片缓存、封面缩略图懒加载、滚动位置二分查找、拖拽 rAF 合并及可选 FPS/1% Low 监视器
 
 ---
 
@@ -333,12 +363,15 @@ JS 加载顺序：`state.js` → `i18n.js` → `utils.js` → `dialog.js` → `f
 
 | Key | 类型 | 说明 |
 |-----|------|------|
-| `musicData` | JSON 字符串 | 完整 sections 数据，编辑后自动保存 |
+| `musicData` | JSON 字符串 | 网页版完整 sections 数据，编辑后自动保存 |
+| `musicData_desktop` | JSON 字符串 | 桌面版 localStorage 镜像；磁盘文件仍是桌面版主数据源 |
 | `lang` | `"en"` / `"zh"` | 界面语言偏好 |
 | `theme` | `"light"` / `"dark"` | 亮/暗模式 |
 | `style` | `"solid"` / `"glass"` | 纯色/毛玻璃风格（默认 glass） |
 | `mustHearThreshold` | 数字字符串 | 必听专辑分数阈值，默认 `80` |
 | `mustHearEnabled` | `"true"` / `"false"` | 必听专辑功能开关，默认 `true` |
+| `bgHue` | `"default"` / `0–360` 数字字符串 | 浅色背景色调，默认 `default` |
+| `showFps` | `"true"` / `"false"` | 桌面版标题栏帧率监视器开关，默认关闭 |
 
 ---
 

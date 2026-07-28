@@ -9,6 +9,9 @@ function hasRealData(data) {
 // 调试：仅开发模式启用
 const isDev = () => !window.__TAURI__;
 
+// localStorage key：网页版和桌面版用不同 key 实现数据隔离
+const getStorageKey = () => window.__TAURI__ ? 'musicData_desktop' : 'musicData';
+
 // 调试：写入日志文件（仅开发模式）
 function logMsg(msg) {
   if (!isDev()) return;
@@ -38,7 +41,7 @@ let _saveQueued = false;
 async function saveData() {
   // 安全检查：拒绝保存空数据到已有数据的 localStorage
   if (!hasRealData(appData)) {
-    const existing = localStorage.getItem('musicData');
+    const existing = localStorage.getItem(getStorageKey());
     if (existing) {
       try {
         if (hasRealData(JSON.parse(existing))) {
@@ -53,7 +56,7 @@ async function saveData() {
   _saveLock = (async () => {
     try {
       const json = JSON.stringify(appData);
-      localStorage.setItem('musicData', json);
+      localStorage.setItem(getStorageKey(), json);
       if (json.length > 4 * 1024 * 1024) {
         console.warn('localStorage 数据量较大 (' + (json.length / 1024 / 1024).toFixed(1) + 'MB)，接近浏览器存储上限');
       }
@@ -78,7 +81,7 @@ async function saveData() {
 }
 
 function loadData() {
-  const saved = localStorage.getItem('musicData');
+  const saved = localStorage.getItem(getStorageKey());
   if (saved) {
     try {
       const parsed = JSON.parse(saved);
@@ -152,6 +155,7 @@ async function loadDataFromDiskWithRetry(maxRetries) {
 // ===== 下拉菜单 portal（挂到 body，保证 backdrop-filter 生效） =====
 
 const _portalHome = new WeakMap();
+const _openPortals = new Set();
 
 function portalOpen(menu, anchor, opts = {}) {
   if (!menu || !anchor) return;
@@ -162,6 +166,7 @@ function portalOpen(menu, anchor, opts = {}) {
     document.body.appendChild(menu);
   }
   menu.classList.add('portal-open');
+  _openPortals.add(menu);
   if (opts.openClass) menu.classList.add(opts.openClass);
 
   menu.style.visibility = 'hidden';
@@ -233,6 +238,7 @@ function portalOpen(menu, anchor, opts = {}) {
 function portalClose(menu, opts = {}) {
   if (!menu) return;
   menu.classList.remove('portal-open');
+  _openPortals.delete(menu);
   if (opts.openClass) menu.classList.remove(opts.openClass);
   menu.style.top = '';
   menu.style.left = '';
@@ -360,6 +366,7 @@ function repositionOpenPortals() {
 
 let _portalRepositionRaf = 0;
 function schedulePortalReposition() {
+  if (_openPortals.size === 0) return;
   if (_portalRepositionRaf) return;
   _portalRepositionRaf = requestAnimationFrame(() => {
     _portalRepositionRaf = 0;
@@ -414,7 +421,7 @@ async function init() {
       if (diskData) {
         appData = diskData;
         // 同步到 localStorage
-        localStorage.setItem('musicData', JSON.stringify(appData));
+        localStorage.setItem(getStorageKey(), JSON.stringify(appData));
         if (isDev()) logMsg('[Init] 磁盘数据已同步到 localStorage');
       } else {
         // 磁盘无数据，尝试 localStorage
@@ -513,6 +520,7 @@ async function init() {
   bindModalTrackButtons();
   bindContentArea();
   setupCoverEvents();
+  if (window.__TAURI__) setupFpsMonitor();
 }
 
 // ===== 事件绑定：工具栏按钮 / 弹窗按钮 =====
@@ -527,6 +535,13 @@ function bindStaticButtons() {
   document.querySelector('[data-action="modal-cancel"]').addEventListener('click', closeModal);
   document.getElementById('deleteBtn').addEventListener('click', deleteEntry);
   document.querySelector('[data-action="modal-save"]').addEventListener('click', saveEntry);
+  document.getElementById('pasteBtn').addEventListener('click', () => {
+    if (clipboardEntry) {
+      pasteEntry();
+    } else {
+      showAlert(currentLang === 'zh' ? '剪贴板为空，请先复制一张卡片' : 'Clipboard is empty. Copy a card first.');
+    }
+  });
 
   // 设置按钮
   document.getElementById('settingsBtn').addEventListener('click', (e) => {
@@ -560,6 +575,9 @@ function bindStaticButtons() {
   window.addEventListener('scroll', schedulePortalReposition, { passive: true, capture: true });
   document.getElementById('settingsThemeToggle').addEventListener('change', () => { toggleTheme(); });
   document.getElementById('settingsStyleToggle').addEventListener('change', () => { toggleStyle(); });
+  document.getElementById('settingsFpsToggle')?.addEventListener('change', (e) => {
+    setFpsMonitorEnabled(e.target.checked);
+  });
   document.querySelector('[data-action="settings-lang"]').addEventListener('click', () => { toggleLang(); });
 
   // 背景色调（仅浅色）
@@ -812,14 +830,33 @@ function bindSectionSelector() {
 
 // ===== 事件绑定：搜索输入 =====
 
+function doSearch(value) {
+  searchQuery = value.trim();
+  applyFilters();
+}
+
 function bindSearch() {
   let searchTimer = null;
-  document.getElementById('searchInput').addEventListener('input', (e) => {
+  const input = document.getElementById('searchInput');
+
+  input.addEventListener('input', (e) => {
     clearTimeout(searchTimer);
-    searchTimer = setTimeout(() => {
-      searchQuery = e.target.value.trim();
-      applyFilters();
-    }, 200);
+    searchTimer = setTimeout(() => doSearch(e.target.value), 200);
+  });
+
+  // 回车立即搜索
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      clearTimeout(searchTimer);
+      doSearch(e.target.value);
+    }
+  });
+
+  // 点击 🔍 图标触发搜索
+  document.querySelector('.search-icon')?.addEventListener('click', () => {
+    clearTimeout(searchTimer);
+    doSearch(input.value);
   });
 }
 
@@ -1002,6 +1039,8 @@ function bindContentArea() {
   const contentArea = document.getElementById('contentArea');
 
   contentArea.addEventListener('click', (e) => {
+    // 复制按钮不触发放大/其他操作
+    if (e.target.closest('[data-action="copy-entry"]')) return;
     const reviewToggle = e.target.closest('[data-action="toggle-review"]');
     if (reviewToggle) {
       e.stopPropagation();
@@ -1057,6 +1096,16 @@ function bindContentArea() {
     if (card) {
       openEditModal(card.dataset.entryId, card.dataset.section, card.dataset.group);
     }
+  });
+
+  // 复制卡片
+  contentArea.addEventListener('click', (e) => {
+    const copyBtn = e.target.closest('[data-action="copy-entry"]');
+    if (!copyBtn) return;
+    e.stopPropagation();
+    const entryId = copyBtn.dataset.entryId;
+    const entry = findEntry(entryId);
+    if (entry) copyEntry(entry);
   });
 }
 
@@ -1321,6 +1370,7 @@ function applyBgHue(value = readBgHue()) {
   const root = document.documentElement;
   const isDefault = value === 'default';
   const hue = isDefault ? 0 : clampBgHue(value);
+  root.toggleAttribute('data-bg-hue-custom', !isDefault);
 
   if (isDefault) {
     root.style.setProperty('--bg-hue-rotate', '0deg');
@@ -1371,6 +1421,91 @@ function syncBgHueControls(value = readBgHue()) {
   });
 }
 
+// ===== 桌面帧率监视器 =====
+const FPS_SAMPLE_LIMIT = 600;
+let _fpsFrameId = 0;
+let _fpsPreviousTime = 0;
+let _fpsLastRenderTime = 0;
+let _fpsFrameTimes = [];
+let _fpsSampleCursor = 0;
+
+function resetFpsSamples() {
+  _fpsPreviousTime = 0;
+  _fpsLastRenderTime = 0;
+  _fpsFrameTimes = [];
+  _fpsSampleCursor = 0;
+  const average = document.getElementById('fpsAverage');
+  const low = document.getElementById('fpsLow');
+  if (average) average.textContent = '--';
+  if (low) low.textContent = '--';
+}
+
+function renderFpsMonitor() {
+  if (_fpsFrameTimes.length < 30) return;
+  const averageFrameTime = _fpsFrameTimes.reduce((sum, value) => sum + value, 0) / _fpsFrameTimes.length;
+  const slowestFrames = [..._fpsFrameTimes].sort((a, b) => b - a);
+  const lowFrameCount = Math.max(1, Math.ceil(slowestFrames.length * 0.01));
+  const lowFrameTime = slowestFrames.slice(0, lowFrameCount).reduce((sum, value) => sum + value, 0) / lowFrameCount;
+  const average = document.getElementById('fpsAverage');
+  const low = document.getElementById('fpsLow');
+  if (average) average.textContent = String(Math.round(1000 / averageFrameTime));
+  if (low) low.textContent = String(Math.round(1000 / lowFrameTime));
+}
+
+function sampleFps(timestamp) {
+  if (_fpsPreviousTime === 0) {
+    _fpsPreviousTime = timestamp;
+    _fpsLastRenderTime = timestamp;
+    _fpsFrameId = requestAnimationFrame(sampleFps);
+    return;
+  }
+
+  if (_fpsPreviousTime > 0) {
+    const frameTime = timestamp - _fpsPreviousTime;
+    if (frameTime > 250) {
+      _fpsFrameTimes = [];
+      _fpsSampleCursor = 0;
+    } else if (frameTime > 0) {
+      if (_fpsFrameTimes.length < FPS_SAMPLE_LIMIT) {
+        _fpsFrameTimes.push(frameTime);
+      } else {
+        _fpsFrameTimes[_fpsSampleCursor] = frameTime;
+        _fpsSampleCursor = (_fpsSampleCursor + 1) % FPS_SAMPLE_LIMIT;
+      }
+    }
+  }
+  _fpsPreviousTime = timestamp;
+
+  if (timestamp - _fpsLastRenderTime >= 500) {
+    _fpsLastRenderTime = timestamp;
+    renderFpsMonitor();
+  }
+  _fpsFrameId = requestAnimationFrame(sampleFps);
+}
+
+function setFpsMonitorEnabled(enabled, persist = true) {
+  const desktopEnabled = !!window.__TAURI__ && enabled;
+  const monitor = document.getElementById('fpsMonitor');
+  const toggle = document.getElementById('settingsFpsToggle');
+  if (toggle) toggle.checked = desktopEnabled;
+  if (monitor) monitor.classList.toggle('active', desktopEnabled);
+  if (persist) localStorage.setItem('showFps', String(desktopEnabled));
+
+  if (_fpsFrameId) cancelAnimationFrame(_fpsFrameId);
+  _fpsFrameId = 0;
+  resetFpsSamples();
+  if (desktopEnabled) _fpsFrameId = requestAnimationFrame(sampleFps);
+}
+
+function setupFpsMonitor() {
+  setFpsMonitorEnabled(localStorage.getItem('showFps') === 'true', false);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && document.getElementById('fpsMonitor')?.classList.contains('active')) {
+      resetFpsSamples();
+    }
+  });
+}
+
 function applyTheme() {
   const saved = localStorage.getItem('theme');
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -1397,6 +1532,20 @@ function updateLangTexts() {
   // Must Hear 标记
   document.querySelectorAll('.must-hear').forEach(el => {
     el.textContent = t('content.mustHear');
+  });
+  // 复制按钮 tooltip
+  document.querySelectorAll('.card-copy-btn').forEach(el => {
+    el.title = t('tooltip.copy');
+  });
+  // 曲目数（track-count）
+  document.querySelectorAll('.track-count').forEach(el => {
+    const count = el.dataset.trackCount;
+    const discs = el.dataset.discCount;
+    if (count) {
+      const discPrefix = discs > 1 ? t('content.discLabel', { count: parseInt(discs) }) : '';
+      el.title = t('content.trackTooltip');
+      el.textContent = discPrefix + count + t('content.trackUnit');
+    }
   });
   // 统计面板
   updateGlobalStatsSidebar();
@@ -1446,9 +1595,11 @@ function syncSettingsToggles() {
   const style = document.documentElement.getAttribute('data-style') || 'glass';
   const themeCb = document.getElementById('settingsThemeToggle');
   const styleCb = document.getElementById('settingsStyleToggle');
+  const fpsCb = document.getElementById('settingsFpsToggle');
   const langVal = document.getElementById('settingsLangValue');
   if (themeCb) themeCb.checked = theme === 'dark';
   if (styleCb) styleCb.checked = style === 'glass';
+  if (fpsCb) fpsCb.checked = !!window.__TAURI__ && localStorage.getItem('showFps') === 'true';
   if (langVal) langVal.textContent = currentLang === 'zh' ? '中文' : 'English';
   syncBgHueControls();
 }
@@ -1524,11 +1675,19 @@ async function exportDesktopNative() {
 }
 
 function importJSON() {
-  const input = document.createElement('input');
-  input.type = 'file';
-  input.accept = '.json';
-  input.onchange = handleImport;
+  const input = document.getElementById('importFileInput');
+  if (!input) return;
+  input.value = '';
   input.click();
+}
+
+// 静态 file input 的 change 事件
+const _importInput = document.getElementById('importFileInput');
+if (_importInput) {
+  _importInput.addEventListener('change', (e) => {
+    handleImport(e);
+    _importInput.value = '';
+  });
 }
 
 function handleImport(e) {
@@ -1749,7 +1908,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.4.0");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.4.1");
         break;
     }
   });

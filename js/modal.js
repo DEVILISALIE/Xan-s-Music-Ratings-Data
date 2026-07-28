@@ -1,4 +1,22 @@
 // Modal logic
+
+function showToast(message) {
+  let toast = document.getElementById('copyToast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'copyToast';
+    toast.className = 'toast';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = message;
+  toast.classList.remove('show');
+  requestAnimationFrame(() => {
+    toast.classList.add('show');
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => toast.classList.remove('show'), 1500);
+  });
+}
+
 function openEditModal(entryId, sectionId, groupId) {
   const entry = findEntry(entryId);
   if (!entry) return;
@@ -70,6 +88,7 @@ function openAddModal() {
 
 function closeModal() {
   document.getElementById('editModal').classList.remove('active');
+  releaseCoverPreview();
   document.getElementById('editSectionSelect').classList.remove('open');
   const sectionMenu = document.getElementById('editSectionMenu');
   const coverDd = document.getElementById('coverRemoveDropdown');
@@ -445,12 +464,60 @@ function updateAotyLabel() {
   } catch (_) {}
 }
 
+// ===== 复制粘贴 =====
+
+function copyEntry(entry) {
+  clipboardEntry = {
+    title: entry.title || '',
+    artist: entry.artist || '',
+    score: entry.score != null ? entry.score : null,
+    date: entry.date || '',
+    scoreNote: entry.scoreNote || '',
+    tags: entry.tags ? [...entry.tags] : [],
+    review: entry.review || '',
+    isAoty: !!entry.isAoty,
+    isSoty: !!entry.isSoty,
+    tracks: (entry.tracks || []).map(t => ({ ...t, disc: t.disc || 1 })),
+    notes: entry.notes || ''
+  };
+  showToast(currentLang === 'zh' ? (entry.title || '已复制') : (entry.title || 'Copied'));
+}
+
+function pasteEntry() {
+  if (!clipboardEntry) {
+    showAlert(currentLang === 'zh' ? '剪贴板为空，请先复制一张卡片' : 'Clipboard is empty. Copy a card first.');
+    return;
+  }
+  const c = clipboardEntry;
+  document.getElementById('editTitle').value = c.title;
+  document.getElementById('editArtist').value = c.artist;
+  document.getElementById('editScore').value = c.score != null ? c.score : '';
+  document.getElementById('editDate').value = c.date;
+  document.getElementById('editScoreNote').value = c.scoreNote;
+  document.getElementById('editReview').value = c.review;
+
+  document.querySelectorAll('#editTags .form-tag').forEach(tag => {
+    tag.classList.toggle('active', c.tags.includes(tag.dataset.tag));
+  });
+
+  editingTracks = c.tracks.map(t => ({ ...t }));
+  renderTracks();
+
+  updateAotyLabel();
+}
+
 // ===== 封面管理 =====
+
+let coverPreviewRequestId = 0;
 
 function loadCoverPreview(cover, entryId) {
   const wrap = document.getElementById('coverPreviewWrap');
   const img = document.getElementById('coverPreview');
   const removeWrap = document.getElementById('coverRemoveWrap');
+  const requestId = ++coverPreviewRequestId;
+  img.src = '';
+  img.style.width = '';
+  img.style.height = '';
 
   // 等比缩放：撑满表单宽度，高度按原图比例
   function fitImage() {
@@ -484,31 +551,37 @@ function loadCoverPreview(cover, entryId) {
     wrap.style.display = '';
     removeWrap.style.display = '';
   } else if (window.__TAURI__) {
-    const cached = coverCache.get(entryId);
-    if (cached) {
-      img.src = cached;
-      wrap.style.display = '';
-      removeWrap.style.display = '';
-    } else {
-      window.__TAURI__.core.invoke('read_cover', { entryId: entryId }).then(dataUrl => {
-        coverCache.set(entryId, dataUrl);
+    wrap.style.display = 'none';
+    removeWrap.style.display = 'none';
+    window.__TAURI__.core.invoke('read_cover', { entryId: entryId }).then(dataUrl => {
+      if (requestId === coverPreviewRequestId && editingEntry?.id === entryId) {
         img.src = dataUrl;
         wrap.style.display = '';
         removeWrap.style.display = '';
-      }).catch(() => {
+      }
+    }).catch(() => {
+      if (requestId === coverPreviewRequestId) {
         wrap.style.display = 'none';
         removeWrap.style.display = 'none';
-      });
-    }
+      }
+    });
   }
 }
 
-function clearCoverPreview() {
+function releaseCoverPreview() {
+  coverPreviewRequestId++;
   document.getElementById('coverPreviewWrap').style.display = 'none';
   const img = document.getElementById('coverPreview');
+  img.onload = null;
   img.src = '';
   img.style.width = '';
   img.style.height = '';
+  const viewerImg = document.getElementById('coverViewerImg');
+  if (viewerImg) viewerImg.src = '';
+}
+
+function clearCoverPreview() {
+  releaseCoverPreview();
   document.getElementById('coverRemoveWrap').style.display = 'none';
   document.getElementById('coverRemoveDropdown').classList.remove('active');
 }
@@ -532,11 +605,7 @@ function setupCoverEvents() {
         sourcePath: selected
       });
       editingEntry.cover = filename;
-      // 更新缓存
-      try {
-        const dataUrl = await window.__TAURI__.core.invoke('read_cover', { entryId: editingEntry.id });
-        coverCache.set(editingEntry.id, dataUrl);
-      } catch (_) {}
+      invalidateCoverThumbnail(editingEntry.id);
       loadCoverPreview(filename, editingEntry.id);
     } catch (err) {
       console.error('封面上传失败:', err);
@@ -549,7 +618,7 @@ function setupCoverEvents() {
     const url = await showPrompt(t('modal.coverUrl'), '', '', 'https://...');
     if (!url || !url.trim()) return;
     editingEntry.cover = url.trim();
-    coverCache.set(editingEntry.id, url.trim());
+    invalidateCoverThumbnail(editingEntry.id);
     loadCoverPreview(url.trim(), editingEntry.id);
   });
 
@@ -578,7 +647,7 @@ function setupCoverEvents() {
       } catch (_) {}
     }
     editingEntry.cover = null;
-    coverCache.delete(editingEntry.id);
+    invalidateCoverThumbnail(editingEntry.id);
     clearCoverPreview();
     const dropdown = document.getElementById('coverRemoveDropdown');
     if (typeof portalClose === 'function') portalClose(dropdown, { openClass: 'active' });

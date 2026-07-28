@@ -111,6 +111,10 @@ body {
 
 /* 浅色毛玻璃：仅对大背景做色相偏移，不影响卡片等内容 */
 [data-style="glass"]:not([data-theme="dark"]) body::before {
+  filter: none;
+}
+
+[data-style="glass"][data-bg-hue-custom]:not([data-theme="dark"]) body::before {
   filter: hue-rotate(var(--bg-hue-rotate));
 }
 

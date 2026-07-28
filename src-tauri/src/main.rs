@@ -10,6 +10,9 @@ use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 use std::fs;
 use base64::Engine;
 
+const MAX_COVER_BYTES: u64 = 20 * 1024 * 1024;
+const COVER_THUMBNAIL_SIZE: u32 = 256;
+
 // 向前端发送菜单动作事件
 fn emit_menu_action(app: &AppHandle, action: &str) {
     if let Some(win) = app.get_webview_window("main") {
@@ -328,8 +331,91 @@ fn covers_dir(app: &AppHandle) -> Option<std::path::PathBuf> {
     app.path().app_data_dir().ok().map(|p| p.join("covers"))
 }
 
+fn cover_thumbnails_dir(app: &AppHandle) -> Option<std::path::PathBuf> {
+    covers_dir(app).map(|p| p.join(".thumbnails"))
+}
+
+fn validate_entry_id(entry_id: &str) -> Result<(), String> {
+    if entry_id.is_empty()
+        || entry_id.contains('/')
+        || entry_id.contains('\\')
+        || entry_id == "."
+        || entry_id == ".."
+    {
+        return Err("无效的条目 ID".into());
+    }
+    Ok(())
+}
+
+fn find_cover_file(dir: &std::path::Path, entry_id: &str) -> Option<std::path::PathBuf> {
+    fs::read_dir(dir).ok()?.flatten().find_map(|entry| {
+        let path = entry.path();
+        if !path.is_file() {
+            return None;
+        }
+        let matches = path
+            .file_stem()
+            .and_then(|stem| stem.to_str())
+            .map(|stem| stem == entry_id)
+            .unwrap_or(false);
+        matches.then_some(path)
+    })
+}
+
+fn thumbnail_path(app: &AppHandle, entry_id: &str) -> Result<std::path::PathBuf, String> {
+    let dir = cover_thumbnails_dir(app).ok_or("无法获取封面缩略图目录")?;
+    Ok(dir.join(format!("{}.png", entry_id)))
+}
+
+fn create_cover_thumbnail(source: &std::path::Path, destination: &std::path::Path) -> Result<(), String> {
+    let image = image::ImageReader::open(source)
+        .map_err(|e| format!("无法打开封面: {}", e))?
+        .with_guessed_format()
+        .map_err(|e| format!("无法识别封面格式: {}", e))?
+        .decode()
+        .map_err(|e| format!("无法解码封面: {}", e))?;
+    let thumbnail = image.thumbnail(COVER_THUMBNAIL_SIZE, COVER_THUMBNAIL_SIZE);
+    if let Some(parent) = destination.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    let temporary = destination.with_extension("png.tmp");
+    let _ = fs::remove_file(&temporary);
+    if let Err(error) = thumbnail.save_with_format(&temporary, image::ImageFormat::Png) {
+        let _ = fs::remove_file(&temporary);
+        return Err(format!("无法保存封面缩略图: {}", error));
+    }
+    let _ = fs::remove_file(destination);
+    fs::rename(&temporary, destination).map_err(|error| {
+        let _ = fs::remove_file(&temporary);
+        format!("无法替换封面缩略图: {}", error)
+    })
+}
+
+fn original_cover_data_url(path: &std::path::Path) -> Result<String, String> {
+    if fs::metadata(path).map_err(|e| e.to_string())?.len() > MAX_COVER_BYTES {
+        return Err("封面文件过大".into());
+    }
+    let bytes = fs::read(path).map_err(|e| e.to_string())?;
+    let ext = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("jpeg")
+        .to_lowercase();
+    let mime = match ext.as_str() {
+        "png" => "image/png",
+        "gif" => "image/gif",
+        "webp" => "image/webp",
+        "bmp" => "image/bmp",
+        "avif" => "image/avif",
+        _ => "image/jpeg",
+    };
+    let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+    Ok(format!("data:{};base64,{}", mime, b64))
+}
+
 #[tauri::command]
 fn upload_cover(app: AppHandle, entry_id: String, source_path: String) -> Result<String, String> {
+    validate_entry_id(&entry_id)?;
     let dir = covers_dir(&app).ok_or("无法获取数据目录")?;
     fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
 
@@ -339,7 +425,7 @@ fn upload_cover(app: AppHandle, entry_id: String, source_path: String) -> Result
     }
     // 限制文件大小 20MB
     if let Ok(meta) = fs::metadata(src) {
-        if meta.len() > 20 * 1024 * 1024 {
+        if meta.len() > MAX_COVER_BYTES {
             return Err("图片文件过大（最大 20MB）".into());
         }
     }
@@ -352,19 +438,29 @@ fn upload_cover(app: AppHandle, entry_id: String, source_path: String) -> Result
     // 清除该 entry 的旧封面（不同扩展名）
     if let Ok(entries) = fs::read_dir(&dir) {
         for entry in entries.flatten() {
-            let name = entry.file_name().to_string_lossy().to_string();
-            if name.starts_with(&entry_id) && name != filename {
+            let path = entry.path();
+            let same_entry = path
+                .file_stem()
+                .and_then(|stem| stem.to_str())
+                .map(|stem| stem == entry_id)
+                .unwrap_or(false);
+            if same_entry && path.file_name().and_then(|name| name.to_str()) != Some(&filename) {
                 let _ = fs::remove_file(entry.path());
             }
         }
     }
 
     fs::copy(src, &dest).map_err(|e| e.to_string())?;
+    let thumb_path = thumbnail_path(&app, &entry_id)?;
+    let _ = fs::remove_file(&thumb_path);
+    // 极少数系统不支持的格式仍保留原图，读取卡片时会回退到原图。
+    let _ = create_cover_thumbnail(&dest, &thumb_path);
     Ok(filename)
 }
 
 #[tauri::command]
 fn remove_cover(app: AppHandle, entry_id: String) -> Result<(), String> {
+    validate_entry_id(&entry_id)?;
     let dir = match covers_dir(&app) {
         Some(d) => d,
         None => return Ok(()),
@@ -372,49 +468,101 @@ fn remove_cover(app: AppHandle, entry_id: String) -> Result<(), String> {
     if !dir.exists() { return Ok(()); }
     if let Ok(entries) = fs::read_dir(&dir) {
         for entry in entries.flatten() {
-            let name = entry.file_name().to_string_lossy().to_string();
-            if name.starts_with(&entry_id) {
+            let path = entry.path();
+            let same_entry = path
+                .file_stem()
+                .and_then(|stem| stem.to_str())
+                .map(|stem| stem == entry_id)
+                .unwrap_or(false);
+            if same_entry {
                 let _ = fs::remove_file(entry.path());
             }
         }
+    }
+    if let Ok(path) = thumbnail_path(&app, &entry_id) {
+        let _ = fs::remove_file(path);
     }
     Ok(())
 }
 
 #[tauri::command]
-fn read_cover(app: AppHandle, entry_id: String) -> Result<String, String> {
+fn read_cover_thumbnail(app: AppHandle, entry_id: String) -> Result<String, String> {
+    validate_entry_id(&entry_id)?;
     let dir = covers_dir(&app).ok_or("无法获取数据目录")?;
-    if !dir.exists() { return Err("covers 目录不存在".into()); }
-
-    if let Ok(entries) = fs::read_dir(&dir) {
-        for entry in entries.flatten() {
-            let name = entry.file_name().to_string_lossy().to_string();
-            if name.starts_with(&entry_id) {
-                // 限制读取大小 20MB
-                if let Ok(meta) = fs::metadata(entry.path()) {
-                    if meta.len() > 20 * 1024 * 1024 {
-                        return Err("封面文件过大".into());
-                    }
-                }
-                let bytes = fs::read(entry.path()).map_err(|e| e.to_string())?;
-                let ext = std::path::Path::new(&name)
-                    .extension()
-                    .and_then(|e| e.to_str())
-                    .unwrap_or("jpeg");
-                let mime = match ext.to_lowercase().as_str() {
-                    "png" => "image/png",
-                    "gif" => "image/gif",
-                    "webp" => "image/webp",
-                    "bmp" => "image/bmp",
-                    "avif" => "image/avif",
-                    _ => "image/jpeg",
-                };
-                let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
-                return Ok(format!("data:{};base64,{}", mime, b64));
-            }
+    if !dir.exists() {
+        return Err("covers 目录不存在".into());
+    }
+    let source = find_cover_file(&dir, &entry_id).ok_or("封面文件不存在")?;
+    let thumb_path = thumbnail_path(&app, &entry_id)?;
+    if !thumb_path.exists() {
+        if create_cover_thumbnail(&source, &thumb_path).is_err() {
+            return original_cover_data_url(&source);
         }
     }
-    Err("封面文件不存在".into())
+    let bytes = fs::read(&thumb_path).map_err(|e| e.to_string())?;
+    if bytes.len() > 2 * 1024 * 1024 {
+        return Err("封面缩略图过大".into());
+    }
+    let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
+    Ok(format!("data:image/png;base64,{}", b64))
+}
+
+#[tauri::command]
+fn read_cover(app: AppHandle, entry_id: String) -> Result<String, String> {
+    validate_entry_id(&entry_id)?;
+    let dir = covers_dir(&app).ok_or("无法获取数据目录")?;
+    if !dir.exists() { return Err("covers 目录不存在".into()); }
+    let path = find_cover_file(&dir, &entry_id).ok_or("封面文件不存在")?;
+    original_cover_data_url(&path)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use image::GenericImageView;
+
+    fn test_dir(name: &str) -> std::path::PathBuf {
+        std::env::temp_dir().join(format!(
+            "music-ratings-{}-{}-{}",
+            name,
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ))
+    }
+
+    #[test]
+    fn creates_bounded_png_thumbnail_from_jpeg() {
+        let dir = test_dir("thumbnail");
+        fs::create_dir_all(&dir).unwrap();
+        let source = dir.join("cover.jpg");
+        let destination = dir.join("cover.png");
+        let image = image::RgbImage::from_pixel(1024, 768, image::Rgb([32, 96, 160]));
+        image.save_with_format(&source, image::ImageFormat::Jpeg).unwrap();
+
+        create_cover_thumbnail(&source, &destination).unwrap();
+
+        let thumbnail = image::open(&destination).unwrap();
+        let (width, height) = thumbnail.dimensions();
+        assert!(width <= COVER_THUMBNAIL_SIZE);
+        assert!(height <= COVER_THUMBNAIL_SIZE);
+        assert!(width > 0 && height > 0);
+        let _ = fs::remove_dir_all(dir);
+    }
+
+    #[test]
+    fn finds_only_the_exact_entry_cover() {
+        let dir = test_dir("lookup");
+        fs::create_dir_all(&dir).unwrap();
+        fs::write(dir.join("a10.jpg"), b"a10").unwrap();
+        fs::write(dir.join("a1.png"), b"a1").unwrap();
+
+        let found = find_cover_file(&dir, "a1").unwrap();
+        assert_eq!(found.file_name().unwrap(), "a1.png");
+        let _ = fs::remove_dir_all(dir);
+    }
 }
 
 fn main() {
@@ -470,7 +618,7 @@ fn main() {
             is_window_maximized, is_window_fullscreen,
             save_data_to_disk, load_data_from_disk, check_disk_data, get_data_file_size, write_log,
             graceful_exit,
-            upload_cover, remove_cover, read_cover
+            upload_cover, remove_cover, read_cover_thumbnail, read_cover
         ])
         .run(tauri::generate_context!())
         .expect("启动 Tauri 应用失败");
