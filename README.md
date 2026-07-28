@@ -2,7 +2,14 @@
 
 面向个人长期收藏的 Windows 音乐评分与乐评管理工具，基于 Tauri v2、Rust 和 WebView2。
 
-它不是音乐播放器，也不是在线社区，而是一套用于整理专辑、单曲、年度选择、曲目评分和长评的本地桌面工作台。数据和封面保存在自己的电脑上，可随时导入或导出 JSON。
+它不是播放器，也不是在线社区，而是一张可以持续维护很多年的私人音乐档案：专辑、单曲、年度选择、曲目评分、封面和长评都保存在自己的电脑上。
+
+<p align="center">
+  <a href="docs/screenshots/overview.png">
+    <img src="docs/screenshots/overview.png" alt="Xan's Music Ratings 桌面版主界面" width="100%">
+  </a>
+</p>
+<p align="center"><sub>年代导航、AOTY、评分列表、分数分布与 FPS/1% Low 监视器</sub></p>
 
 > 本仓库只维护桌面版，不提供网页版。`desktop-ui/` 是打包进 exe 的 WebView2 界面资源，不是独立网站。
 
@@ -12,57 +19,118 @@
 
 当前版本：`v1.4.1`
 
-## 特色功能
+## 把几十年的音乐放在一张时间轴上
 
-### 年代化音乐档案
+左侧以年份和年代组织 Albums、Singles、AOTY 与 SOTY，主区域保留每个时期的上下文，右侧则持续显示专辑和单曲的整体评分分布。即使条目增长到上千条，也可以从侧边栏直接跳到指定分组，滚动时导航高亮会自动跟随。
 
-- 按年份或年代组织 Albums 和 Singles，从 1950s 延伸到当前年份
-- 侧边栏精确导航到 AOTY、Albums、SOTY、Singles，滚动时自动同步高亮
-- 不同年代使用针对性的自动排序规则，年度最佳条目始终置顶
-- 支持搜索标题、艺术家、分数备注、笔记和乐评，并可循环跳转结果
+不同年份使用不同的自动排序规则：较新的分区可以按日期组织，早期年代按年份倒序，年度最佳始终位于普通条目之前。普通卡片同时保留评分、日期、标签、曲目数和 `Must Hear Album` 等关键信息，适合快速扫描。
 
-### AOTY / SOTY 年度体系
+## AOTY 与 SOTY 是档案的主角
 
-- 专辑可标记为 AOTY，单曲可标记为 SOTY，并使用独立的大卡片展示
-- 年度卡片集中呈现封面、评分、标签和可展开长评
-- AOTY 与 SOTY 同时参与筛选和侧边栏导航，不需要维护重复条目
-- Albums 中达到自定义阈值的高分作品可自动显示 `Must Hear Album`
+年度选择不是普通标签。AOTY 和 SOTY 会从原分组中提升为独立大卡片，但数据仍只维护一份，筛选、导航和编辑不会产生重复条目。
 
-### 从总分深入到每首曲目
+<p align="center">
+  <a href="docs/screenshots/aoty-review.png">
+    <img src="docs/screenshots/aoty-review.png" alt="带封面和长评的 AOTY 卡片" width="100%">
+  </a>
+</p>
+<p align="center"><strong>AOTY 与完整乐评</strong><br><sub>封面、日期、评分和长评集中在一张年度卡片中，篇幅较长时可展开阅读</sub></p>
 
-- 每个条目可记录总分、日期、标签、分数备注、笔记和完整乐评
-- 支持逐首曲目评分，`NR` 可表示已听但暂不评分
-- 支持多碟专辑，分别统计每碟平均分，并在卡片上显示碟数与曲目数
-- 可按目标数量批量补齐或删减曲目行，适合录入完整 tracklist
-- 卡片支持复制并粘贴到编辑弹窗，快速创建结构相近的条目
+长评可以直接写在 AOTY/SOTY 卡片里。卡片默认保持列表紧凑，需要时再展开全文，既能保留快速浏览节奏，也能记录真正重要的听感和背景。
 
-### 本地封面与视觉管理
+<p align="center">
+  <a href="docs/screenshots/soty-card.png">
+    <img src="docs/screenshots/soty-card.png" alt="SOTY 年度单曲卡片" width="100%">
+  </a>
+</p>
+<p align="center"><strong>SOTY 年度单曲</strong><br><sub>专辑与单曲使用同一套年度体系，同时保留各自独立的列表和统计</sub></p>
 
-- 支持上传本地封面或填写图片 URL
-- 自动生成最长边 256px 的缩略图，列表只加载可视区域附近的封面
-- 编辑弹窗按需读取原图；双击可全屏查看，并支持缩放和平移
-- 本地封面与 JSON 数据分开保存，更换和移除时同步清理相关缓存
+## 搜索不是过滤后停在那里
 
-### 为桌面环境设计
+<p align="center">
+  <a href="docs/screenshots/search-navigation.png">
+    <img src="docs/screenshots/search-navigation.png" alt="跨年份搜索结果与上下跳转" width="100%">
+  </a>
+</p>
+<p align="center"><sub>搜索框显示当前/总结果数，右下角按钮可在匹配项之间向上或向下循环跳转</sub></p>
 
-- 无原生菜单栏的自定义毛玻璃标题栏，支持置顶、全屏、最小化和最大化
-- 系统托盘、单实例运行、原生文件对话框和全局快捷键
-- 点击关闭按钮隐藏到托盘；从托盘退出时等待最新数据写入磁盘
-- 亮暗主题、纯色/毛玻璃风格、浅色背景色调和中英文界面
-- 针对高刷新率滚动优化合成、封面加载和导航同步；可选显示平均 FPS 与 `1% LOW`
+搜索会同时匹配标题、艺术家、分数备注、笔记和乐评，并跨越所有年份展示结果。除了输入时实时查找，还可以按 Enter 或点击搜索图标立即执行；上下按钮用于逐个定位匹配卡片，而不是让用户在长列表中手动寻找。
 
-## 功能概览
+标签多选、分数区间、NR 和 AOTY/SOTY 筛选可以与搜索叠加，适合从大型档案中快速收窄范围。
+
+## 评分会逐渐形成自己的历史
+
+点击右侧专辑或单曲统计卡片，可以把总览展开为逐年趋势。这里展示的是每一年的独立平均分和条目数量，而不仅是一个全局平均值。
+
+<p align="center">
+  <a href="docs/screenshots/yearly-stats.png">
+    <img src="docs/screenshots/yearly-stats.png" alt="年度平均分统计" width="100%">
+  </a>
+</p>
+<p align="center"><sub>年度平均分、相对柱状长度和有效条目数放在同一视图中比较</sub></p>
+
+一张专辑也不必只留下总分。编辑弹窗可以逐首记录曲目名称和分数，`NR` 表示已经听过但暂不评分；多碟专辑会分别计算每碟平均分，并在卡片上显示碟数和总曲目数。
+
+<p align="center">
+  <a href="docs/screenshots/track-ratings.png">
+    <img src="docs/screenshots/track-ratings.png" alt="逐曲评分与多碟管理" width="560">
+  </a>
+</p>
+<p align="center"><sub>逐曲录入、批量补齐曲目数量、添加 Disc，并实时计算平均分</sub></p>
+
+## 封面属于条目，也属于本地档案
+
+<p align="center">
+  <a href="docs/screenshots/cover-editor.png">
+    <img src="docs/screenshots/cover-editor.png" alt="本地封面编辑与预览" width="560">
+  </a>
+</p>
+<p align="center"><sub>支持本地上传、图片 URL、移除和大图预览；双击封面可进入缩放查看器</sub></p>
+
+本地封面保存在应用数据目录，JSON 只记录引用。后台会生成最长边 256px 的 PNG 缩略图，列表仅在图片接近可视区域时加载；编辑和全屏查看才读取原图，避免大型收藏在滚动时持续占用内存。
+
+## 大量条目也可以集中整理
+
+<p align="center">
+  <a href="docs/screenshots/batch-management.png">
+    <img src="docs/screenshots/batch-management.png" alt="多选与批量管理模式" width="100%">
+  </a>
+</p>
+<p align="center"><sub>多选模式支持全选、Shift 范围选择、删除、添加/移除标签和跨分组移动</sub></p>
+
+批量模式会把选择状态直接显示在卡片上，并在窗口底部提供集中操作栏。日常编辑还支持同组拖拽排序，以及复制一张卡片后将标题、艺术家、评分、标签、乐评和曲目粘贴到另一条目。
+
+## 外观不是固定模板
+
+深色模式和毛玻璃风格彼此独立，可以组合成不同外观。浅色模式还支持预设色板和完整色相滑条；这些设置只改变呈现，不触碰音乐数据。
+
+<table>
+  <tr>
+    <td width="76%" valign="top">
+      <a href="docs/screenshots/dark-mode.png"><img src="docs/screenshots/dark-mode.png" alt="深色毛玻璃主界面" width="100%"></a>
+    </td>
+    <td width="24%" valign="top">
+      <a href="docs/screenshots/appearance-settings.png"><img src="docs/screenshots/appearance-settings.png" alt="外观与帧率设置" width="100%"></a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><strong>深色毛玻璃</strong><br><sub>标题栏、工具栏、侧边栏与统计面板保持统一层次</sub></td>
+    <td align="center"><strong>个性化设置</strong><br><sub>主题、毛玻璃、FPS、语言和背景色调</sub></td>
+  </tr>
+</table>
+
+滚动路径针对高刷新率显示器做了专门优化：固定面板保留真实毛玻璃，卡片减少昂贵的逐项模糊，封面按需加载，导航位置使用缓存和二分查找。标题栏可选显示平均 FPS 与 `1% LOW`，便于直接观察运行状态。
+
+## 桌面版能力
 
 | 范围 | 能力 |
 |---|---|
-| 浏览 | 年份/年代分区、分组导航、滚动高亮、搜索结果翻页 |
-| 筛选 | 标签多选、分数区间、NR、AOTY/SOTY 组合筛选 |
+| 窗口 | 自定义标题栏、置顶、全屏、最小化、最大化、自定义右键菜单 |
+| 系统 | 系统托盘、单实例运行、原生文件对话框、全局快捷键 |
 | 编辑 | 总分、日期、标签、备注、长评、封面、曲目与多碟信息 |
-| 排序 | 同组拖拽、年代规则自动排序、AOTY/SOTY 置顶 |
-| 批量 | Shift 范围选择、批量标签、批量移动、批量添加曲目 |
-| 统计 | 专辑/单曲平均分、分数分布、已评分/未评分、年度平均分 |
-| 外观 | 中英文、亮暗模式、纯色/毛玻璃、背景色调 |
-| 数据 | 磁盘自动保存、备份恢复、JSON 导入导出、txt 数据生成 |
+| 整理 | 自动排序、同组拖拽、范围选择、批量标签、批量移动 |
+| 统计 | 专辑/单曲平均分、七档分布、已评分/未评分、年度平均分 |
+| 外观 | 中英文、亮暗模式、纯色/毛玻璃、背景色调、FPS 监视器 |
 
 ## 数据与可靠性
 
@@ -79,8 +147,6 @@
 %APPDATA%\com.xan.music-ratings\covers\.thumbnails\
 ```
 
-数据保护机制：
-
 - 磁盘 JSON 是主数据源，`localStorage.musicData_desktop` 仅作为 WebView2 本地镜像
 - Rust 写盘前校验 JSON，每次覆盖前生成 `.json.bak`
 - 主文件无法读取时自动尝试备份文件
@@ -89,14 +155,6 @@
 - JSON 导入会校验并修复 section、group、entry 和 track 字段
 
 建议仍定期使用“导出 JSON”保存一份独立备份。
-
-## 基本使用
-
-1. 点击右下角 `+` 新建专辑或单曲。
-2. 在编辑弹窗填写评分、日期、标签、乐评和曲目。
-3. 通过侧边栏切换年份，使用工具栏搜索或组合筛选。
-4. 在设置菜单调整主题、毛玻璃、语言、批量模式和帧率显示。
-5. 使用导入/导出 JSON 在安装、迁移或备份时转移数据。
 
 ## 快捷键
 
@@ -115,15 +173,7 @@
 
 ## 开发与构建
 
-环境要求：
-
-- Windows 10/11
-- Node.js 与 npm
-- Rust stable toolchain
-- WebView2 Runtime
-- Visual Studio C++ Build Tools
-
-安装依赖并启动开发模式：
+环境要求：Windows 10/11、Node.js、Rust stable、WebView2 Runtime 和 Visual Studio C++ Build Tools。
 
 ```bash
 npm install
@@ -135,8 +185,6 @@ npm run tauri dev
 ```bash
 npm run tauri build
 ```
-
-输出位置：
 
 ```text
 src-tauri/target/release/music-ratings.exe
@@ -155,28 +203,13 @@ src-tauri/target/release/bundle/msi/
 ├── dev-server.js             # 桌面开发模式资源服务器
 ├── dev-server.vbs            # 隐藏服务器控制台窗口
 ├── gen.js                    # txt 转桌面内置数据
-├── package.json
-└── CLAUDE.md
-```
-
-界面脚本加载顺序：
-
-```text
-state.js -> i18n.js -> utils.js -> dialog.js -> filter.js
--> modal.js -> render.js -> drag.js -> app.js
+└── package.json
 ```
 
 ## 从 txt 生成内置数据
 
-将源 `.txt` 文件放在项目根目录后运行：
-
 ```bash
 node gen.js
-```
-
-也可以指定文件：
-
-```bash
 node gen.js path/to/source.txt
 ```
 
@@ -185,3 +218,5 @@ node gen.js path/to/source.txt
 ## 最近版本
 
 `v1.4.1` 主要加入卡片复制粘贴、FPS/1% Low 监视器和封面缩略图，并优化高刷新率滚动、拖拽、搜索状态同步与封面读取安全。完整变更与安装包见 [v1.4.1 Release](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases/tag/v1.4.1)。
+
+<p align="center"><sub>点击 README 中的任意截图可查看原图。</sub></p>
