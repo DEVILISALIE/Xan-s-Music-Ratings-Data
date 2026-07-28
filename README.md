@@ -72,8 +72,8 @@
 一张专辑也不必只留下总分。编辑弹窗按 Disc 整理曲目，每行都可以填写曲名和 `0–100` 的任意整数分数；暂不评分时可记为 `NR`，它不会计入已评分数和平均分。右侧的 `×` 可删除单首曲目，曲目区之后仍可继续填写整张作品的文字乐评。
 
 <p align="center">
-  <a href="docs/screenshots/track-ratings.png">
-    <img src="docs/screenshots/track-ratings.png" alt="逐曲评分与多碟管理" width="560">
+  <a href="docs/screenshots/track-ratings-nr.png">
+    <img src="docs/screenshots/track-ratings-nr.png" alt="逐曲评分与多碟管理" width="560">
   </a>
 </p>
 <p align="center"><sub>曲名与逐曲评分、多碟分组、曲目增删、批量录入及分碟统计集中在同一编辑区</sub></p>
