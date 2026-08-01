@@ -372,10 +372,43 @@ function scrollToGroup(gid, e, offset) {
   if (e) e.preventDefault();
   const el = document.getElementById('group-' + gid);
   const main = document.getElementById('mainContent');
-  if (el && main) {
-    const y = el.getBoundingClientRect().top - main.getBoundingClientRect().top + main.scrollTop - (offset || 0);
-    main.scrollTo({ top: y, behavior: 'smooth' });
+  if (!el || !main) return;
+
+  let cardGroupId = gid;
+  let specialCardClass = '';
+  if (gid.endsWith('-aoty')) {
+    cardGroupId = gid.slice(0, -5) + '-albums';
+    specialCardClass = 'aoty-card';
+  } else if (gid.endsWith('-soty')) {
+    cardGroupId = gid.slice(0, -5) + '-singles';
+    specialCardClass = 'soty-card';
   }
+
+  // 以第一张可见卡片为基准，让卡片上沿贴在粘性工具栏下方。
+  const firstVisibleCard = [...document.querySelectorAll('.album-card, .aoty-card')].find(card => {
+    if (card.classList.contains('hidden') || card.dataset.group !== cardGroupId) return false;
+    return !specialCardClass || card.classList.contains(specialCardClass);
+  });
+  const target = firstVisibleCard || el;
+
+  // 新导航开始时先停止旧的平滑滚动，避免旧动画继续影响新的目标位置。
+  if (main._groupScrollAlignTimer) {
+    clearTimeout(main._groupScrollAlignTimer);
+    main._groupScrollAlignTimer = 0;
+  }
+  main.scrollTo({ top: main.scrollTop, behavior: 'auto' });
+
+  const toolbar = main.querySelector('.toolbar');
+  const toolbarBottom = toolbar
+    ? toolbar.getBoundingClientRect().bottom
+    : main.getBoundingClientRect().top;
+  const targetTop = target.getBoundingClientRect().top;
+  const desiredScrollTop = main.scrollTop + targetTop - toolbarBottom - (offset || 0);
+  const maxScrollTop = Math.max(0, main.scrollHeight - main.clientHeight);
+  const y = Math.max(0, Math.min(maxScrollTop, desiredScrollTop));
+
+  // 只使用一次原生平滑滚动，避免固定延迟的 scrollBy 在动画末尾强行吸附。
+  main.scrollTo({ top: y, behavior: 'smooth' });
 }
 
 async function addNewYear() {

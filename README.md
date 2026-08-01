@@ -17,7 +17,7 @@
 
 前往 [GitHub Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 Windows MSI 安装包。
 
-当前版本：`v1.4.1`
+当前版本：`v1.4.2`
 
 ## 把几十年的音乐放在一张时间轴上
 
@@ -219,6 +219,6 @@ node gen.js path/to/source.txt
 
 ## 最近版本
 
-`v1.4.1` 主要加入卡片复制粘贴、FPS/1% Low 监视器和封面缩略图，并优化高刷新率滚动、拖拽、搜索状态同步与封面读取安全。完整变更与安装包见 [v1.4.1 Release](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases/tag/v1.4.1)。
+`v1.4.2` 修复侧边栏年份分组导航的卡片定位，确保第一张可见卡片贴在顶部工具栏下方，并修复连续点击时旧平滑滚动和延迟校准互相干扰的问题。完整变更与安装包见 [v1.4.2 Release](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases/tag/v1.4.2)。
 
 <p align="center"><sub>点击 README 中的任意截图可查看原图。</sub></p>
