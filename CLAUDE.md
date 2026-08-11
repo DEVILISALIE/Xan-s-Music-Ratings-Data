@@ -74,6 +74,10 @@ npm run tauri build              # 构建 MSI 安装包
 | `bgHue` | `"default"` / `0–360` 数字字符串 | 浅色背景色调（仅浅色生效），默认 `default` |
 | `showFps` | `"true"` / `"false"` | 桌面标题栏 FPS/1% Low 监视器，默认关闭 |
 
+## v1.4.3 更新（相对 v1.4.2）
+
+- **搜索结果顺序修复**：搜索结果中新增符合关键词的专辑或单曲后，上下切换按钮会继续按照发行时间和当前卡片排序规则排列，避免新条目固定追加到结果末尾。
+
 ## v1.4.2 更新（相对 v1.4.1）
 
 GitHub 上一次正式 Release 为 `v1.4.1`（commit `93cef28`，2026-07-28）。v1.4.2 主要修复桌面版侧边栏分组导航的滚动定位：
@@ -131,7 +135,7 @@ GitHub 上一次正式 Release 为 `v1.4.0`（commit `ede5a58`，2026-07-14）�
 - 桌面版固定使用 `musicData_desktop` 作为 WebView2 本地镜像
 - `build-frontend.js` 构建时将 `desktop-ui/index.html`、`desktop-ui/css`、`desktop-ui/js` 和可选 `desktop-ui/data.json` 复制到 `dist/`，再由 Tauri 打包进二进制
 - Tauri 插件：dialog、fs、global-shortcut、shell、single-instance；Rust 依赖 `base64` 与 `image`
-- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.4.2`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.4.2`
+- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.4.3`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.4.3`
 
 **分数统计面板**：`render.js` 中 `updateGlobalStatsSidebar()` 在右侧固定位置渲染两个统计卡片（专辑 / 单曲），各自显示平均分、7 档分数分布柱状图（100 / 90-99 / 80-89 / 70-79 / 60-69 / 50-59 / 0-49）、已打分/未打分/条目数。所有标签均支持中英文切换，通过 `t()` 函数实现。每次数据变更后通过 `refreshAll()` 实时更新。**点击统计卡片弹出年度平均分弹窗**（`#yearlyStatsModal`），展示每一年的独立平均分和条目数，水平柱状图按最高分等比缩放，支持 ESC / 点击遮罩关闭。
 

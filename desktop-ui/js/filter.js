@@ -20,6 +20,34 @@ function rebuildCardCache() {
   });
 }
 
+function syncSearchResultsInDomOrder(preserveEntryId) {
+  const currentEntryId = preserveEntryId || searchResults[searchIndex]?.dataset.entryId || '';
+  searchResults = [...document.querySelectorAll('.album-card, .aoty-card')]
+    .filter(card => !card.classList.contains('hidden'));
+
+  if (searchResults.length === 0) {
+    searchIndex = -1;
+    return;
+  }
+
+  const preservedIndex = currentEntryId
+    ? searchResults.findIndex(card => card.dataset.entryId === currentEntryId)
+    : -1;
+  searchIndex = preservedIndex >= 0
+    ? preservedIndex
+    : Math.min(Math.max(searchIndex, 0), searchResults.length - 1);
+
+  const nextBtn = document.getElementById('searchNextBtn');
+  const prevBtn = document.getElementById('searchPrevBtn');
+  if (searchQuery) {
+    nextBtn.style.display = 'flex';
+    prevBtn.style.display = 'flex';
+    highlightSearchResult(searchIndex);
+    const counter = document.getElementById('searchCounter');
+    if (counter) counter.textContent = (searchIndex + 1) + '/' + searchResults.length;
+  }
+}
+
 function matchesFilter(entry) {
   // Type filter (multi-select)
   if (currentFilter.length > 0) {
@@ -66,11 +94,12 @@ function applyFilters() {
   for (const { card, entry } of allCards) {
     if (entry && matchesFilter(entry)) {
       card.classList.remove('hidden');
-      searchResults.push(card);
     } else {
       card.classList.add('hidden');
     }
   }
+  // 结果顺序以内容区实际发行排序后的 DOM 为准，避免缓存顺序落后于新增条目。
+  syncSearchResultsInDomOrder();
 
   // 搜索时显示"下一个"按钮并定位到第一个结果
   const nextBtn = document.getElementById('searchNextBtn');
@@ -142,4 +171,3 @@ function buildEntryIndex() {
 function findEntry(id) {
   return entryIndex.get(id) || null;
 }
-

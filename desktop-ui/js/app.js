@@ -931,21 +931,7 @@ function bindSidebar() {
     const navItem = e.target.closest('[data-action="nav-click"]');
     if (navItem) {
       e.preventDefault();
-      document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-      navItem.classList.add('active');
-      const ca = document.getElementById('contentArea');
-      ca.classList.add('overview-scroll');
-      resetNavScrollLock();
-      window._navActiveInterval = setInterval(() => navItem.classList.add('active'), 50);
-      window._navActiveTimeout = setTimeout(() => {
-        clearInterval(window._navActiveInterval);
-        window._navActiveInterval = null;
-        window._navActiveTimeout = null;
-        window._navScrollDelay = setTimeout(() => {
-          ca.classList.remove('overview-scroll');
-          window._navScrollDelay = null;
-        }, 200);
-      }, 1500);
+      holdActiveNavItemDuringScroll(navItem);
       scrollToGroup(navItem.dataset.nav, e);
       return;
     }
@@ -1908,7 +1894,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.4.2");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.4.3");
         break;
     }
   });

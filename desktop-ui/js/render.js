@@ -161,12 +161,14 @@ function scheduleScrollCacheRebuild() {
 }
 
 function setActiveNavItem(target) {
-  if (_activeNavItem === target) return;
-  if (_activeNavItem?.isConnected) {
-    _activeNavItem.classList.remove('active');
-  } else {
-    document.querySelectorAll('.nav-item.active').forEach(item => item.classList.remove('active'));
-  }
+  const activeItems = [...document.querySelectorAll('.nav-item.active')];
+  const targetIsOnlyActive = target && activeItems.length === 1 && activeItems[0] === target;
+  if ((_activeNavItem === target && targetIsOnlyActive) || (!target && activeItems.length === 0)) return;
+
+  // 统一清理旧高亮，避免年度锚点和普通分组同时高亮。
+  activeItems.forEach(item => {
+    if (item !== target) item.classList.remove('active');
+  });
   target?.classList.add('active');
   _activeNavItem = target || null;
 }
@@ -185,6 +187,47 @@ function findCurrentScrollGroup(scrollTop) {
     }
   }
   return match;
+}
+
+function syncActiveNavItemToScrollPosition(main = document.getElementById('mainContent')) {
+  if (!main || _cachedGroupPositions.length === 0) return;
+
+  const currentGroup = findCurrentScrollGroup(main.scrollTop + _scrollActivationOffset);
+  const currentSectionId = currentGroup ? currentGroup.split('-')[0] : '';
+  setActiveNavItem(_navItemByGroup.get(currentGroup));
+
+  if (!currentGroup) return;
+  const group = document.querySelector(`.nav-group[data-section="${currentSectionId}"]`);
+  if (!group) return;
+  const header = group.querySelector('.nav-group-header');
+  const items = group.querySelector('.nav-group-items');
+  if (header && header.classList.contains('collapsed')) {
+    header.classList.remove('collapsed');
+    items.classList.remove('collapsed');
+  }
+}
+
+function holdActiveNavItemDuringScroll(target) {
+  const main = document.getElementById('mainContent');
+  const content = document.getElementById('contentArea');
+  if (!target || !main || !content) return;
+
+  resetNavScrollLock();
+  setActiveNavItem(target);
+  content.classList.add('overview-scroll');
+  window._navActiveTimeout = setTimeout(() => {
+    window._navActiveTimeout = null;
+    content.classList.remove('overview-scroll');
+    syncActiveNavItemToScrollPosition(main);
+  }, 1500);
+}
+
+function releaseNavScrollLockForManualScroll(main) {
+  const content = document.getElementById('contentArea');
+  if (!content?.classList.contains('overview-scroll')) return;
+  resetNavScrollLock();
+  content.classList.remove('overview-scroll');
+  syncActiveNavItemToScrollPosition(main);
 }
 
 // 获取所有 sections 并按年份降序排列
@@ -460,19 +503,7 @@ function activateNavItem(groupId) {
   // 滚动侧边栏使目标导航项可见
   target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   // 禁用滚动同步，防止内容区滚动覆盖侧边栏高亮
-  var ca = document.getElementById('contentArea');
-  ca.classList.add('overview-scroll');
-  resetNavScrollLock();
-  window._navActiveInterval = setInterval(function(){ target.classList.add('active') }, 50);
-  window._navActiveTimeout = setTimeout(function(){
-    clearInterval(window._navActiveInterval);
-    window._navActiveInterval = null;
-    window._navActiveTimeout = null;
-    window._navScrollDelay = setTimeout(function(){
-      ca.classList.remove('overview-scroll');
-      window._navScrollDelay = null;
-    }, 200);
-  }, 1500);
+  holdActiveNavItemDuringScroll(target);
 }
 
 function setupScrollSync() {
@@ -517,6 +548,12 @@ function setupScrollSync() {
       ticking = false;
     });
   }, { passive: true });
+
+  // 用户主动滚动时立即解除点击导航锁定，旧的年度高亮不会继续滞留。
+  const releaseForManualScroll = () => releaseNavScrollLockForManualScroll(main);
+  main.addEventListener('wheel', releaseForManualScroll, { passive: true });
+  main.addEventListener('touchstart', releaseForManualScroll, { passive: true });
+  main.addEventListener('pointerdown', releaseForManualScroll, { passive: true });
 
   const content = document.getElementById('contentArea');
   if (content && 'ResizeObserver' in window && !_contentResizeObserver) {
@@ -904,6 +941,7 @@ function insertNewCardInSection(entry, sel) {
   const sectionId = sel.sectionId;
   const groupName = sel.groupName;
   const groupId = getGroupId(sectionId, groupName);
+  const preserveEntryId = searchQuery ? searchResults[searchIndex]?.dataset.entryId : '';
   const sectionEl = document.getElementById('section-' + sectionId);
   if (!sectionEl) { _lastContentHtml = ''; renderContent(); return; }
 
@@ -938,23 +976,11 @@ function insertNewCardInSection(entry, sel) {
   observeCoverThumbnails(newCard);
   animateCardChange(newCard);
   allCards.push({ card: newCard, entry: entry });
-  // 搜索态下：匹配则加入导航、不匹配则隐藏
+  // 搜索态下：不匹配的新卡片隐藏，匹配结果稍后按 DOM 顺序同步。
   if (searchQuery) {
-    if (matchesFilter(entry)) {
-      searchResults.push(newCard);
-      const nextBtn = document.getElementById('searchNextBtn');
-      const prevBtn = document.getElementById('searchPrevBtn');
-      if (nextBtn) nextBtn.style.display = 'flex';
-      if (prevBtn) prevBtn.style.display = 'flex';
-      const counter = document.getElementById('searchCounter');
-      if (counter && counter.textContent) {
-        const parts = counter.textContent.split('/');
-        if (parts.length === 2) counter.textContent = (parseInt(parts[0]) + 1) + '/' + (parseInt(parts[1]) + 1);
-      }
-    } else {
-      newCard.classList.add('hidden');
-    }
+    if (!matchesFilter(entry)) newCard.classList.add('hidden');
   }
+  if (searchQuery) syncSearchResultsInDomOrder(preserveEntryId);
   _lastContentHtml = '';
 }
 
@@ -1012,6 +1038,7 @@ function reorderGroupCards(entry, sel) {
 
       // 重建被编辑的卡片（可能类型变了：aoty ↔ 普通）
       const oldCard = list.querySelector('[data-entry-id="' + entry.id + '"]');
+      const preserveEntryId = searchQuery ? searchResults[searchIndex]?.dataset.entryId : '';
       if (oldCard) oldCard.remove();
       const isAoty = entry.isAoty || entry.isSoty;
       const tmp = document.createElement('div');
@@ -1026,22 +1053,9 @@ function reorderGroupCards(entry, sel) {
       else allCards.push({ card: newCard, entry: entry });
       const srIdx = searchResults.indexOf(oldCard);
       if (srIdx !== -1) searchResults[srIdx] = newCard;
-      // 新条目：检查是否匹配当前搜索
+      // 新条目：不匹配当前搜索时隐藏，匹配结果在 DOM 重排后统一同步。
       if (!cached && searchQuery) {
-        if (matchesFilter(entry)) {
-          searchResults.push(newCard);
-          const sb = document.getElementById('searchNextBtn');
-          if (sb) sb.style.display = 'flex';
-          const pb = document.getElementById('searchPrevBtn');
-          if (pb) pb.style.display = 'flex';
-          const counter = document.getElementById('searchCounter');
-          if (counter && counter.textContent) {
-            const parts = counter.textContent.split('/');
-            if (parts.length === 2) counter.textContent = (parseInt(parts[0]) + 1) + '/' + (parseInt(parts[1]) + 1);
-          }
-        } else {
-          newCard.classList.add('hidden');
-        }
+        if (!matchesFilter(entry)) newCard.classList.add('hidden');
       }
 
       // 按排序顺序重排整个 group 的 DOM
@@ -1058,6 +1072,7 @@ function reorderGroupCards(entry, sel) {
       // 更新序号
       const normalCards = list.querySelectorAll('.album-card[data-group="' + groupId + '"]');
       normalCards.forEach((c, i) => { const el = c.querySelector('.album-index'); if (el) el.textContent = i + 1; });
+      if (searchQuery) syncSearchResultsInDomOrder(preserveEntryId);
       _lastContentHtml = '';
       return;
     }

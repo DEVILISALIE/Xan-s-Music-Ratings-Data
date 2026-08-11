@@ -17,7 +17,7 @@
 
 前往 [GitHub Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 Windows MSI 安装包。
 
-当前版本：`v1.4.2`
+当前版本：`v1.4.3`
 
 ## 把几十年的音乐放在一张时间轴上
 
@@ -218,6 +218,8 @@ node gen.js path/to/source.txt
 生成器会更新 `desktop-ui/index.html` 中的 `__MUSIC_DATA__`，并写入被 Git 忽略的 `desktop-ui/data.json`。`Vol. N - YYYY` 分区会自动合并到对应年份。
 
 ## 最近版本
+
+`v1.4.3` 修复搜索结果中新增符合关键词的专辑或单曲后，上下切换按钮固定把新条目放在结果末尾的问题，使切换顺序继续遵循发行时间和当前卡片排序规则。
 
 `v1.4.2` 修复侧边栏年份分组导航的卡片定位，确保第一张可见卡片贴在顶部工具栏下方，并修复连续点击时旧平滑滚动和延迟校准互相干扰的问题。完整变更与安装包见 [v1.4.2 Release](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases/tag/v1.4.2)。
 
