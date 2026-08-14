@@ -123,6 +123,41 @@
 
 滚动路径针对高刷新率显示器做了专门优化：固定面板保留真实毛玻璃，卡片减少昂贵的逐项模糊，封面按需加载，导航位置使用缓存和二分查找。标题栏可选显示平均 FPS 与 `1% LOW`，便于直接观察运行状态。
 
+## 每一个交互都有明确、细腻的手感反馈
+
+界面的动效与光标设计遵循 Apple 与 Emil Kowalski 设计工程准则，不做无意义的装饰，而是为用户的每一次视线移动、悬停与点击提供精准的物理反馈。
+
+<table>
+  <tr>
+    <td width="30%" align="center" valign="top">
+      <a href="docs/screenshots/cursor-arrow.png"><img src="docs/screenshots/cursor-arrow.png" alt="macOS 默认光标" height="64"></a>
+      <br><strong>精准箭头</strong>
+      <br><sub>经典黑底白边带柔和投影</sub>
+    </td>
+    <td width="30%" align="center" valign="top">
+      <a href="docs/screenshots/cursor-pointer.png"><img src="docs/screenshots/cursor-pointer.png" alt="macOS 白手套光标" height="64"></a>
+      <br><strong>白手套指针</strong>
+      <br><sub>按钮、卡片与交互元素</sub>
+    </td>
+    <td width="40%" align="center" valign="top">
+      <a href="docs/screenshots/cursor-text.png"><img src="docs/screenshots/cursor-text.png" alt="macOS 工字钢光标" height="64"></a>
+      <br><strong>Apple 工字钢 (I-Beam)</strong>
+      <br><sub>双向衬线挡角与高对比边缘</sub>
+    </td>
+  </tr>
+</table>
+
+应用内全场景接入了矢量级原生 macOS 光标体系：在窗口空白处保持经典白边箭头，在所有可点击卡片、标签、开关与按钮上自动切换为圆润白手套食指指针，而在任何标题、艺术家、分数输入框与搜索栏中，均呈现带有上下双向衬线挡角与高对比黑白双层的经典 Apple 工字钢光标。
+
+<p align="center">
+  <a href="docs/screenshots/stats-exploration.png">
+    <img src="docs/screenshots/stats-exploration.png" alt="分数分布柱状图与单行悬停探索" width="280">
+  </a>
+</p>
+<p align="center"><strong>数据动效与单行探索</strong><br><sub>柱状图阶梯延展、悬停分数段即时高亮、统计卡片等比弹性缩放与瞬时下压回弹</sub></p>
+
+右侧分数统计面板也融入了完整的设计工程动效：七档分布柱状图在渲染时采用 30ms 阶梯级联延展（`barGrow`）；悬停任意分数段时触发单行探索反馈（Row Exploration），柱状条增亮 15%、标签与计数微平移；统计卡片本身支持悬停等比弹性放大（`scale(1.03)`）与按压瞬时回弹（`scale(0.97)`），并在搜索模式下支持通过键盘 `↑` / `↓` 方向键丝滑循环翻页。
+
 ## 桌面版能力
 
 | 范围 | 能力 |
@@ -217,13 +252,5 @@ node gen.js path/to/source.txt
 ```
 
 生成器会更新 `desktop-ui/index.html` 中的 `__MUSIC_DATA__`，并写入被 Git 忽略的 `desktop-ui/data.json`。`Vol. N - YYYY` 分区会自动合并到对应年份。
-
-## 最近版本
-
-`v1.5.0` 全面引入原生 macOS 鼠标光标体系（经典黑白箭头、白手套指针、文本工字钢 I-Beam、拖拽抓手），并构建基于 Apple / Emil Kowalski 的设计工程微动效系统（统计面板阶梯延展与单行悬停探索、统计卡片等比缩放、年度统计自适应布局与编辑弹窗防闪烁优化）。
-
-`v1.4.3` 修复搜索结果中新增符合关键词的专辑或单曲后，上下切换按钮固定把新条目放在结果末尾的问题，使切换顺序继续遵循发行时间和当前卡片排序规则。
-
-`v1.4.2` 修复侧边栏年份分组导航的卡片定位，确保第一张可见卡片贴在顶部工具栏下方，并修复连续点击时旧平滑滚动和延迟校准互相干扰的问题。完整变更与安装包见 [v1.4.2 Release](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases/tag/v1.4.2)。
 
 <p align="center"><sub>点击 README 中的任意截图可查看原图。</sub></p>
