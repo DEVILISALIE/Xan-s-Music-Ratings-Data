@@ -912,7 +912,8 @@ function updateMustHearBadges() {
     const entry = findEntry(card.dataset.entryId);
     if (!entry) return;
     const existing = card.querySelector('.must-hear');
-    const shouldShow = mustHearEnabled && entry.score != null && entry.score >= mustHearThreshold;
+    const isSingles = card.dataset.group && card.dataset.group.toLowerCase().includes('singles');
+    const shouldShow = mustHearEnabled && !isSingles && entry.score != null && entry.score >= mustHearThreshold;
     if (shouldShow && !existing) {
       const span = document.createElement('span');
       span.className = 'must-hear';
@@ -1548,25 +1549,51 @@ function updateLangTexts() {
   renderSidebar();
 }
 
+function runWithoutTransitions(fn) {
+  const css = document.createElement('style');
+  css.textContent = `*, *::before, *::after {
+    -webkit-transition: none !important;
+    -moz-transition: none !important;
+    -o-transition: none !important;
+    -ms-transition: none !important;
+    transition: none !important;
+  }`;
+  document.head.appendChild(css);
+  try {
+    fn();
+  } finally {
+    void window.getComputedStyle(document.body);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (css.parentNode) document.head.removeChild(css);
+      });
+    });
+  }
+}
+
 function toggleTheme() {
-  const current = document.documentElement.getAttribute('data-theme');
-  const next = current === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem('theme', next);
-  const cb = document.getElementById('settingsThemeToggle');
-  if (cb) cb.checked = next === 'dark';
-  applyBgHue();
-  updateThemeColor();
+  runWithoutTransitions(() => {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    const cb = document.getElementById('settingsThemeToggle');
+    if (cb) cb.checked = next === 'dark';
+    applyBgHue();
+    updateThemeColor();
+  });
 }
 
 function toggleStyle() {
-  const current = document.documentElement.getAttribute('data-style') || 'solid';
-  const next = current === 'glass' ? 'solid' : 'glass';
-  document.documentElement.setAttribute('data-style', next);
-  localStorage.setItem('style', next);
-  const cb = document.getElementById('settingsStyleToggle');
-  if (cb) cb.checked = next === 'glass';
-  updateThemeColor();
+  runWithoutTransitions(() => {
+    const current = document.documentElement.getAttribute('data-style') || 'solid';
+    const next = current === 'glass' ? 'solid' : 'glass';
+    document.documentElement.setAttribute('data-style', next);
+    localStorage.setItem('style', next);
+    const cb = document.getElementById('settingsStyleToggle');
+    if (cb) cb.checked = next === 'glass';
+    updateThemeColor();
+  });
 }
 
 function updateThemeColor() {
@@ -1917,7 +1944,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.5.1");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.5.2");
         break;
     }
   });

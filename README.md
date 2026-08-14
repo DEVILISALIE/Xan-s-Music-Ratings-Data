@@ -17,7 +17,7 @@
 
 前往 [GitHub Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 Windows MSI 安装包。
 
-当前版本：`v1.5.1`
+当前版本：`v1.5.2`
 
 ## 把几十年的音乐放在一张时间轴上
 

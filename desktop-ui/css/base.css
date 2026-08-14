@@ -7,7 +7,7 @@
   --light-bg: #F2F2F7;
   --bg-hue-rotate: 0deg;
   --card-bg: #FFFFFF;
-  --sidebar-bg: rgba(242, 242, 247, 0.72);
+  --sidebar-bg: #F2F2F7;
   --text: #1C1C1E;
   --text-secondary: #8E8E93;
   --text-tertiary: #AEAEB2;
@@ -86,11 +86,13 @@ body {
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
-  transition: background-color 0.3s, color 0.3s;
   overflow: hidden;
   height: 100vh;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: optimizeLegibility;
 }
 
 /* 所有可交互元素使用 macOS Pointer 手型光标 */
@@ -190,7 +192,6 @@ textarea,
   background: linear-gradient(135deg, #c1dfc4 0%, #deecdd 30%, #d4e4f7 60%, #e8dff5 100%);
   z-index: -1;
   pointer-events: none;
-  transition: filter 0.3s ease;
 }
 
 /* 浅色毛玻璃：仅对大背景做色相偏移，不影响卡片等内容 */

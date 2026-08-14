@@ -8,7 +8,10 @@
   box-shadow: var(--card-shadow);
   margin-bottom: 6px;
   cursor: var(--cursor-pointer);
-  transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out), background-color var(--duration-modal) var(--ease-out);
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
   gap: 12px;
   touch-action: none;
   user-select: none;
@@ -22,8 +25,6 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
   position: relative;
   overflow: hidden;
-  will-change: transform;
-  contain: layout style paint;
 }
 
 [data-style="glass"] .aoty-card {
@@ -33,8 +34,6 @@
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.06);
   position: relative;
   overflow: hidden;
-  will-change: transform;
-  contain: layout style paint;
 }
 
 [data-style="glass"] .album-card:hover,
@@ -59,13 +58,14 @@
 }
 
 .album-card:hover {
-  transform: translateY(-2px) scale(1.012);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+  transform: scale(1.025);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .album-card:active {
-  transform: scale(0.985);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  transform: scale(0.97) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  transition: transform 80ms var(--ease-out), box-shadow 80ms var(--ease-out);
 }
 
 .album-card:focus-visible {
@@ -266,11 +266,20 @@
   border: 1.75px solid var(--aoty-border);
   margin-bottom: 12px;
   cursor: var(--cursor-pointer);
-  transition: transform var(--duration-fast) var(--ease-out);
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
 }
 
-.aoty-card:hover { transform: translateY(-1px); }
-.aoty-card:active { transform: scale(0.99); }
+.aoty-card:hover {
+  transform: scale(1.025);
+  box-shadow: 0 14px 44px rgba(0, 0, 0, 0.14), 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+.aoty-card:active {
+  transform: scale(0.97) !important;
+  transition: transform 80ms var(--ease-out), box-shadow 80ms var(--ease-out);
+}
 .aoty-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 .aoty-header {

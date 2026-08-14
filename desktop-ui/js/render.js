@@ -357,7 +357,7 @@ function renderSidebar() {
   let html = '';
   // 添加新年份按钮
   html += `<div style="padding:8px 16px;">
-    <button data-action="add-new-year" style="width:100%;padding:8px;border:1.5px dashed var(--separator);border-radius:10px;background:transparent;color:var(--accent);font-size:13px;font-weight:500;cursor:pointer;transition:background 0.15s;border-color 0.15s;">${t('sidebar.newYear')}</button>
+    <button class="sidebar-add-year-btn" data-action="add-new-year">${t('sidebar.newYear')}</button>
   </div>`;
   const mergedSections = getMergedSections();
   for (const section of mergedSections) {
@@ -845,7 +845,8 @@ function renderAlbumCard(entry, idx, sectionId, groupId, groupName, visible) {
   const { noteHtml, tagsBlock, trackHtml } = buildCardMeta(entry);
   const hiddenClass = visible ? '' : 'hidden';
   const hasReview = entry.review && entry.review.trim().length > 0;
-  const showMustHear = mustHearEnabled && groupName !== 'Singles' && entry.score != null && entry.score >= mustHearThreshold;
+  const isSingles = groupName === 'Singles' || (groupId && groupId.toLowerCase().includes('singles'));
+  const showMustHear = mustHearEnabled && !isSingles && entry.score != null && entry.score >= mustHearThreshold;
   const selectedClass = batchSelectedIds.has(entry.id) ? 'batch-selected' : '';
   const checkedClass = batchSelectedIds.has(entry.id) ? 'checked' : '';
 
