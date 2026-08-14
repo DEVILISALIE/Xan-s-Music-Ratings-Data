@@ -126,10 +126,10 @@ function renderTracks() {
       html += `<div class="track-row" data-track-index="${i}">
         <span class="track-num">${discNum}</span>
         <div class="track-name">
-          <input class="form-input track-name-input" placeholder="${t('modal.placeholder.track')}" value="${escapeHtml(tr.name)}">
+          <input class="form-input track-name-input" placeholder="${t('modal.placeholder.track')}" value="${escapeHtml(tr.name)}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
         </div>
         <div class="track-score">
-          <input class="form-input track-score-input" type="text" placeholder="—" value="${tr.score != null ? tr.score : ''}">
+          <input class="form-input track-score-input" type="text" placeholder="—" value="${tr.score != null ? tr.score : ''}" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
         </div>
         <button type="button" class="track-remove" data-action="remove-track" data-track-index="${i}">×</button>
       </div>`;

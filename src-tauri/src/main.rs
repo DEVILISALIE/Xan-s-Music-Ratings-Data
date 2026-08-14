@@ -566,6 +566,12 @@ mod tests {
 }
 
 fn main() {
+    // 全局禁用 WebView2 / Chromium 的自动填充与“保存的信息”浏览器提示
+    std::env::set_var(
+        "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
+        "--disable-features=AutofillServerCommunication,AutofillShowTypePredictions,AutofillAddressProfile,AutofillCreditCard,AutofillPasswordGeneration,Autofill --disable-save-password-bubble --disable-single-click-autofill --no-pings",
+    );
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())

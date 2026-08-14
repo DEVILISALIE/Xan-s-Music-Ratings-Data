@@ -62,7 +62,7 @@
     <div class="toolbar">
       <div class="search-box">
         <span class="search-icon">🔍</span>
-        <input type="text" id="searchInput" placeholder="Search title or artist…" data-i18n-placeholder="toolbar.search" aria-label="Search albums" autocomplete="off">
+        <input type="text" id="searchInput" placeholder="Search title or artist…" data-i18n-placeholder="toolbar.search" aria-label="Search albums" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
         <span class="search-counter" id="searchCounter"></span>
       </div>
       <div class="custom-select" id="tagFilter">
@@ -107,7 +107,7 @@
           </div>
           <div class="must-hear-input-row">
             <span data-i18n="toolbar.mustHearLabel">必听阈值</span>
-            <input type="number" id="mustHearInput" min="0" max="100" class="must-hear-input">
+            <input type="number" id="mustHearInput" min="0" max="100" class="must-hear-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
           </div>
           <button class="must-hear-save" id="mustHearSave" data-i18n="toolbar.mustHearSave">保存</button>
         </div>
@@ -263,25 +263,25 @@
     </div>
     <div class="form-group">
       <label class="form-label" data-i18n="modal.title">Title</label>
-      <input class="form-input" id="editTitle" name="title" autocomplete="off" placeholder="Album title…" data-i18n-placeholder="modal.placeholder.title">
+      <input class="form-input" id="editTitle" name="title" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="Album title…" data-i18n-placeholder="modal.placeholder.title">
     </div>
     <div class="form-group">
       <label class="form-label" data-i18n="modal.artist">Artist</label>
-      <input class="form-input" id="editArtist" name="artist" autocomplete="off" placeholder="Artist name…" data-i18n-placeholder="modal.placeholder.artist">
+      <input class="form-input" id="editArtist" name="artist" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="Artist name…" data-i18n-placeholder="modal.placeholder.artist">
     </div>
     <div class="form-row">
       <div class="form-group">
         <label class="form-label" data-i18n="modal.score">Score</label>
-        <input class="form-input" id="editScore" name="score" type="number" min="0" max="100" inputmode="numeric" placeholder="0–100" data-i18n-placeholder="modal.placeholder.score">
+        <input class="form-input" id="editScore" name="score" type="number" min="0" max="100" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="0–100" data-i18n-placeholder="modal.placeholder.score">
       </div>
       <div class="form-group">
         <label class="form-label" data-i18n="modal.date">Date</label>
-        <input class="form-input" id="editDate" name="date" autocomplete="off" placeholder="MM.DD" data-i18n-placeholder="modal.placeholder.date">
+        <input class="form-input" id="editDate" name="date" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="MM.DD" data-i18n-placeholder="modal.placeholder.date">
       </div>
     </div>
     <div class="form-group">
       <label class="form-label" data-i18n="modal.scoreNote">Score Note</label>
-      <input class="form-input" id="editScoreNote" name="scoreNote" autocomplete="off" placeholder="e.g. Top1, NR…" data-i18n-placeholder="modal.placeholder.note">
+      <input class="form-input" id="editScoreNote" name="scoreNote" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="e.g. Top1, NR…" data-i18n-placeholder="modal.placeholder.note">
     </div>
     <div class="form-group">
       <label class="form-label" data-i18n="modal.tags">Tags</label>
@@ -331,7 +331,7 @@
     </div>
     <div class="form-group">
       <label class="form-label" data-i18n="modal.review">Review / AOTY Write-up</label>
-      <textarea class="form-input" id="editReview" name="review" autocomplete="off" placeholder="Write your review here…" data-i18n-placeholder="modal.placeholder.review"></textarea>
+      <textarea class="form-input" id="editReview" name="review" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="Write your review here…" data-i18n-placeholder="modal.placeholder.review"></textarea>
     </div>
     <div class="modal-actions">
       <button class="modal-btn secondary" id="pasteBtn" data-action="paste-entry" data-i18n="modal.paste">Paste</button>

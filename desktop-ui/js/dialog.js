@@ -15,7 +15,7 @@ function showCustomDialog({ title, message, type, inputDefault, inputPlaceholder
     if (isPrompt) {
       contentHtml += '<input class="dialog-input" id="dialogInput" type="text" value="' +
         escapeHtml(inputDefault || '') + '" placeholder="' +
-        escapeHtml(inputPlaceholder || '') + '">';
+        escapeHtml(inputPlaceholder || '') + '" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">';
     }
 
     // 构建按钮

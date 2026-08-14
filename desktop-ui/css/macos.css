@@ -273,10 +273,23 @@
   background: var(--hover-bg);
 }
 
-[data-desktop="true"] .custom-select.open .custom-select-trigger {
+[data-desktop="true"] .custom-select.open .custom-select-trigger,
+[data-desktop="true"] .custom-select-trigger:focus,
+[data-desktop="true"] .custom-select-trigger:focus-visible,
+[data-desktop="true"] #tagFilter.open #tagFilterTrigger,
+[data-desktop="true"] #scoreFilter.open #scoreFilterTrigger,
+[data-desktop="true"] #mustHearSelect.open #mustHearTrigger,
+[data-desktop="true"] #tagFilterTrigger:focus,
+[data-desktop="true"] #scoreFilterTrigger:focus,
+[data-desktop="true"] #mustHearTrigger:focus,
+[data-desktop="true"] #tagFilterTrigger:focus-visible,
+[data-desktop="true"] #scoreFilterTrigger:focus-visible,
+[data-desktop="true"] #mustHearTrigger:focus-visible {
   background: var(--hover-bg);
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent);
+  outline: 2px solid var(--accent) !important;
+  outline-offset: -2px !important;
+  box-shadow: none !important;
 }
 
 [data-desktop="true"] .custom-select-trigger::after {
@@ -342,7 +355,7 @@
   font-size: 16px;
   border: 0.5px solid transparent;
   background: var(--input-bg);
-  transition: background 0.12s, border-color 0.12s;
+  transition: transform var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), outline var(--duration-fast) var(--ease-out);
   min-width: 0;
   text-align: center;
 }
@@ -576,18 +589,31 @@
   padding: 14px 18px;
   border-radius: 10px;
   border: 0.5px solid transparent;
-  transition: background 0.12s, border-color 0.12s, transform 0.12s;
+  transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
   margin-bottom: 4px;
+  will-change: transform;
 }
 
 [data-desktop="true"] .album-card:hover {
-  transform: none;
+  transform: translateY(-2px) scale(1.012);
   background: var(--hover-bg);
   border-color: var(--separator);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+[data-desktop="true"][data-style="glass"] .album-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.09), 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+[data-desktop="true"][data-style="glass"][data-theme="dark"] .album-card:hover {
+  background: rgba(56, 56, 60, 0.85);
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.36), 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 [data-desktop="true"] .album-card:active {
-  transform: scale(0.995);
+  transform: scale(0.985);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
 }
 
 [data-desktop="true"] .album-index {
@@ -619,6 +645,8 @@
   margin-bottom: 12px;
   border: 1.5px solid var(--aoty-border);
   background: var(--aoty-bg);
+  transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
+  will-change: transform;
 }
 
 /* 让 AOTY 卡片突破父容器宽度限制 */
@@ -633,7 +661,16 @@
 }
 
 [data-desktop="true"] .aoty-card:hover {
-  transform: none;
+  transform: translateY(-2px) scale(1.008);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.1), 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+[data-desktop="true"][data-theme="dark"] .aoty-card:hover {
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+[data-desktop="true"] .aoty-card:active {
+  transform: scale(0.99);
 }
 
 [data-desktop="true"] .aoty-badge {

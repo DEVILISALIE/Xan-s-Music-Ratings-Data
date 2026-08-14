@@ -395,10 +395,18 @@
 }
 
 .custom-select.open .custom-select-trigger,
-.custom-select-trigger:focus-visible {
+.custom-select-trigger:focus,
+.custom-select-trigger:focus-visible,
+#tagFilter.open #tagFilterTrigger,
+#scoreFilter.open #scoreFilterTrigger,
+#mustHearSelect.open #mustHearTrigger,
+#mustHearTrigger:focus,
+#mustHearTrigger:focus-visible {
   background: var(--hover-bg);
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  box-shadow: none;
 }
 
 @keyframes menuIn {

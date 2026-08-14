@@ -264,10 +264,12 @@ function closeAllDropdowns() {
   const tag = document.getElementById('tagFilter');
   const section = document.getElementById('editSectionSelect');
   const mustHear = document.getElementById('mustHearPopover');
+  const mustHearSelect = document.getElementById('mustHearSelect');
   const settings = document.getElementById('settingsSelect');
   if (score) score.classList.remove('open');
   if (tag) tag.classList.remove('open');
   if (section) section.classList.remove('open');
+  if (mustHearSelect) mustHearSelect.classList.remove('open');
   if (settings) settings.classList.remove('open');
 
   portalClose(document.getElementById('scoreFilterMenu'));
@@ -375,9 +377,11 @@ function schedulePortalReposition() {
 }
 
 function openMustHearPopover() {
+  const select = document.getElementById('mustHearSelect');
   const popover = document.getElementById('mustHearPopover');
   const trigger = document.getElementById('mustHearTrigger');
   if (!popover || !trigger) return;
+  if (select) select.classList.add('open');
   // 与按钮同宽，左对齐
   portalOpen(popover, trigger, {
     openClass: 'open',
@@ -699,12 +703,15 @@ function bindStaticButtons() {
       !e.target.closest('#mustHearSelect') &&
       !e.target.closest('#mustHearPopover') &&
       (document.getElementById('mustHearPopover')?.classList.contains('open') ||
-        document.getElementById('mustHearPopover')?.classList.contains('portal-open'))
+        document.getElementById('mustHearPopover')?.classList.contains('portal-open') ||
+        document.getElementById('mustHearSelect')?.classList.contains('open'))
     ) {
       const input = document.getElementById('mustHearInput');
       const toggle = document.getElementById('mustHearToggle');
       if (input) input.value = mustHearThreshold;
       if (toggle) toggle.checked = mustHearEnabled;
+      const select = document.getElementById('mustHearSelect');
+      if (select) select.classList.remove('open');
       portalClose(document.getElementById('mustHearPopover'), { openClass: 'open' });
     }
   });
@@ -890,6 +897,8 @@ function bindMustHear() {
       localStorage.setItem('mustHearThreshold', v);
     }
     trigger.textContent = t('toolbar.mustHear');
+    const select = document.getElementById('mustHearSelect');
+    if (select) select.classList.remove('open');
     portalClose(popover, { openClass: 'open' });
     // 只更新 Must Hear 标记，不全量重建 DOM
     updateMustHearBadges();
@@ -1908,7 +1917,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.5.0");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.5.1");
         break;
     }
   });
@@ -1918,6 +1927,18 @@ init();
     try { await saveData(); } catch (_) {}
     invoke('graceful_exit');
   });
+
+  // 全局禁用所有输入控件的浏览器历史记录与自动填充弹窗（"保存的信息"）
+  document.addEventListener('focusin', (e) => {
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+      e.target.setAttribute('autocomplete', 'off');
+      e.target.setAttribute('autocorrect', 'off');
+      e.target.setAttribute('autocapitalize', 'off');
+      e.target.setAttribute('spellcheck', 'false');
+      e.target.setAttribute('data-lpignore', 'true');
+      e.target.setAttribute('data-form-type', 'other');
+    }
+  }, true);
 
   console.log('[Tauri] 桌面版功能已加载');
 })();
