@@ -101,12 +101,12 @@
 }
 
 [data-desktop="true"] .nav-group-header {
-  padding: 7px 20px;
+  padding: 8px 14px 4px;
   font-size: 16px;
   font-weight: 600;
   color: var(--text-tertiary);
   letter-spacing: 0.6px;
-  cursor: default;
+  cursor: var(--cursor-default);
   user-select: none;
   margin-top: 4px;
 }
@@ -195,7 +195,7 @@
   font-size: 14px;
   font-weight: 500;
   font-family: inherit;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   transition: background 0.12s, opacity 0.12s;
 }
 
@@ -261,7 +261,7 @@
   font-size: 16px;
   border: 0.5px solid transparent;
   background: var(--input-bg);
-  transition: background 0.12s, border-color 0.12s;
+  transition: transform var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
   width: 140px;
 }
 
@@ -276,6 +276,7 @@
 [data-desktop="true"] .custom-select.open .custom-select-trigger {
   background: var(--hover-bg);
   border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
 }
 
 [data-desktop="true"] .custom-select-trigger::after {
@@ -728,6 +729,21 @@
   border-color: var(--accent);
 }
 
+[data-desktop="true"] #editSectionGroup .custom-select-trigger {
+  padding: 10px 36px 10px 14px;
+  border-radius: 10px;
+  font-size: 17px;
+  border: 0.5px solid var(--separator);
+  width: 100%;
+  transition: transform var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+}
+
+[data-desktop="true"] #editSectionGroup .custom-select.open .custom-select-trigger,
+[data-desktop="true"] #editSectionGroup .custom-select-trigger:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
 [data-desktop="true"] .form-tag {
   padding: 6px 14px;
   border-radius: 16px;
@@ -745,6 +761,37 @@
 [data-desktop="true"] .modal-handle {
   width: 38px;
   height: 5px;
+}
+
+[data-desktop="true"] .track-num {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  font-size: 14px;
+  border: 0.5px solid var(--separator);
+}
+
+[data-desktop="true"][data-style="glass"] .track-num {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+[data-desktop="true"][data-style="glass"][data-theme="dark"] .track-num {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+[data-desktop="true"] .cover-btn {
+  padding: 6px 14px;
+  font-size: 14px;
+  border-radius: 8px;
+  border: 0.5px solid var(--separator);
+}
+
+[data-desktop="true"][data-style="glass"] .cover-btn {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+[data-desktop="true"][data-style="glass"][data-theme="dark"] .cover-btn {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 [data-desktop="true"] .track-add {
@@ -863,7 +910,7 @@
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-bottom: 0.5px solid var(--separator);
   user-select: none;
-  cursor: default;
+  cursor: var(--cursor-default);
 }
 
 [data-desktop="true"] .titlebar-version {
@@ -899,7 +946,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   transition: background 0.1s, color 0.1s;
   -webkit-app-region: no-drag;
 }
@@ -967,7 +1014,7 @@
   justify-content: space-between;
   padding: 7px 14px;
   border-radius: 6px;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   color: var(--text);
   transition: background 0.1s;
 }
@@ -1021,6 +1068,16 @@
 }
 
 /* 全局右侧统计面板（固定不滚动） */
+
+@keyframes barGrow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
 [data-desktop="true"] .global-stats-sidebar {
   position: fixed;
   right: 20px;
@@ -1040,6 +1097,26 @@
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+  cursor: var(--cursor-pointer);
+  user-select: none;
+  -webkit-user-select: none;
+  transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
+}
+
+[data-desktop="true"] .stats-card:hover {
+  transform: scale(1.03);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.12);
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+[data-desktop="true"][data-theme="dark"] .stats-card:hover {
+  border-color: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 10px 36px rgba(0, 0, 0, 0.45);
+}
+
+[data-desktop="true"] .stats-card:active {
+  transform: scale(0.97) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 [data-desktop="true"] .stats-card-title {
@@ -1062,6 +1139,11 @@
   font-weight: 700;
   color: var(--text);
   letter-spacing: -0.5px;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+[data-desktop="true"] .stats-card:hover .stats-avg-value {
+  color: var(--accent);
 }
 
 [data-desktop="true"] .stats-avg-label {
@@ -1072,13 +1154,21 @@
 [data-desktop="true"] .stats-dist {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
 }
 
 [data-desktop="true"] .stats-row {
   display: flex;
   align-items: center;
   gap: 6px;
+  padding: 2px 4px;
+  margin: 0 -4px;
+  border-radius: 6px;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+[data-desktop="true"] .stats-row:hover {
+  background: var(--hover-bg);
 }
 
 [data-desktop="true"] .stats-label {
@@ -1088,6 +1178,11 @@
   text-align: right;
   flex-shrink: 0;
   white-space: nowrap;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+[data-desktop="true"] .stats-row:hover .stats-label {
+  color: var(--text);
 }
 
 [data-desktop="true"] .stats-bar-track {
@@ -1102,7 +1197,21 @@
   height: 100%;
   border-radius: 3px;
   background: var(--accent);
-  transition: width 0.3s ease;
+  transform-origin: left center;
+  animation: barGrow 360ms var(--ease-out) both;
+  transition: width 350ms var(--ease-out), filter var(--duration-fast) var(--ease-out);
+}
+
+[data-desktop="true"] .stats-row:nth-child(1) .stats-bar { animation-delay: 0.04s; }
+[data-desktop="true"] .stats-row:nth-child(2) .stats-bar { animation-delay: 0.07s; }
+[data-desktop="true"] .stats-row:nth-child(3) .stats-bar { animation-delay: 0.10s; }
+[data-desktop="true"] .stats-row:nth-child(4) .stats-bar { animation-delay: 0.13s; }
+[data-desktop="true"] .stats-row:nth-child(5) .stats-bar { animation-delay: 0.16s; }
+[data-desktop="true"] .stats-row:nth-child(6) .stats-bar { animation-delay: 0.19s; }
+[data-desktop="true"] .stats-row:nth-child(7) .stats-bar { animation-delay: 0.22s; }
+
+[data-desktop="true"] .stats-row:hover .stats-bar {
+  filter: brightness(1.15);
 }
 
 [data-desktop="true"] .stats-count {
@@ -1111,11 +1220,26 @@
   color: var(--text-secondary);
   text-align: left;
   flex-shrink: 0;
+  transition: color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+}
+
+[data-desktop="true"] .stats-row:hover .stats-count {
+  color: var(--text);
+  font-weight: 600;
+  transform: translateX(1px);
 }
 
 /* ===== macOS Yearly Stats Modal ===== */
 [data-desktop="true"] .yearly-stats-list {
   max-height: 55vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+[data-desktop="true"] .yearly-stats-row {
+  width: 100%;
+  box-sizing: border-box;
 }
 
 [data-desktop="true"] .yearly-stats-year {
@@ -1126,6 +1250,7 @@
 [data-desktop="true"] .yearly-stats-bar-track {
   height: 10px;
   border-radius: 5px;
+  min-width: 0;
 }
 
 [data-desktop="true"] .yearly-stats-bar {
@@ -1141,4 +1266,90 @@
   margin-top: 8px;
   font-size: 11px;
   color: var(--text-tertiary);
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+/* ===== Universal macOS Cursor System ===== */
+[data-desktop="true"],
+[data-desktop="true"] body {
+  cursor: var(--cursor-default);
+}
+
+/* 统一所有可点击/可交互元素为 macOS 经典白手套指针 */
+[data-desktop="true"] button,
+[data-desktop="true"] a,
+[data-desktop="true"] [role="button"],
+[data-desktop="true"] [data-action],
+[data-desktop="true"] .album-card,
+[data-desktop="true"] .aoty-card,
+[data-desktop="true"] .stats-card,
+[data-desktop="true"] .pill,
+[data-desktop="true"] .nav-item,
+[data-desktop="true"] .nav-group-header,
+[data-desktop="true"] .nav-group-delete,
+[data-desktop="true"] .custom-select-trigger,
+[data-desktop="true"] .custom-select-option,
+[data-desktop="true"] .form-tag,
+[data-desktop="true"] .toggle-switch,
+[data-desktop="true"] .toggle-switch *,
+[data-desktop="true"] .modal-btn,
+[data-desktop="true"] .dialog-btn,
+[data-desktop="true"] .cover-btn,
+[data-desktop="true"] .fab,
+[data-desktop="true"] .fab-search-next,
+[data-desktop="true"] .fab-search-prev,
+[data-desktop="true"] .track-add,
+[data-desktop="true"] .track-remove,
+[data-desktop="true"] .track-add-inline,
+[data-desktop="true"] .track-batch-add,
+[data-desktop="true"] .batch-bar-btn,
+[data-desktop="true"] .batch-checkbox,
+[data-desktop="true"] .batch-dropdown-item,
+[data-desktop="true"] .card-copy-btn,
+[data-desktop="true"] .search-clear,
+[data-desktop="true"] .sidebar-footer button,
+[data-desktop="true"] .theme-toggle,
+[data-desktop="true"] .settings-btn,
+[data-desktop="true"] .settings-item,
+[data-desktop="true"] .settings-item-click,
+[data-desktop="true"] .modal-handle,
+[data-desktop="true"] .must-hear-save,
+[data-desktop="true"] .must-hear-pill,
+[data-desktop="true"] .must-hear-close,
+[data-desktop="true"] .cover-remove-item,
+[data-desktop="true"] .context-menu-item,
+[data-desktop="true"] .review-toggle,
+[data-desktop="true"] .yearly-stats-row,
+[data-desktop="true"] .stats-row,
+[data-desktop="true"] .titlebar-btn,
+[data-desktop="true"] [style*="cursor: pointer"],
+[data-desktop="true"] [style*="cursor:pointer"] {
+  cursor: var(--cursor-pointer) !important;
+}
+
+/* 统一所有输入与编辑框为 macOS 工字钢光标 (I-Beam) */
+[data-desktop="true"] input[type="text"],
+[data-desktop="true"] input[type="number"],
+[data-desktop="true"] input[type="search"],
+[data-desktop="true"] input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="hidden"]),
+[data-desktop="true"] textarea,
+[data-desktop="true"] .form-input,
+[data-desktop="true"] .search-box input,
+[data-desktop="true"] .dialog-input,
+[data-desktop="true"] .must-hear-input,
+[data-desktop="true"] [contenteditable="true"],
+[data-desktop="true"] [style*="cursor: text"],
+[data-desktop="true"] [style*="cursor:text"] {
+  cursor: var(--cursor-text) !important;
+}
+
+/* 统一拖拽与平移为 macOS 抓手光标 */
+[data-desktop="true"] .viewer-img-wrap.zoomed {
+  cursor: var(--cursor-grab) !important;
+}
+[data-desktop="true"] .viewer-img-wrap.dragging,
+[data-desktop="true"] .drag-ghost,
+[data-desktop="true"] .content.is-dragging,
+[data-desktop="true"] .content.is-dragging * {
+  cursor: var(--cursor-grabbing) !important;
 }

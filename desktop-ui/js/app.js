@@ -1614,6 +1614,20 @@ document.addEventListener('keydown', (e) => {
     e.preventDefault();
     saveEntry();
   }
+  
+  if (searchQuery && !document.getElementById('editModal').classList.contains('active')) {
+    const isInput = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+    const isSearchInput = e.target.id === 'searchInput';
+    if (!isInput || isSearchInput) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        goToNextResult();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        goToPrevResult();
+      }
+    }
+  }
 });
 
 // 年度统计弹窗：点击遮罩关闭
@@ -1894,7 +1908,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.4.3");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.5.0");
         break;
     }
   });

@@ -28,6 +28,21 @@
   --fab-bg: #007AFF;
   --fab-text: #FFFFFF;
   --export-bg: rgba(0,0,0,0.04);
+
+  /* Motion & Easing Tokens (Emil Kowalski / Apple Design Engineering) */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --duration-fast: 120ms;
+  --duration-normal: 180ms;
+  --duration-modal: 220ms;
+
+  /* macOS Cursor Tokens */
+  --cursor-default: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M4.5 1.5 L4.5 19.5 L8.8 15.2 L11.8 22.2 L14.8 20.8 L11.8 13.8 L17.5 13.8 Z' fill='%23000000' stroke='%23FFFFFF' stroke-width='1.6' stroke-linejoin='round'/%3E%3C/svg%3E") 4 1, default;
+  --cursor-pointer: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M7.5 2 C6.7 2 6 2.7 6 3.5 L6 11.8 C5.4 11.2 4.6 10.8 3.8 10.8 C2.8 10.8 2 11.6 2 12.5 C2 13.2 2.8 14.2 4.2 16 C5.5 17.8 6.8 21 11 21 C15.5 21 17.5 17.5 17.5 13 L17.5 9.5 C17.5 8.7 16.8 8 16 8 C15.6 8 15.2 8.2 14.9 8.5 C14.6 7.6 13.8 7 12.9 7 C12.6 7 12.3 7.1 12 7.3 C11.7 6.5 10.9 6 10 6 C9.8 6 9.6 6 9.4 6.1 L9.4 3.5 C9.4 2.7 8.7 2 7.9 2 Z' fill='%23FFFFFF' stroke='%23000000' stroke-width='1.3' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E") 6 2, pointer;
+  --cursor-text: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M7 4.5 h10 M7 4.5 v2.5 M17 4.5 v2.5 M12 4.5 v15 M7 19.5 h10 M7 19.5 v-2.5 M17 19.5 v-2.5' fill='none' stroke='%23FFFFFF' stroke-width='3.2' stroke-linecap='square' stroke-linejoin='miter'/%3E%3Cpath d='M7 4.5 h10 M7 4.5 v2.5 M17 4.5 v2.5 M12 4.5 v15 M7 19.5 h10 M7 19.5 v-2.5 M17 19.5 v-2.5' fill='none' stroke='%23000000' stroke-width='1.3' stroke-linecap='square' stroke-linejoin='miter'/%3E%3C/svg%3E") 12 12, text;
+  --cursor-grab: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M9 5 C9 4.2 9.7 3.5 10.5 3.5 C11.3 3.5 12 4.2 12 5 L12 9 C12 8.2 12.7 7.5 13.5 7.5 C14.3 7.5 15 8.2 15 9 L15 9.5 C15 8.7 15.7 8 16.5 8 C17.3 8 18 8.7 18 9.5 L18 10 C18 9.2 18.7 8.5 19.5 8.5 C20.3 8.5 21 9.2 21 10 L21 14 C21 18 18 20.5 14 20.5 C10.5 20.5 7.5 18.5 6.5 15 L5.5 11.5 C5.2 10.6 5.8 9.8 6.7 9.6 C7.6 9.4 8.5 10 8.8 11 L9.5 13.5 Z' fill='%23FFFFFF' stroke='%23000000' stroke-width='1.3' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E") 12 12, grab;
+  --cursor-grabbing: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Cpath d='M8 10 C8 8.8 9.2 8 10.5 8.8 C11.5 8 12.8 8 13.8 8.8 C14.8 8 16 8.2 17 9.2 C18 8.8 19.2 9.2 19.2 10.5 L19.2 14 C19.2 18 16.5 20.5 13 20.5 C9.5 20.5 7 18.5 6 15 L5.8 13 C5.5 11.8 6.5 10.5 7.8 10.5 Z' fill='%23FFFFFF' stroke='%23000000' stroke-width='1.3' stroke-linejoin='round' stroke-linecap='round'/%3E%3C/svg%3E") 12 12, grabbing;
 }
 
 [data-theme="dark"] {
@@ -62,6 +77,10 @@ html { scroll-behavior: smooth; }
   outline-offset: 2px;
 }
 
+html, body {
+  cursor: var(--cursor-default);
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
   background: var(--bg);
@@ -72,6 +91,71 @@ body {
   height: 100vh;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+}
+
+/* 所有可交互元素使用 macOS Pointer 手型光标 */
+button,
+a,
+[role="button"],
+.album-card,
+.aoty-card,
+.stats-card,
+.pill,
+.nav-item,
+.custom-select-trigger,
+.custom-select-option,
+.form-tag,
+.toggle-switch,
+.toggle-switch input,
+.modal-btn,
+.dialog-btn,
+.cover-btn,
+.fab,
+.fab-search-next,
+.track-add,
+.track-remove,
+.track-add-inline,
+.track-batch-add,
+.batch-bar-btn,
+.batch-checkbox,
+.batch-dropdown-item,
+.card-copy-btn,
+.search-clear,
+.sidebar-footer button,
+.theme-toggle,
+.settings-btn,
+.settings-item,
+.settings-item-click,
+.modal-handle,
+.must-hear-save,
+.cover-remove-item,
+.context-menu-item {
+  cursor: var(--cursor-pointer);
+}
+
+/* 所有文本输入与编辑框使用 macOS 工字钢光标 (I-Beam) */
+input[type="text"],
+input[type="number"],
+input[type="search"],
+input:not([type="checkbox"]):not([type="radio"]):not([type="button"]):not([type="submit"]):not([type="hidden"]),
+textarea,
+.form-input,
+.search-box input,
+.dialog-input,
+.must-hear-input,
+[contenteditable="true"] {
+  cursor: var(--cursor-text);
+}
+
+/* 拖拽与图片查看器 macOS 抓手光标 */
+.viewer-img-wrap.zoomed {
+  cursor: var(--cursor-grab);
+}
+.viewer-img-wrap.dragging,
+.drag-ghost,
+.content.is-dragging,
+.content.is-dragging * {
+  cursor: var(--cursor-grabbing) !important;
 }
 
 /* 浅色纯色模式：可用调色盘改写 --light-bg */
