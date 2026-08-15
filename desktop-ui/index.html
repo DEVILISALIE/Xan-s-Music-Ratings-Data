@@ -107,7 +107,17 @@
           </div>
           <div class="must-hear-input-row">
             <span data-i18n="toolbar.mustHearLabel">必听阈值</span>
-            <input type="number" id="mustHearInput" min="0" max="100" class="must-hear-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
+            <div class="stepper-input-wrap must-hear-stepper-wrap">
+              <input type="number" id="mustHearInput" min="0" max="100" class="must-hear-input" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
+              <div class="stepper-controls">
+                <button type="button" class="stepper-btn stepper-btn-up" data-action="must-hear-step-up" tabindex="-1" aria-label="Increase threshold">
+                  <svg viewBox="0 0 10 6" class="stepper-icon" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 4.5L5 1.5L8.5 4.5"/></svg>
+                </button>
+                <button type="button" class="stepper-btn stepper-btn-down" data-action="must-hear-step-down" tabindex="-1" aria-label="Decrease threshold">
+                  <svg viewBox="0 0 10 6" class="stepper-icon" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 1.5L5 4.5L8.5 1.5"/></svg>
+                </button>
+              </div>
+            </div>
           </div>
           <button class="must-hear-save" id="mustHearSave" data-i18n="toolbar.mustHearSave">保存</button>
         </div>
@@ -272,7 +282,17 @@
     <div class="form-row">
       <div class="form-group">
         <label class="form-label" data-i18n="modal.score">Score</label>
-        <input class="form-input" id="editScore" name="score" type="number" min="0" max="100" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="0–100" data-i18n-placeholder="modal.placeholder.score">
+        <div class="stepper-input-wrap">
+          <input class="form-input" id="editScore" name="score" type="number" min="0" max="100" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="0–100" data-i18n-placeholder="modal.placeholder.score">
+          <div class="stepper-controls">
+            <button type="button" class="stepper-btn stepper-btn-up" data-action="score-step-up" tabindex="-1" aria-label="Increase score">
+              <svg viewBox="0 0 10 6" class="stepper-icon" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 4.5L5 1.5L8.5 4.5"/></svg>
+            </button>
+            <button type="button" class="stepper-btn stepper-btn-down" data-action="score-step-down" tabindex="-1" aria-label="Decrease score">
+              <svg viewBox="0 0 10 6" class="stepper-icon" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 1.5L5 4.5L8.5 1.5"/></svg>
+            </button>
+          </div>
+        </div>
       </div>
       <div class="form-group">
         <label class="form-label" data-i18n="modal.date">Date</label>

@@ -17,12 +17,15 @@ function showToast(message) {
   });
 }
 
+let currentModalCover = null;
+
 function openEditModal(entryId, sectionId, groupId) {
   const entry = findEntry(entryId);
   if (!entry) return;
 
   editingEntry = entry;
   editingGroupId = groupId;
+  currentModalCover = entry.cover || null;
 
   document.getElementById('modalTitle').textContent = t('modal.editTitle');
   document.getElementById('editId').value = entry.id;
@@ -59,9 +62,11 @@ function openEditModal(entryId, sectionId, groupId) {
 function openAddModal() {
   editingEntry = null;
   editingGroupId = null;
+  currentModalCover = null;
 
+  const newId = generateId();
   document.getElementById('modalTitle').textContent = t('modal.addTitle');
-  document.getElementById('editId').value = '';
+  document.getElementById('editId').value = newId;
   document.getElementById('editSectionId').value = '';
   document.getElementById('editTitle').value = '';
   document.getElementById('editArtist').value = '';
@@ -89,6 +94,7 @@ function openAddModal() {
 function closeModal() {
   document.getElementById('editModal').classList.remove('active');
   releaseCoverPreview();
+  currentModalCover = null;
   document.getElementById('editSectionSelect').classList.remove('open');
   const sectionMenu = document.getElementById('editSectionMenu');
   const coverDd = document.getElementById('coverRemoveDropdown');
@@ -277,8 +283,13 @@ async function saveEntry() {
   let sel;
   try { sel = JSON.parse(selectedSectionValue); } catch (_) { closeModal(); return; }
 
-  const scoreVal = document.getElementById('editScore').value;
-  const score = scoreVal !== '' ? parseInt(scoreVal) : null;
+  const scoreVal = document.getElementById('editScore').value.trim();
+  let score = scoreVal !== '' ? parseInt(scoreVal, 10) : null;
+  if (score !== null && !isNaN(score)) {
+    score = Math.max(0, Math.min(100, score));
+  } else {
+    score = null;
+  }
   const tags = [];
   document.querySelectorAll('#editTags .form-tag.active').forEach(t => tags.push(t.dataset.tag));
 
@@ -286,10 +297,11 @@ async function saveEntry() {
     id: document.getElementById('editId').value || generateId(),
     title: title,
     artist: document.getElementById('editArtist').value.trim(),
-    score: isNaN(score) ? null : score,
+    score: score,
     scoreNote: document.getElementById('editScoreNote').value.trim(),
     date: document.getElementById('editDate').value.trim(),
     tags: tags,
+    cover: currentModalCover !== null ? currentModalCover : (editingEntry ? editingEntry.cover || null : null),
     review: document.getElementById('editReview').value,
     isAoty: document.getElementById('editAotyToggle').checked,
     isSoty: document.getElementById('editSotyToggle').checked,
@@ -434,6 +446,13 @@ async function deleteEntry() {
   const confirmed = await showConfirm(t('dialog.deleteEntry'), t('dialog.deleteEntryMsg'));
   if (!confirmed) return;
 
+  const deletedId = editingEntry.id;
+  if (window.__TAURI__ && deletedId) {
+    try {
+      await window.__TAURI__.core.invoke('remove_cover', { entryId: deletedId });
+    } catch (_) {}
+  }
+
   debugAotyCount('deleteEntry 开始');
   console.log('[Delete] 删除:', editingEntry.title, 'isAoty:', editingEntry.isAoty, 'id:', editingEntry.id);
 
@@ -466,7 +485,22 @@ function updateAotyLabel() {
 
 // ===== 复制粘贴 =====
 
-function copyEntry(entry) {
+function copyEntry(entry, sectionId, groupName) {
+  if (!sectionId || !groupName) {
+    for (const sec of (appData?.sections || [])) {
+      for (const grp of sec.groups) {
+        if (grp.entries.some(e => e.id === entry.id)) {
+          sectionId = sec.id;
+          groupName = grp.name;
+          break;
+        }
+      }
+      if (sectionId) break;
+    }
+  }
+
+  const isUrlCover = entry.cover && /^https?:\/\//i.test(entry.cover);
+
   clipboardEntry = {
     title: entry.title || '',
     artist: entry.artist || '',
@@ -477,8 +511,11 @@ function copyEntry(entry) {
     review: entry.review || '',
     isAoty: !!entry.isAoty,
     isSoty: !!entry.isSoty,
+    cover: isUrlCover ? entry.cover : null,
     tracks: (entry.tracks || []).map(t => ({ ...t, disc: t.disc || 1 })),
-    notes: entry.notes || ''
+    notes: entry.notes || '',
+    sectionId: sectionId || '',
+    groupName: groupName || (entry.isSoty ? 'Singles' : 'Albums')
   };
   showToast(currentLang === 'zh' ? (entry.title || '已复制') : (entry.title || 'Copied'));
 }
@@ -500,6 +537,31 @@ function pasteEntry() {
     tag.classList.toggle('active', c.tags.includes(tag.dataset.tag));
   });
 
+  document.getElementById('editAotyToggle').checked = !!c.isAoty;
+  document.getElementById('editSotyToggle').checked = !!c.isSoty;
+
+  // 恢复复制时的 URL 封面
+  if (c.cover && /^https?:\/\//i.test(c.cover)) {
+    currentModalCover = c.cover;
+    const currentEntryId = document.getElementById('editId').value || generateId();
+    loadCoverPreview(c.cover, currentEntryId);
+  }
+
+  // 恢复复制时的年份分区
+  if (c.sectionId && c.groupName) {
+    const val = JSON.stringify({ sectionId: c.sectionId, groupName: c.groupName });
+    selectedSectionValue = val;
+    const menu = document.getElementById('editSectionMenu');
+    const trigger = document.getElementById('editSectionTrigger');
+    if (menu && trigger) {
+      const activeOpt = [...menu.querySelectorAll('.custom-select-option')].find(o => o.dataset.value === val);
+      if (activeOpt) {
+        trigger.textContent = activeOpt.textContent;
+        menu.querySelectorAll('.custom-select-option').forEach(o => o.classList.toggle('active', o.dataset.value === val));
+      }
+    }
+  }
+
   editingTracks = c.tracks.map(t => ({ ...t }));
   renderTracks();
 
@@ -515,38 +577,15 @@ function loadCoverPreview(cover, entryId) {
   const img = document.getElementById('coverPreview');
   const removeWrap = document.getElementById('coverRemoveWrap');
   const requestId = ++coverPreviewRequestId;
-  img.src = '';
-  img.style.width = '';
-  img.style.height = '';
-
-  // 等比缩放：撑满表单宽度，高度按原图比例
-  function fitImage() {
-    const modal = document.querySelector('.modal');
-    if (!modal) return;
-    const containerW = modal.clientWidth - 48; // 减去 modal padding 24*2
-    const naturalW = img.naturalWidth;
-    const naturalH = img.naturalHeight;
-    if (!containerW || !naturalW || !naturalH) return;
-    const ratio = naturalH / naturalW;
-    img.style.width = containerW + 'px';
-    img.style.height = Math.round(containerW * ratio) + 'px';
-  }
-
-  img.onload = function() {
-    // 弹窗打开动画 0.25s 后再计算，确保 layout 完成
-    setTimeout(fitImage, 300);
-  };
 
   if (!cover) {
     wrap.style.display = 'none';
     img.src = '';
-    img.style.width = '';
-    img.style.height = '';
     removeWrap.style.display = 'none';
     return;
   }
 
-  if (cover.startsWith('http')) {
+  if (/^https?:\/\//i.test(cover)) {
     img.src = cover;
     wrap.style.display = '';
     removeWrap.style.display = '';
@@ -554,7 +593,7 @@ function loadCoverPreview(cover, entryId) {
     wrap.style.display = 'none';
     removeWrap.style.display = 'none';
     window.__TAURI__.core.invoke('read_cover', { entryId: entryId }).then(dataUrl => {
-      if (requestId === coverPreviewRequestId && editingEntry?.id === entryId) {
+      if (requestId === coverPreviewRequestId && (editingEntry?.id === entryId || document.getElementById('editId').value === entryId)) {
         img.src = dataUrl;
         wrap.style.display = '';
         removeWrap.style.display = '';
@@ -574,8 +613,6 @@ function releaseCoverPreview() {
   const img = document.getElementById('coverPreview');
   img.onload = null;
   img.src = '';
-  img.style.width = '';
-  img.style.height = '';
   const viewerImg = document.getElementById('coverViewerImg');
   if (viewerImg) viewerImg.src = '';
 }
@@ -592,7 +629,12 @@ function setupCoverEvents() {
 
   // 本地上传
   section.querySelector('[data-action="cover-upload"]').addEventListener('click', async () => {
-    if (!window.__TAURI__ || !editingEntry) return;
+    if (!window.__TAURI__) return;
+    let entryId = document.getElementById('editId').value;
+    if (!entryId) {
+      entryId = generateId();
+      document.getElementById('editId').value = entryId;
+    }
     try {
       const { open } = window.__TAURI_PLUGIN_DIALOG__;
       const selected = await open({
@@ -601,12 +643,13 @@ function setupCoverEvents() {
       });
       if (!selected) return;
       const filename = await window.__TAURI__.core.invoke('upload_cover', {
-        entryId: editingEntry.id,
+        entryId: entryId,
         sourcePath: selected
       });
-      editingEntry.cover = filename;
-      invalidateCoverThumbnail(editingEntry.id);
-      loadCoverPreview(filename, editingEntry.id);
+      currentModalCover = filename;
+      if (editingEntry) editingEntry.cover = filename;
+      invalidateCoverThumbnail(entryId);
+      loadCoverPreview(filename, entryId);
     } catch (err) {
       console.error('封面上传失败:', err);
     }
@@ -614,12 +657,37 @@ function setupCoverEvents() {
 
   // URL 输入
   section.querySelector('[data-action="cover-url"]').addEventListener('click', async () => {
-    if (!editingEntry) return;
-    const url = await showPrompt(t('modal.coverUrl'), '', '', 'https://...');
-    if (!url || !url.trim()) return;
-    editingEntry.cover = url.trim();
-    invalidateCoverThumbnail(editingEntry.id);
-    loadCoverPreview(url.trim(), editingEntry.id);
+    let entryId = document.getElementById('editId').value;
+    if (!entryId) {
+      entryId = generateId();
+      document.getElementById('editId').value = entryId;
+    }
+    // 若当前已有 URL 封面，默认写入当前 URL 方便查看或复制
+    let currentUrl = '';
+    if (currentModalCover && /^https?:\/\//i.test(currentModalCover)) {
+      currentUrl = currentModalCover;
+    } else if (editingEntry && editingEntry.cover && /^https?:\/\//i.test(editingEntry.cover)) {
+      currentUrl = editingEntry.cover;
+    }
+    const url = await showPrompt(t('modal.coverUrl'), '', currentUrl, 'https://...');
+    if (url === null) return; // 用户取消
+    if (!url.trim()) {
+      // 用户清空并确认，则移除 URL 封面
+      currentModalCover = null;
+      if (editingEntry) editingEntry.cover = null;
+      invalidateCoverThumbnail(entryId);
+      loadCoverPreview(null, entryId);
+      return;
+    }
+    let cleanUrl = url.trim();
+    // 无论是直接粘贴纯域名图片链接还是带 http/https，均可正确识别
+    if (!/^https?:\/\//i.test(cleanUrl)) {
+      cleanUrl = 'https://' + cleanUrl;
+    }
+    currentModalCover = cleanUrl;
+    if (editingEntry) editingEntry.cover = cleanUrl;
+    invalidateCoverThumbnail(entryId);
+    loadCoverPreview(cleanUrl, entryId);
   });
 
   // 移除 — 显示确认 dropdown
@@ -640,14 +708,15 @@ function setupCoverEvents() {
 
   // 确认移除
   section.querySelector('[data-action="cover-remove-confirm"]').addEventListener('click', async () => {
-    if (!editingEntry) return;
-    if (window.__TAURI__) {
+    const entryId = document.getElementById('editId').value;
+    if (window.__TAURI__ && entryId) {
       try {
-        await window.__TAURI__.core.invoke('remove_cover', { entryId: editingEntry.id });
+        await window.__TAURI__.core.invoke('remove_cover', { entryId: entryId });
       } catch (_) {}
     }
-    editingEntry.cover = null;
-    invalidateCoverThumbnail(editingEntry.id);
+    currentModalCover = null;
+    if (editingEntry) editingEntry.cover = null;
+    if (entryId) invalidateCoverThumbnail(entryId);
     clearCoverPreview();
     const dropdown = document.getElementById('coverRemoveDropdown');
     if (typeof portalClose === 'function') portalClose(dropdown, { openClass: 'active' });
@@ -758,10 +827,13 @@ function setupCoverEvents() {
     }
   });
 
-  // Escape 关闭
+  // Escape 关闭放大查看器（捕获阶段拦截，防止关闭下层编辑弹窗）
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && viewer.classList.contains('active')) {
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      e.preventDefault();
       closeCoverViewer();
     }
-  });
+  }, true);
 }

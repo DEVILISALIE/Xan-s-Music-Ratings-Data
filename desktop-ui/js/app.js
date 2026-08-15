@@ -501,6 +501,7 @@ async function init() {
       if (isDev()) logMsg('[Init] 警告: appData 无真实数据，跳过保存');
     }
   } catch (e) {
+    console.error('Init error:', e);
     document.getElementById('contentArea').innerHTML =
       '<div style="padding:40px;text-align:center;color:var(--text-secondary)">' +
       '<p style="font-size:18px;margin-bottom:8px">' + t('error.loadData') + '</p>' +
@@ -544,6 +545,59 @@ function bindStaticButtons() {
       pasteEntry();
     } else {
       showAlert(currentLang === 'zh' ? '剪贴板为空，请先复制一张卡片' : 'Clipboard is empty. Copy a card first.');
+    }
+  });
+
+  // 分数 Stepper 微调按钮（支持单击与长按连续步进）
+  function setupStepper(btnSelector, inputId, delta, min = 0, max = 100, defaultVal = 0) {
+    const btn = document.querySelector(btnSelector);
+    if (!btn) return;
+    const step = () => {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      let val = parseInt(input.value, 10);
+      if (isNaN(val)) {
+        val = delta > 0 ? (defaultVal + delta) : defaultVal;
+      } else {
+        val = Math.max(min, Math.min(max, val + delta));
+      }
+      input.value = val;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    };
+
+    let timer = null;
+    let interval = null;
+    const start = (e) => {
+      e.preventDefault();
+      step();
+      timer = setTimeout(() => {
+        interval = setInterval(step, 80);
+      }, 350);
+    };
+    const stop = () => {
+      if (timer) clearTimeout(timer);
+      if (interval) clearInterval(interval);
+      timer = null;
+      interval = null;
+    };
+    btn.addEventListener('pointerdown', start);
+    btn.addEventListener('pointerup', stop);
+    btn.addEventListener('pointerleave', stop);
+    btn.addEventListener('pointercancel', stop);
+    btn.addEventListener('click', (e) => e.preventDefault());
+  }
+
+  setupStepper('[data-action="score-step-up"]', 'editScore', 1, 0, 100, 0);
+  setupStepper('[data-action="score-step-down"]', 'editScore', -1, 0, 100, 0);
+  setupStepper('[data-action="must-hear-step-up"]', 'mustHearInput', 1, 0, 100, 80);
+  setupStepper('[data-action="must-hear-step-down"]', 'mustHearInput', -1, 0, 100, 80);
+
+  // 必听阈值回车快捷保存
+  document.getElementById('mustHearInput')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.getElementById('mustHearSave')?.click();
     }
   });
 
@@ -1034,9 +1088,38 @@ function bindModalTrackButtons() {
 function bindContentArea() {
   const contentArea = document.getElementById('contentArea');
 
+  // 阻止复制按钮触发拖拽或卡片激活位移
+  contentArea.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('[data-action="copy-entry"]')) {
+      e.stopPropagation();
+    }
+  });
+
+  contentArea.addEventListener('mousedown', (e) => {
+    if (e.target.closest('[data-action="copy-entry"]')) {
+      e.stopPropagation();
+    }
+  });
+
   contentArea.addEventListener('click', (e) => {
-    // 复制按钮不触发放大/其他操作
-    if (e.target.closest('[data-action="copy-entry"]')) return;
+    // 复制按钮优先响应并阻断卡片打开
+    const copyBtn = e.target.closest('[data-action="copy-entry"]');
+    if (copyBtn) {
+      e.stopPropagation();
+      e.preventDefault();
+      const entryId = copyBtn.dataset.entryId;
+      const entry = findEntry(entryId);
+      const card = copyBtn.closest('.album-card, .aoty-card');
+      const sectionId = card ? card.dataset.section : null;
+      const groupId = card ? card.dataset.group : null;
+      let groupName = null;
+      if (groupId) {
+        groupName = groupId.toLowerCase().includes('singles') ? 'Singles' : 'Albums';
+      }
+      if (entry) copyEntry(entry, sectionId, groupName);
+      return;
+    }
+
     const reviewToggle = e.target.closest('[data-action="toggle-review"]');
     if (reviewToggle) {
       e.stopPropagation();
@@ -1093,36 +1176,31 @@ function bindContentArea() {
       openEditModal(card.dataset.entryId, card.dataset.section, card.dataset.group);
     }
   });
-
-  // 复制卡片
-  contentArea.addEventListener('click', (e) => {
-    const copyBtn = e.target.closest('[data-action="copy-entry"]');
-    if (!copyBtn) return;
-    e.stopPropagation();
-    const entryId = copyBtn.dataset.entryId;
-    const entry = findEntry(entryId);
-    if (entry) copyEntry(entry);
-  });
 }
 
 // ===== 批量操作 =====
 
 function toggleBatchMode() {
-  batchMode = !batchMode;
+  if (batchMode) {
+    cancelBatchMode();
+    return;
+  }
+  batchMode = true;
   batchSelectedIds.clear();
+  window._lastBatchClickId = null;
   const batchBar = document.getElementById('batchBar');
   const contentArea = document.getElementById('contentArea');
   const fab = document.querySelector('.fab');
   const searchNextBtn = document.getElementById('searchNextBtn');
   const searchPrevBtn = document.getElementById('searchPrevBtn');
 
-  batchBar.classList.toggle('active', batchMode);
-  contentArea.classList.toggle('batch-mode', batchMode);
+  batchBar.classList.add('active');
+  contentArea.classList.add('batch-mode');
   const batchVal = document.getElementById('settingsBatchValue');
-  if (batchVal) batchVal.textContent = batchMode ? 'ON' : 'OFF';
+  if (batchVal) batchVal.textContent = 'ON';
 
   // 隐藏 FAB 按钮
-  if (fab) fab.style.display = batchMode ? 'none' : 'flex';
+  if (fab) fab.style.display = 'none';
   if (searchNextBtn) searchNextBtn.style.display = 'none';
   if (searchPrevBtn) searchPrevBtn.style.display = 'none';
 
@@ -1132,9 +1210,7 @@ function toggleBatchMode() {
   updateBatchBar();
 
   // 填充移动菜单
-  if (batchMode) {
-    populateBatchMoveMenu();
-  }
+  populateBatchMoveMenu();
 }
 
 function cancelBatchMode() {
@@ -1208,6 +1284,13 @@ async function batchDelete() {
 
   debugAotyCount('batchDelete 开始');
   console.log('[BatchDelete] 删除', batchSelectedIds.size, '个条目');
+
+  // 清理所有被删除条目的本地封面文件与缩略图
+  if (window.__TAURI__) {
+    for (const id of batchSelectedIds) {
+      window.__TAURI__.core.invoke('remove_cover', { entryId: id }).catch(() => {});
+    }
+  }
 
   for (const section of appData.sections) {
     for (const group of section.groups) {
@@ -1300,29 +1383,33 @@ async function batchMoveToSection(targetSectionId) {
   console.log('[BatchMove] 移动', batchSelectedIds.size, '个条目到', targetSectionId);
 
   const targetSection = findOrCreateSection(targetSectionId);
-  let targetGroup = targetSection.groups.find(g => g.name === 'Albums');
-  if (!targetGroup) {
-    targetGroup = { name: 'Albums', entries: [] };
-    targetSection.groups.push(targetGroup);
-  }
 
-  // 收集选中的条目并从原位置移除
-  const entriesToMove = [];
+  // 收集选中的条目及其原始分组并从原位置移除
+  const itemsToMove = [];
   for (const section of appData.sections) {
     for (const group of section.groups) {
       for (let i = group.entries.length - 1; i >= 0; i--) {
         if (batchSelectedIds.has(group.entries[i].id)) {
           const entry = group.entries.splice(i, 1)[0];
           console.log('[BatchMove] 取出:', entry.title, 'isAoty:', entry.isAoty, 'from', section.id, group.name);
-          entriesToMove.push(entry);
+          itemsToMove.push({ entry, groupName: group.name });
         }
       }
     }
   }
 
-  // 添加到目标位置
-  targetGroup.entries.push(...entriesToMove);
-  console.log('[BatchMove] 目标组现在有', targetGroup.entries.length, '个条目');
+  // 保持原有相对顺序
+  itemsToMove.reverse();
+
+  // 添加到目标 section 对应的分组中（Albums 归入 Albums，Singles 归入 Singles）
+  for (const item of itemsToMove) {
+    let targetGroup = targetSection.groups.find(g => g.name === item.groupName);
+    if (!targetGroup) {
+      targetGroup = { name: item.groupName, entries: [] };
+      targetSection.groups.push(targetGroup);
+    }
+    targetGroup.entries.push(item.entry);
+  }
 
   batchSelectedIds.clear();
   debugAotyCount('batchMove 添加后');
@@ -1642,6 +1729,54 @@ document.addEventListener('click', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
+  // 核心组合快捷键 (Ctrl 或 Meta)
+  if (e.ctrlKey || e.metaKey) {
+    const key = e.key.toLowerCase();
+    if (key === 's') {
+      e.preventDefault();
+      exportJSON();
+      return;
+    }
+    if (key === 'o') {
+      e.preventDefault();
+      importJSON();
+      return;
+    }
+    if (key === 'd') {
+      e.preventDefault();
+      toggleTheme();
+      return;
+    }
+    if (key === 'g') {
+      e.preventDefault();
+      toggleStyle();
+      return;
+    }
+    if (key === 'k') {
+      e.preventDefault();
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) {
+        searchInput.focus();
+        searchInput.select();
+      }
+      return;
+    }
+    if (key === 'n') {
+      e.preventDefault();
+      if (!document.getElementById('editModal').classList.contains('active')) {
+        openAddModal();
+      }
+      return;
+    }
+    if (key === 't') {
+      e.preventDefault();
+      if (typeof window.toggleTopmostApp === 'function') {
+        window.toggleTopmostApp();
+      }
+      return;
+    }
+  }
+
   if (e.key === 'Escape') {
     closeModal();
     document.getElementById('yearlyStatsModal').classList.remove('active');
@@ -1755,7 +1890,18 @@ function handleImport(e) {
             if (entry.score != null) entry.score = Math.max(0, Math.min(100, parseInt(entry.score) || 0));
             if (!Array.isArray(entry.tags)) entry.tags = [];
             if (!Array.isArray(entry.tracks)) entry.tracks = [];
-            for (const tr of entry.tracks) { if (!tr.disc) tr.disc = 1; }
+            for (const tr of entry.tracks) {
+              if (typeof tr.name !== 'string') tr.name = String(tr.name || '');
+              if (!tr.disc || typeof tr.disc !== 'number' || tr.disc < 1) tr.disc = 1;
+              if (tr.score === 'NR') {
+                tr.score = 'NR';
+              } else if (tr.score != null && tr.score !== '') {
+                const trn = parseInt(tr.score, 10);
+                tr.score = (!isNaN(trn) && trn >= 0 && trn <= 100) ? trn : null;
+              } else {
+                tr.score = null;
+              }
+            }
             if (typeof entry.review !== 'string') entry.review = String(entry.review || '');
             if (typeof entry.scoreNote !== 'string') entry.scoreNote = String(entry.scoreNote || '');
             if (typeof entry.date !== 'string') entry.date = String(entry.date || '');
@@ -1807,12 +1953,27 @@ init();
   const restoreSvg = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1"><rect x="2" y="0.5" width="7.5" height="7.5" rx="1"/><rect x="0.5" y="2" width="7.5" height="7.5" rx="1" fill="var(--card-bg, #fff)"/></svg>';
   let isTopmost = false;
 
-  pinBtn?.addEventListener('click', () => {
-    invoke('toggle_topmost');
-    isTopmost = !isTopmost;
-    pinBtn.innerHTML = isTopmost ? pinFilled : pinEmpty;
-    pinBtn.classList.toggle('active', isTopmost);
-  });
+  function updateTopmostUI(top) {
+    if (typeof top === 'boolean') isTopmost = top;
+    if (pinBtn) {
+      pinBtn.innerHTML = isTopmost ? pinFilled : pinEmpty;
+      pinBtn.classList.toggle('active', isTopmost);
+    }
+  }
+
+  async function toggleTopmostAction() {
+    try {
+      const next = await invoke('toggle_topmost');
+      updateTopmostUI(next);
+    } catch (_) {}
+  }
+
+  window.toggleTopmostApp = toggleTopmostAction;
+
+  // 初始化置顶状态
+  invoke('is_window_topmost').then(updateTopmostUI).catch(() => {});
+
+  pinBtn?.addEventListener('click', toggleTopmostAction);
 
   async function updateMaximizeIcon() {
     if (!maximizeBtn) return;
@@ -1872,17 +2033,6 @@ init();
   const ctxMaximizeItem = document.getElementById('ctxMaximizeItem');
   const ctxTopmostItem = document.getElementById('ctxTopmostItem');
 
-  function updateCtxMenuLabels() {
-    try {
-      Promise.all([invoke('is_window_maximized'), invoke('is_window_fullscreen')]).then(([isMax, isFs]) => {
-        ctxMaximizeItem.childNodes[0].textContent = (isMax || isFs) ? '还原' : '最大化';
-      });
-      invoke('toggle_topmost').then(() => {
-        // toggle_topmost 是切换，需要先查询状态。用另一个方式
-      });
-    } catch (_) {}
-  }
-
   // 禁止系统右键菜单，显示自定义菜单
   document.addEventListener('contextmenu', (e) => {
     e.preventDefault();
@@ -1923,7 +2073,7 @@ init();
     const action = item.dataset.action;
     if (action === 'ctx-minimize') invoke('minimize_window');
     else if (action === 'ctx-maximize') invoke('toggle_maximize').then(updateMaximizeIcon);
-    else if (action === 'ctx-topmost') invoke('toggle_topmost');
+    else if (action === 'ctx-topmost') toggleTopmostAction();
     else if (action === 'ctx-close') invoke('close_window');
     ctxMenu.classList.remove('open');
   });
@@ -1940,11 +2090,17 @@ init();
       case 'toggle-theme': toggleTheme(); break;
       case 'toggle-style': toggleStyle(); break;
       case 'new-album': openAddModal(); break;
+      case 'topmost-enabled': updateTopmostUI(true); break;
+      case 'topmost-disabled': updateTopmostUI(false); break;
+      case 'toggle-topmost':
+      case 'tray_topmost':
+        toggleTopmostAction();
+        break;
       case 'focus-search':
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.5.2");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.5.3");
         break;
     }
   });
@@ -1966,6 +2122,28 @@ init();
       e.target.setAttribute('data-form-type', 'other');
     }
   }, true);
+
+  // 切到后台时主动释放工作集物理内存
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden && window.__TAURI__) {
+      invoke('trim_memory').catch(() => {});
+    }
+  });
+
+  // 启动时静默清理未引用的孤儿封面
+  if (typeof appData !== 'undefined' && appData && Array.isArray(appData.sections)) {
+    const allValidIds = [];
+    for (const sec of appData.sections) {
+      for (const grp of (sec.groups || [])) {
+        for (const en of (grp.entries || [])) {
+          if (en && en.id) allValidIds.push(en.id);
+        }
+      }
+    }
+    if (allValidIds.length > 0) {
+      invoke('clean_orphan_covers', { validEntryIds: allValidIds }).catch(() => {});
+    }
+  }
 
   console.log('[Tauri] 桌面版功能已加载');
 })();

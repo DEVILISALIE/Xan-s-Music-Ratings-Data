@@ -71,7 +71,6 @@ const I18N = {
     'modal.coverRemoveConfirm': 'Confirm',
     'modal.coverRemoveCancel': 'Cancel',
     'modal.coverUrlPrompt': 'Enter image URL:',
-    'modal.paste': 'Paste',
     'modal.placeholder.title': 'Album title…',
     'modal.placeholder.artist': 'Artist name…',
     'modal.placeholder.score': '0–100',

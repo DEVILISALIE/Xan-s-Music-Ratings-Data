@@ -149,6 +149,17 @@ textarea,
   cursor: var(--cursor-text);
 }
 
+/* 隐藏原生数字输入框默认的白色/方块 spin button */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 /* 拖拽与图片查看器 macOS 抓手光标 */
 .viewer-img-wrap.zoomed {
   cursor: var(--cursor-grab);

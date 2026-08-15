@@ -5,31 +5,8 @@ let _lastContentHtml = '';
 // 卡片只缓存小尺寸缩略图，原图由编辑弹窗按需读取并在关闭时释放
 const coverThumbnailCache = new Map();
 const coverThumbnailLoads = new Map();
-const COVER_THUMBNAIL_CACHE_LIMIT = 96;
-const COVER_THUMBNAIL_LOAD_CONCURRENCY = 1;
-const coverThumbnailQueue = [];
-let activeCoverThumbnailLoads = 0;
+const COVER_THUMBNAIL_CACHE_LIMIT = 64;
 let coverThumbnailObserver = null;
-
-function drainCoverThumbnailQueue() {
-  while (activeCoverThumbnailLoads < COVER_THUMBNAIL_LOAD_CONCURRENCY && coverThumbnailQueue.length > 0) {
-    const task = coverThumbnailQueue.shift();
-    activeCoverThumbnailLoads++;
-    window.__TAURI__.core.invoke('read_cover_thumbnail', { entryId: task.entryId })
-      .then(task.resolve, task.reject)
-      .finally(() => {
-        activeCoverThumbnailLoads--;
-        drainCoverThumbnailQueue();
-      });
-  }
-}
-
-function requestCoverThumbnail(entryId) {
-  return new Promise((resolve, reject) => {
-    coverThumbnailQueue.push({ entryId, resolve, reject });
-    drainCoverThumbnailQueue();
-  });
-}
 
 function cacheCoverThumbnail(entryId, dataUrl) {
   coverThumbnailCache.delete(entryId);
@@ -41,46 +18,61 @@ function cacheCoverThumbnail(entryId, dataUrl) {
 
 function invalidateCoverThumbnail(entryId) {
   coverThumbnailCache.delete(entryId);
+  coverThumbnailLoads.delete(entryId);
 }
 
 function applyCoverThumbnail(entryId, dataUrl) {
-  document.querySelectorAll('.album-cover-thumb[data-cover-id]').forEach(img => {
-    if (img.dataset.coverId === entryId) {
-      img.src = dataUrl;
-      img.removeAttribute('data-cover-id');
-    }
+  document.querySelectorAll(`.album-cover-thumb[data-cover-id="${entryId}"]`).forEach(img => {
+    img.src = dataUrl;
+    img.removeAttribute('data-cover-id');
   });
 }
 
 async function loadLocalCoverThumbnail(entryId) {
   const cached = coverThumbnailCache.get(entryId);
   if (cached) {
-    cacheCoverThumbnail(entryId, cached);
     applyCoverThumbnail(entryId, cached);
     return;
   }
 
-  let request = coverThumbnailLoads.get(entryId);
-  if (!request) {
-    request = requestCoverThumbnail(entryId);
-    coverThumbnailLoads.set(entryId, request);
+  if (coverThumbnailLoads.has(entryId)) {
+    try {
+      const dataUrl = await coverThumbnailLoads.get(entryId);
+      if (dataUrl) applyCoverThumbnail(entryId, dataUrl);
+    } catch (_) {}
+    return;
   }
+
+  const loadPromise = (async () => {
+    if (!window.__TAURI__?.core?.invoke) {
+      throw new Error('Tauri not ready');
+    }
+    try {
+      return await window.__TAURI__.core.invoke('read_cover_thumbnail', { entryId });
+    } catch (_) {
+      return await window.__TAURI__.core.invoke('read_cover', { entryId });
+    }
+  })();
+
+  coverThumbnailLoads.set(entryId, loadPromise);
+
   try {
-    const dataUrl = await request;
-    cacheCoverThumbnail(entryId, dataUrl);
-    applyCoverThumbnail(entryId, dataUrl);
+    const dataUrl = await loadPromise;
+    if (dataUrl) {
+      cacheCoverThumbnail(entryId, dataUrl);
+      applyCoverThumbnail(entryId, dataUrl);
+    }
   } catch (_) {
-    document.querySelectorAll('.album-cover-thumb[data-cover-id]').forEach(img => {
-      if (img.dataset.coverId === entryId) img.classList.add('cover-load-failed');
+    document.querySelectorAll(`.album-cover-thumb[data-cover-id="${entryId}"]`).forEach(img => {
+      img.classList.add('cover-load-failed');
     });
   } finally {
-    if (coverThumbnailLoads.get(entryId) === request) {
-      coverThumbnailLoads.delete(entryId);
-    }
+    coverThumbnailLoads.delete(entryId);
   }
 }
 
 function loadObservedCover(img) {
+  if (!img) return;
   const remoteUrl = img.dataset.coverUrl;
   if (remoteUrl) {
     img.src = remoteUrl;
@@ -88,11 +80,16 @@ function loadObservedCover(img) {
     return;
   }
   const entryId = img.dataset.coverId;
-  if (entryId && window.__TAURI__) loadLocalCoverThumbnail(entryId);
+  if (entryId) {
+    loadLocalCoverThumbnail(entryId);
+  }
 }
 
 function observeCoverThumbnails(root) {
-  const images = root.querySelectorAll('.album-cover-thumb[data-cover-id], .album-cover-thumb[data-cover-url]');
+  const container = root || document.getElementById('contentArea') || document.body;
+  const images = container.querySelectorAll('.album-cover-thumb[data-cover-id], .album-cover-thumb[data-cover-url]');
+  if (!images.length) return;
+
   if (!('IntersectionObserver' in window)) {
     images.forEach(loadObservedCover);
     return;
@@ -105,8 +102,7 @@ function observeCoverThumbnails(root) {
         loadObservedCover(entry.target);
       }
     }, {
-      root: document.getElementById('mainContent'),
-      rootMargin: '160px 0px'
+      rootMargin: '200px 0px'
     });
   }
   images.forEach(img => coverThumbnailObserver.observe(img));
@@ -785,8 +781,16 @@ function openYearlyStats(type) {
     }
   }
 
-  // 按年份从新到旧排序
-  rows.sort((a, b) => b.year.localeCompare(a.year));
+  // 按年份从新到旧排序（统一年代与具体年份解析降序规则）
+  rows.sort((a, b) => {
+    const ya = parseInt(a.year), yb = parseInt(b.year);
+    const na = isNaN(ya), nb = isNaN(yb);
+    if (na && nb) return b.year.localeCompare(a.year);
+    if (na) return 1;
+    if (nb) return -1;
+    if (ya !== yb) return yb - ya;
+    return b.year.localeCompare(a.year);
+  });
 
   if (rows.length === 0) return;
 
@@ -816,7 +820,7 @@ function openYearlyStats(type) {
 // 支持懒加载：缓存未命中时异步获取并就地更新
 function getCoverHtml(entry) {
   if (!entry.cover) return '';
-  if (entry.cover.startsWith('http')) {
+  if (/^https?:\/\//i.test(entry.cover)) {
     return '<img class="album-cover-thumb" data-cover-url="' + escapeHtml(entry.cover) + '" alt="" loading="lazy">';
   }
   const cached = coverThumbnailCache.get(entry.id);
@@ -1170,6 +1174,17 @@ async function deleteYearSection(sectionId) {
     });
   });
   if (!confirmed) return;
+
+  if (window.__TAURI__) {
+    const deletedSections = appData.sections.filter(s => s.id === sectionId);
+    for (const sec of deletedSections) {
+      for (const grp of sec.groups) {
+        for (const en of grp.entries) {
+          window.__TAURI__.core.invoke('remove_cover', { entryId: en.id }).catch(() => {});
+        }
+      }
+    }
+  }
 
   appData.sections = appData.sections.filter(s => s.id !== sectionId);
 

@@ -222,10 +222,12 @@ document.addEventListener('DOMContentLoaded', () => {
   // ===== Pointer Handlers =====
 
   function onPointerDown(e) {
+    if (batchMode) return;
+    if (searchQuery || (currentFilter && currentFilter.length > 0) || currentScoreFilter !== 'all') return;
     const card = e.target.closest('.album-card');
     if (!card) return;
     if (card.classList.contains('aoty-card')) return;
-    if (e.target.closest('button, a, .tag, .review-indicator, .score-badge')) return;
+    if (e.target.closest('button, a, .tag, .review-indicator, .score-badge, .batch-checkbox')) return;
 
     const rect = card.getBoundingClientRect();
 

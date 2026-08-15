@@ -351,7 +351,13 @@
   color: #B0B0B4;
 }
 
-.search-box input:focus-visible { background: var(--input-bg); box-shadow: 0 0 0 2px var(--accent); }
+.search-box input:focus,
+.search-box input:focus-visible {
+  background: var(--input-bg);
+  outline: 2px solid var(--accent) !important;
+  outline-offset: -2px !important;
+  box-shadow: none !important;
+}
 
 .search-box .search-icon {
   position: absolute;
@@ -898,19 +904,39 @@
   color: var(--text-secondary);
 }
 
+.must-hear-stepper-wrap {
+  width: 74px;
+}
+
 .must-hear-input {
-  width: 56px;
-  padding: 6px 8px;
+  width: 100%;
+  padding: 6px 24px 6px 10px;
   border: none;
   border-radius: 8px;
   background: var(--input-bg);
   color: var(--text);
   font-size: 15px;
-  text-align: center;
+  text-align: left;
   font-family: inherit;
   font-variant-numeric: tabular-nums;
   outline: none;
   transition: box-shadow 0.2s;
+}
+
+.must-hear-stepper-wrap .stepper-controls {
+  right: 5px;
+  width: 16px;
+  height: 24px;
+}
+
+.must-hear-stepper-wrap .stepper-btn {
+  width: 16px;
+  height: 11px;
+}
+
+.must-hear-stepper-wrap .stepper-icon {
+  width: 8px;
+  height: 4px;
 }
 
 [data-style="glass"] .must-hear-input {
@@ -1006,7 +1032,7 @@
 }
 
 .theme-toggle:hover .settings-gear-icon {
-  animation: gearSpin 0.9s var(--ease-out) forwards;
+  animation: gearSpin 1.5s var(--ease-out) forwards;
 }
 
 .theme-toggle:active {

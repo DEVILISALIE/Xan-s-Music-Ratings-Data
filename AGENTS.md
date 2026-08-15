@@ -113,7 +113,7 @@ npm run tauri build              # 构建 MSI 安装包
 - 桌面版 localStorage 域名与网页版隔离，需单独导入一次数据
 - `build-frontend.js` 构建时将 index.html/css/js/data.json 复制到 dist/，Tauri 打包进二进制
 - Tauri 插件：dialog、fs、global-shortcut、shell、single-instance
-- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.5.2`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.5.2`
+- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.5.3`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.5.3`
 
 **macOS 原生鼠标光标体系（v1.5.0）**：应用内统一使用纯矢量 macOS 原生风格光标：
 - `--cursor-default`：macOS 经典白边黑底箭头（带柔和投影）

@@ -54,7 +54,9 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
             "tray_topmost" => {
                 if let Some(win) = get_main_window(app) {
                     let is_top = win.is_always_on_top().unwrap_or(false);
-                    let _ = win.set_always_on_top(!is_top);
+                    let next = !is_top;
+                    let _ = win.set_always_on_top(next);
+                    emit_menu_action(app, if next { "topmost-enabled" } else { "topmost-disabled" });
                 }
             }
             "tray_theme" => emit_menu_action(app, "toggle-theme"),
@@ -102,11 +104,22 @@ fn get_app_version(app: AppHandle) -> String {
 }
 
 #[tauri::command]
-fn toggle_topmost(app: AppHandle) {
+fn toggle_topmost(app: AppHandle) -> bool {
     if let Some(win) = get_main_window(&app) {
         let is_top = win.is_always_on_top().unwrap_or(false);
-        let _ = win.set_always_on_top(!is_top);
+        let next = !is_top;
+        let _ = win.set_always_on_top(next);
+        return next;
     }
+    false
+}
+
+#[tauri::command]
+fn is_window_topmost(app: AppHandle) -> bool {
+    if let Some(win) = get_main_window(&app) {
+        return win.is_always_on_top().unwrap_or(false);
+    }
+    false
 }
 
 #[tauri::command]
@@ -121,10 +134,30 @@ fn toggle_fullscreen(app: AppHandle) {
     }
 }
 
+#[cfg(target_os = "windows")]
+fn trim_working_set_memory() {
+    unsafe {
+        #[link(name = "kernel32")]
+        extern "system" {
+            fn GetCurrentProcess() -> isize;
+            fn SetProcessWorkingSetSize(hProcess: isize, dwMinimumWorkingSetSize: usize, dwMaximumWorkingSetSize: usize) -> i32;
+        }
+        SetProcessWorkingSetSize(GetCurrentProcess(), usize::MAX, usize::MAX);
+    }
+}
+
+#[tauri::command]
+fn trim_memory() {
+    #[cfg(target_os = "windows")]
+    trim_working_set_memory();
+}
+
 #[tauri::command]
 fn minimize_window(app: AppHandle) {
     if let Some(win) = get_main_window(&app) {
         let _ = win.minimize();
+        #[cfg(target_os = "windows")]
+        trim_working_set_memory();
     }
 }
 
@@ -145,6 +178,8 @@ fn close_window(app: AppHandle) {
     if let Some(win) = get_main_window(&app) {
         let _ = win.hide();
         let _ = write_log(app, format!("[Rust] close_window: hidden={}", !win.is_visible().unwrap_or(false)));
+        #[cfg(target_os = "windows")]
+        trim_working_set_memory();
     }
 }
 
@@ -486,6 +521,53 @@ fn remove_cover(app: AppHandle, entry_id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+fn clean_orphan_covers(app: AppHandle, valid_entry_ids: Vec<String>) -> Result<usize, String> {
+    if valid_entry_ids.is_empty() {
+        return Ok(0);
+    }
+    let valid_set: std::collections::HashSet<String> = valid_entry_ids.into_iter().collect();
+    let mut cleaned_count = 0;
+
+    if let Some(dir) = covers_dir(&app) {
+        if dir.exists() {
+            if let Ok(entries) = fs::read_dir(&dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_file() {
+                        if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                            if !valid_set.contains(stem) {
+                                if fs::remove_file(&path).is_ok() {
+                                    cleaned_count += 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if let Some(thumb_dir) = cover_thumbnails_dir(&app) {
+        if thumb_dir.exists() {
+            if let Ok(entries) = fs::read_dir(&thumb_dir) {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.is_file() {
+                        if let Some(stem) = path.file_stem().and_then(|s| s.to_str()) {
+                            if !valid_set.contains(stem) {
+                                let _ = fs::remove_file(&path);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(cleaned_count)
+}
+
+#[tauri::command]
 fn read_cover_thumbnail(app: AppHandle, entry_id: String) -> Result<String, String> {
     validate_entry_id(&entry_id)?;
     let dir = covers_dir(&app).ok_or("无法获取数据目录")?;
@@ -499,7 +581,20 @@ fn read_cover_thumbnail(app: AppHandle, entry_id: String) -> Result<String, Stri
             return original_cover_data_url(&source);
         }
     }
-    let bytes = fs::read(&thumb_path).map_err(|e| e.to_string())?;
+    let bytes = match fs::read(&thumb_path) {
+        Ok(b) if !b.is_empty() => b,
+        _ => {
+            let _ = fs::remove_file(&thumb_path);
+            if create_cover_thumbnail(&source, &thumb_path).is_ok() {
+                fs::read(&thumb_path).unwrap_or_default()
+            } else {
+                return original_cover_data_url(&source);
+            }
+        }
+    };
+    if bytes.is_empty() {
+        return original_cover_data_url(&source);
+    }
     if bytes.len() > 2 * 1024 * 1024 {
         return Err("封面缩略图过大".into());
     }
@@ -566,10 +661,10 @@ mod tests {
 }
 
 fn main() {
-    // 全局禁用 WebView2 / Chromium 的自动填充与“保存的信息”浏览器提示
+    // 全局禁用 WebView2 / Chromium 的自动填充与“保存的信息”浏览器提示，并优化 V8 与进程内存占用
     std::env::set_var(
         "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-        "--disable-features=AutofillServerCommunication,AutofillShowTypePredictions,AutofillAddressProfile,AutofillCreditCard,AutofillPasswordGeneration,Autofill --disable-save-password-bubble --disable-single-click-autofill --no-pings",
+        "--disable-features=AutofillServerCommunication,AutofillShowTypePredictions,AutofillAddressProfile,AutofillCreditCard,AutofillPasswordGeneration,Autofill --disable-save-password-bubble --disable-single-click-autofill --no-pings --js-flags=--max-old-space-size=256 --renderer-process-limit=2 --disable-breakpad --disable-component-update --disable-domain-reliability",
     );
 
     tauri::Builder::default()
@@ -604,14 +699,23 @@ fn main() {
                 let _ = win.show();
                 let _ = win.set_focus();
 
-                // 点击 X 只最小化窗口，不退出应用
+                // 点击 X 只最小化窗口，不退出应用，并释放工作集内存
                 let app_handle = app.handle().clone();
                 win.on_window_event(move |event| {
-                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                        api.prevent_close();
-                        if let Some(win) = app_handle.get_webview_window("main") {
-                            let _ = win.hide();
+                    match event {
+                        tauri::WindowEvent::CloseRequested { api, .. } => {
+                            api.prevent_close();
+                            if let Some(win) = app_handle.get_webview_window("main") {
+                                let _ = win.hide();
+                                #[cfg(target_os = "windows")]
+                                trim_working_set_memory();
+                            }
                         }
+                        tauri::WindowEvent::Focused(false) => {
+                            #[cfg(target_os = "windows")]
+                            trim_working_set_memory();
+                        }
+                        _ => {}
                     }
                 });
             }
@@ -621,10 +725,10 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             get_app_version, toggle_topmost, toggle_fullscreen,
             minimize_window, toggle_maximize, close_window, start_window_drag,
-            is_window_maximized, is_window_fullscreen,
+            is_window_maximized, is_window_fullscreen, is_window_topmost,
             save_data_to_disk, load_data_from_disk, check_disk_data, get_data_file_size, write_log,
-            graceful_exit,
-            upload_cover, remove_cover, read_cover_thumbnail, read_cover
+            graceful_exit, trim_memory,
+            upload_cover, remove_cover, read_cover_thumbnail, read_cover, clean_orphan_covers
         ])
         .run(tauri::generate_context!())
         .expect("启动 Tauri 应用失败");
