@@ -272,6 +272,12 @@ function updateTrackSummary() {
 
 async function saveEntry() {
   debugAotyCount('saveEntry 开始');
+
+  // 主动失焦当前处于编辑态的输入框，确保原生 number/text input 与 DOM 数据立即同步
+  if (document.activeElement && typeof document.activeElement.blur === 'function') {
+    document.activeElement.blur();
+  }
+
   const title = document.getElementById('editTitle').value.trim();
   if (!title) return;
 
@@ -292,6 +298,24 @@ async function saveEntry() {
   }
   const tags = [];
   document.querySelectorAll('#editTags .form-tag.active').forEach(t => tags.push(t.dataset.tag));
+
+  // 同步曲目输入框当前最新数据，防止未触发 change 时数据落后
+  document.querySelectorAll('#trackList .track-row').forEach(row => {
+    const idx = parseInt(row.dataset.trackIndex);
+    if (isNaN(idx) || !editingTracks[idx]) return;
+    const nameInput = row.querySelector('.track-name-input');
+    const scoreInput = row.querySelector('.track-score-input');
+    if (nameInput) editingTracks[idx].name = nameInput.value;
+    if (scoreInput) {
+      const v = scoreInput.value.trim();
+      if (v === 'NR') editingTracks[idx].score = 'NR';
+      else if (v === '') editingTracks[idx].score = null;
+      else {
+        const n = parseInt(v, 10);
+        editingTracks[idx].score = (!isNaN(n) && n >= 0 && n <= 100) ? n : null;
+      }
+    }
+  });
 
   const data = {
     id: document.getElementById('editId').value || generateId(),
@@ -753,8 +777,8 @@ function setupCoverEvents() {
     viewerImg.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + viewerScale + ')';
   }
 
-  function openCoverViewer() {
-    const src = document.getElementById('coverPreview').src;
+  function openCoverViewer(customSrc) {
+    const src = (typeof customSrc === 'string' && customSrc) ? customSrc : document.getElementById('coverPreview')?.src;
     if (!src) return;
     viewerImg.src = src;
     viewerScale = 1;
@@ -763,11 +787,13 @@ function setupCoverEvents() {
     updateViewerTransform();
     viewer.classList.add('active');
   }
+  window.openCoverViewer = openCoverViewer;
 
   function closeCoverViewer() {
     viewer.classList.remove('active');
     viewerImg.src = '';
   }
+  window.closeCoverViewer = closeCoverViewer;
 
   // 双击封面图 → 打开放大查看器
   document.getElementById('coverPreview').addEventListener('dblclick', openCoverViewer);

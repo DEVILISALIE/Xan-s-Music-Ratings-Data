@@ -6,11 +6,9 @@
 
 ## 工作规则（必须遵守）
 
-1. **默认只指桌面版**：用户说「修改」、提出问题或反馈，默认都只针对桌面版 exe（Tauri 应用），不是网页版。排查、改动、验证都以桌面版为准。
-2. **桌面 exe 覆盖**：涉及桌面版改动并完成修改后，必须重新打包，并覆盖本机 exe：
+1. **默认只编译预览页**：日常修改、问题修复与功能调优完成后，默认只构建 HTML 预览页（`npm run build:preview` 或 `node build-preview.js`），便于快速秒级验证。
+2. **打包 exe 权限**：**只有当用户明确说要打包 exe（如「打包 exe」「构建 exe」「编译 exe」）时，才允许运行 `npm run tauri build`** 重新打包并覆盖本机 exe：
    `C:\Users\lilxanyy\Desktop\music-ratings-main\src-tauri\target\release\music-ratings.exe`
-   - 构建命令：`npm run tauri build`（或等价流程）
-   - 目标是让上述路径的 exe 始终是当前最新可运行版本
 3. **GitHub 发布权限**：只有用户明确说要发布/上传 GitHub（如「发布 github」「上传 github」「更新 release」）时，才允许 `git push`、创建/更新 GitHub Release、上传安装包。未明确要求时，禁止发布到 GitHub。
 
 ## 项目简介
@@ -27,14 +25,20 @@
 node gen.js                      # 自动查找根目录下的 txt 文件
 node gen.js path/to/file.txt     # 指定文件路径
 
-# 桌面版
+# 桌面版与预览
+npm run preview                  # 构建并一键在默认浏览器中打开 HTML 预览页
+npm run build:preview            # 构建独立 preview.html 预览页
 npm run tauri dev                # 开发模式（自动启动本地服务器）
-npm run tauri build              # 构建 MSI 安装包
+npm run tauri build              # 构建 MSI 安装包并覆盖 release\music-ratings.exe
 ```
 
 ## 架构
 
 ```
+├── preview.html           # 独立 HTML 预览页（单文件内嵌全量数据与桌面模拟环境，可双击直接看）
+├── build-preview.js       # HTML 预览页生成器（从 AppData/data.json 读取数据，内嵌模拟环境）
+├── preview.js / .bat      # 一键构建并在默认浏览器中启动 preview.html
+├── desktop-ui/            # 模块化前端源码（HTML、CSS、JS、data.json）
 ├── index.html             # 入口，包含 __MUSIC_DATA__ 占位
 ├── css/
 │   ├── base.css           # CSS 变量、Reset、主题（亮/暗/毛玻璃），含 --tag-bg 变量
@@ -113,7 +117,7 @@ npm run tauri build              # 构建 MSI 安装包
 - 桌面版 localStorage 域名与网页版隔离，需单独导入一次数据
 - `build-frontend.js` 构建时将 index.html/css/js/data.json 复制到 dist/，Tauri 打包进二进制
 - Tauri 插件：dialog、fs、global-shortcut、shell、single-instance
-- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.5.3`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.5.3`
+- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.5.4`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.5.4`
 
 **macOS 原生鼠标光标体系（v1.5.0）**：应用内统一使用纯矢量 macOS 原生风格光标：
 - `--cursor-default`：macOS 经典白边黑底箭头（带柔和投影）

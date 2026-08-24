@@ -1,9 +1,11 @@
 {
   "name": "music-ratings",
-  "version": "1.5.3",
+  "version": "1.5.4",
   "private": true,
   "description": "Xan's Music Ratings - Desktop Edition",
   "scripts": {
+    "preview": "node preview.js",
+    "build:preview": "node build-preview.js",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build"

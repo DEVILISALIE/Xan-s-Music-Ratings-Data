@@ -179,9 +179,16 @@ function portalOpen(menu, anchor, opts = {}) {
   menu.style.minWidth = '';
   menu.style.maxWidth = '';
 
-  const rect = anchor.getBoundingClientRect();
+  let rect = anchor.getBoundingClientRect();
   // matchAnchor: 与触发器同宽（标签/分数/编辑分组）
-  // 否则优先用 CSS 自带宽度，不把菜单强行拉宽
+  // 若 anchor 父级是 custom-select 容器，以容器真实常态边界为准，防止悬浮/按压 scale 瞬态动画导致菜单宽度偏窄
+  if (opts.matchAnchor && anchor.parentElement && anchor.parentElement.classList.contains('custom-select')) {
+    const pRect = anchor.parentElement.getBoundingClientRect();
+    if (pRect.width > 0) {
+      rect = pRect;
+    }
+  }
+
   let mw;
   if (opts.matchAnchor) {
     mw = Math.max(rect.width, opts.minWidth || 0);
@@ -233,6 +240,9 @@ function portalOpen(menu, anchor, opts = {}) {
   menu.style.top = top + 'px';
   menu.style.left = left + 'px';
   menu.style.visibility = '';
+
+  // 在下一渲染帧自动重校准一次，彻底消除弹窗打开时的瞬态几何偏差
+  schedulePortalReposition();
 }
 
 function portalClose(menu, opts = {}) {
@@ -525,7 +535,13 @@ async function init() {
   bindModalTrackButtons();
   bindContentArea();
   setupCoverEvents();
-  if (window.__TAURI__) setupFpsMonitor();
+  if (window.__TAURI__) {
+    setupFpsMonitor();
+    // 首屏渲染完成后 1.5 秒静默回收初始阶段峰值内存
+    setTimeout(() => {
+      window.__TAURI__.core.invoke('trim_memory').catch(() => {});
+    }, 1500);
+  }
 }
 
 // ===== 事件绑定：工具栏按钮 / 弹窗按钮 =====
@@ -561,7 +577,8 @@ function bindStaticButtons() {
       } else {
         val = Math.max(min, Math.min(max, val + delta));
       }
-      input.value = val;
+      input.value = String(val);
+      input.setAttribute('value', String(val));
       input.dispatchEvent(new Event('input', { bubbles: true }));
       input.dispatchEvent(new Event('change', { bubbles: true }));
     };
@@ -570,6 +587,10 @@ function bindStaticButtons() {
     let interval = null;
     const start = (e) => {
       e.preventDefault();
+      const input = document.getElementById(inputId);
+      if (input && document.activeElement !== input) {
+        input.focus();
+      }
       step();
       timer = setTimeout(() => {
         interval = setInterval(step, 80);
@@ -1783,6 +1804,9 @@ document.addEventListener('keydown', (e) => {
   }
   if (e.key === 'Enter' && e.shiftKey && document.getElementById('editModal').classList.contains('active')) {
     e.preventDefault();
+    if (document.activeElement && typeof document.activeElement.blur === 'function') {
+      document.activeElement.blur();
+    }
     saveEntry();
   }
   
@@ -1809,6 +1833,25 @@ document.getElementById('yearlyStatsModal').addEventListener('click', (e) => {
 });
 document.querySelector('[data-action="yearly-stats-close"]').addEventListener('click', () => {
   document.getElementById('yearlyStatsModal').classList.remove('active');
+});
+
+// 侧边栏 Logo 连续点击3次：唤起全屏高清放大查看器（支持滚轮缩放与鼠标拖拽平移）
+let logoClickCount = 0;
+let logoClickTimer = null;
+document.getElementById('sidebarLogo')?.addEventListener('click', () => {
+  logoClickCount++;
+  if (logoClickTimer) clearTimeout(logoClickTimer);
+  if (logoClickCount >= 3) {
+    logoClickCount = 0;
+    const src = window.__APP_ICON_DATA__ || 'assets/app-icon.png';
+    if (typeof window.openCoverViewer === 'function') {
+      window.openCoverViewer(src);
+    }
+  } else {
+    logoClickTimer = setTimeout(() => {
+      logoClickCount = 0;
+    }, 450);
+  }
 });
 
 // ===== 导出 / 导入 =====
@@ -2028,59 +2071,10 @@ init();
   // 初始化图标状态
   updateMaximizeIcon();
 
-  // ===== 自定义右键菜单 =====
-  const ctxMenu = document.getElementById('contextMenu');
-  const ctxMaximizeItem = document.getElementById('ctxMaximizeItem');
-  const ctxTopmostItem = document.getElementById('ctxTopmostItem');
-
-  // 禁止系统右键菜单，显示自定义菜单
+  // 全局禁用默认右键菜单
   document.addEventListener('contextmenu', (e) => {
     e.preventDefault();
-    e.stopPropagation();
-    if (!ctxMenu) return;
-
-    // 更新菜单项文字
-    const isZh = currentLang === 'zh';
-    const minLabel = isZh ? '最小化' : 'Minimize';
-    const closeLabel = isZh ? '关闭' : 'Close';
-    const topLabel = isZh ? '置顶' : 'Topmost';
-    ctxMenu.children[0].childNodes[0].textContent = minLabel;
-    ctxMenu.children[0].querySelector('.shortcut').textContent = '—';
-    ctxMenu.children[2].childNodes[0].textContent = topLabel;
-    ctxMenu.children[2].querySelector('.shortcut').textContent = 'Ctrl+T';
-    ctxMenu.children[4].childNodes[0].textContent = closeLabel;
-    ctxMenu.children[4].querySelector('.shortcut').textContent = 'Alt+F4';
-
-    // 更新最大化/还原标签
-    Promise.all([invoke('is_window_maximized'), invoke('is_window_fullscreen')]).then(([isMax, isFs]) => {
-      ctxMaximizeItem.childNodes[0].textContent = (isMax || isFs)
-        ? (isZh ? '还原' : 'Restore')
-        : (isZh ? '最大化' : 'Maximize');
-    }).catch(() => {});
-
-    // 定位菜单（防止超出窗口）
-    const x = Math.min(e.clientX, window.innerWidth - 220);
-    const y = Math.min(e.clientY, window.innerHeight - 200);
-    ctxMenu.style.left = x + 'px';
-    ctxMenu.style.top = y + 'px';
-    ctxMenu.classList.add('open');
   });
-
-  // 菜单项点击
-  ctxMenu?.addEventListener('click', (e) => {
-    const item = e.target.closest('.context-menu-item');
-    if (!item) return;
-    const action = item.dataset.action;
-    if (action === 'ctx-minimize') invoke('minimize_window');
-    else if (action === 'ctx-maximize') invoke('toggle_maximize').then(updateMaximizeIcon);
-    else if (action === 'ctx-topmost') toggleTopmostAction();
-    else if (action === 'ctx-close') invoke('close_window');
-    ctxMenu.classList.remove('open');
-  });
-
-  // 点击其他地方关闭菜单
-  document.addEventListener('click', () => ctxMenu?.classList.remove('open'));
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') ctxMenu?.classList.remove('open'); });
 
   // 监听托盘事件
   tauriEvent?.listen('menu-action', ({ payload }) => {
@@ -2100,7 +2094,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.5.3");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.5.4");
         break;
     }
   });
@@ -2123,12 +2117,42 @@ init();
     }
   }, true);
 
-  // 切到后台时主动释放工作集物理内存
+  // 切到后台或窗口失焦时主动释放工作集物理内存
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && window.__TAURI__) {
       invoke('trim_memory').catch(() => {});
     }
   });
+
+  window.addEventListener('blur', () => {
+    if (window.__TAURI__) {
+      invoke('trim_memory').catch(() => {});
+    }
+  });
+
+  // 智能空闲内存回收器：用户停止操作 20 秒后静默清理 WorkingSet
+  let _idleTimer = null;
+  function resetIdleMemoryTimer() {
+    clearTimeout(_idleTimer);
+    _idleTimer = setTimeout(() => {
+      if (window.__TAURI__) {
+        invoke('trim_memory').catch(() => {});
+      }
+    }, 20000);
+  }
+
+  ['pointerdown', 'keydown', 'scroll', 'touchstart'].forEach(evt => {
+    window.addEventListener(evt, resetIdleMemoryTimer, { passive: true });
+  });
+  let _lastMove = 0;
+  window.addEventListener('mousemove', () => {
+    const now = Date.now();
+    if (now - _lastMove > 2000) {
+      _lastMove = now;
+      resetIdleMemoryTimer();
+    }
+  }, { passive: true });
+  resetIdleMemoryTimer();
 
   // 启动时静默清理未引用的孤儿封面
   if (typeof appData !== 'undefined' && appData && Array.isArray(appData.sections)) {

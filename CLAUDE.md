@@ -132,19 +132,28 @@ GitHub 上一次正式 Release 为 `v1.4.0`（commit `ede5a58`，2026-07-14）�
 - 前端通过 `window.__TAURI__` 检测桌面环境，`app.js` 末尾的 `initTauriDesktop()` 自动激活桌面功能
 - `desktop-ui/css/macos.css` 通过 `[data-desktop="true"]` 选择器提供桌面窗口专属样式（UI 放大 20%）
 - **自定义标题栏**（`decorations: false`）：38px 常驻毛玻璃标题栏，左侧版本号和可选 FPS/1% Low，右侧窗口控件（📌置顶 / ⬚全屏 / —最小化 / □最大化 / ×关闭）。标题栏通过 JS `start_window_drag` 拖拽（不使用 `-webkit-app-region: drag` 以避免系统右键菜单），关闭按钮 hover 变红，最大化/全屏时中间按钮自动切换为还原图标。全屏按钮为四角取景框 SVG 图标，最大化状态下进入全屏先 `unmaximize()` 避免 WebView2 bug
-- **自定义右键菜单**：拦截系统右键菜单，显示毛玻璃风格自定义菜单（最小化/最大化还原/置顶/关闭），支持中英文
+- **Windows 任务栏双向最小化/还原（v1.5.4）**：Rust 端在窗口创建时通过 Win32 API 动态配置 `WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU` 窗口样式并调用 `SetWindowPos(SWP_FRAMECHANGED)`，完美支持 Windows 原生任务栏图标点击最小化与还原双向切换
 - 窗口管理通过自定义 Tauri command：`minimize_window`、`toggle_maximize`、`close_window`、`start_window_drag`
 - 托盘事件通过 `tauriEvent.listen('menu-action')` 接收，映射到前端函数
 - 导出使用 Tauri 原生文件对话框（`__TAURI_PLUGIN_DIALOG__` + `__TAURI_PLUGIN_FS__`）
 - 快捷键：Ctrl+S 导出、Ctrl+D 主题、Ctrl+G 风格、Ctrl+O 导入、Ctrl+K 搜索、Ctrl+N 新建、Ctrl+T 置顶、F11 全屏
 - **设置按钮**：工具栏 stats 右侧 ⚙ 按钮，点击弹出 iOS 风格下拉菜单，集成深色模式/毛玻璃风格/帧率显示（桌面专属）/语言/多选模式，复用 `.toggle-switch` 样式，点击选项保持展开，点击外部自动关闭
-- 系统托盘：左键按 `is_visible` 切换显示/隐藏窗口，右键菜单（显示/置顶/主题/退出）
+- **系统托盘（v1.5.4）**：配置 `show_menu_on_left_click(false)` 确保仅鼠标右键弹出托盘菜单；托盘双击在后台/最小化时唤起并聚焦窗口，前台已显示时点击不触发最小化
 - 点击 X 隐藏到系统托盘（任务栏按钮一并消失，仅保留托盘图标），通过 `on_window_event` 拦截 `CloseRequested` 并 `api.prevent_close()` + `win.hide()`
 - 单实例模式：`tauri-plugin-single-instance` 确保只有一个窗口运行，第二次启动聚焦已有窗口
 - 桌面版固定使用 `musicData_desktop` 作为 WebView2 本地镜像
 - `build-frontend.js` 构建时将 `desktop-ui/index.html`、`desktop-ui/css`、`desktop-ui/js` 和可选 `desktop-ui/data.json` 复制到 `dist/`，再由 Tauri 打包进二进制
 - Tauri 插件：dialog、fs、global-shortcut、shell、single-instance；Rust 依赖 `base64` 与 `image`
-- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.5.3`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.5.3`
+- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.5.4`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.5.4`
+
+**v1.5.4 更新日志**：
+- **搜索图标重塑**：搜索栏放大镜更换为清晰纯正的 iOS 风格微图标（`assets/search-icon.png`），去除旧版噪点与 AI 味；
+- **编辑弹窗分数即时同步**：修复编辑弹窗点击微调箭头修改分数后必须点击框外才能 Shift+Enter 保存的问题，现在调整分数后按 Shift+Enter 即可即时保存；
+- **Windows 任务栏无缝切换**：无边框窗口底层注入标准 Win32 最小化样式，完美支持在 Windows 底部任务栏点击图标双向最小化与恢复前台；
+- **高清圆角应用图标**：托盘与应用图标全尺寸升级为透明圆角高清矢量渲染，彻底消除黑色外边框；
+- **系统托盘交互优化**：统一为仅鼠标右键唤出菜单，鼠标双击自后台唤醒窗口至前台聚焦；
+- **侧边栏高保真 Logo**：侧边栏标题右侧置入高保真原生 Logo，支持悬停微交互与连续 3 击全屏放大查看细节。
+
 
 **分数统计面板**：`render.js` 中 `updateGlobalStatsSidebar()` 在右侧固定位置渲染两个统计卡片（专辑 / 单曲），各自显示平均分、7 档分数分布柱状图（100 / 90-99 / 80-89 / 70-79 / 60-69 / 50-59 / 0-49）、已打分/未打分/条目数。所有标签均支持中英文切换，通过 `t()` 函数实现。每次数据变更后通过 `refreshAll()` 实时更新。**点击统计卡片弹出年度平均分弹窗**（`#yearlyStatsModal`），展示每一年的独立平均分和条目数，水平柱状图按最高分等比缩放，支持 ESC / 点击遮罩关闭。
 

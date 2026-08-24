@@ -81,8 +81,12 @@
 }
 
 [data-desktop="true"] .sidebar-header {
-  padding: 24px 20px 14px;
+  padding: 22px 20px 14px;
   border-bottom: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
 }
 
 [data-desktop="true"] .sidebar-title {
@@ -97,6 +101,26 @@
   color: var(--text-tertiary);
   margin-top: 1px;
   letter-spacing: 0.1px;
+}
+
+[data-desktop="true"] .sidebar-app-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.16);
+  cursor: var(--cursor-pointer);
+  pointer-events: auto;
+  transition: transform var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal) var(--ease-out);
+}
+
+[data-desktop="true"] .sidebar-app-icon:hover {
+  transform: scale(1.08);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+[data-desktop="true"] .sidebar-app-icon:active {
+  transform: scale(0.92) !important;
+  transition: transform 80ms var(--ease-out);
 }
 
 /* ===== macOS Sidebar Nav ===== */
@@ -366,8 +390,9 @@
 }
 
 [data-desktop="true"] .search-box .search-icon {
-  font-size: 12px;
-  left: 8px;
+  left: 10px;
+  width: 16px;
+  height: 16px;
 }
 
 /* ===== macOS Filter Pills / Select ===== */
@@ -884,9 +909,6 @@
   margin-bottom: 12px;
   border: 1.5px solid var(--aoty-border);
   background: var(--aoty-bg);
-  transform: translate3d(0, 0, 0);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
   transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out);
 }
 
@@ -1035,6 +1057,17 @@
   border: 0.5px solid var(--separator);
   width: 100%;
   transition: transform var(--duration-fast) var(--ease-out), background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+}
+
+[data-desktop="true"] #editSectionGroup .custom-select-trigger:hover {
+  background: var(--hover-bg);
+  transform: scale(1.02);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+[data-desktop="true"] #editSectionGroup .custom-select-trigger:active {
+  transform: scale(0.98) !important;
+  transition: transform 80ms var(--ease-out);
 }
 
 [data-desktop="true"] #editSectionGroup .custom-select.open .custom-select-trigger,
@@ -1482,87 +1515,20 @@
   color: #fff;
 }
 
-/* ===== 自定义右键菜单 ===== */
-[data-desktop="true"] .context-menu {
-  display: none;
-  position: fixed;
-  min-width: 200px;
-  padding: 6px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.14);
-  border: 0.5px solid rgba(255, 255, 255, 0.38);
-  backdrop-filter: blur(60px) saturate(200%);
-  -webkit-backdrop-filter: blur(60px) saturate(200%);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.14), 0 0 0 0.5px rgba(0,0,0,0.04);
-  z-index: 10000;
-  font-size: 13px;
-  transform: translateZ(0);
-  will-change: backdrop-filter;
-}
-
-[data-desktop="true"][data-theme="dark"] .context-menu {
-  background: rgba(40, 40, 44, 0.3);
-  border: 0.5px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 12px 40px rgba(0,0,0,0.42), 0 0 0 0.5px rgba(0,0,0,0.2);
-}
-
-[data-desktop="true"][data-style="glass"] .context-menu {
-  background: rgba(255, 255, 255, 0.14);
-  backdrop-filter: blur(72px) saturate(220%);
-  -webkit-backdrop-filter: blur(72px) saturate(220%);
-}
-
-[data-desktop="true"][data-style="glass"][data-theme="dark"] .context-menu {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-[data-desktop="true"] .context-menu.open {
-  display: block;
-}
-
-[data-desktop="true"] .context-menu-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 7px 14px;
-  border-radius: 6px;
-  cursor: var(--cursor-pointer);
-  color: var(--text);
-  transition: background 0.1s;
-}
-
-[data-desktop="true"] .context-menu-item:hover {
-  background: var(--accent);
-  color: #fff;
-}
-
-[data-desktop="true"] .context-menu-item.disabled {
-  opacity: 0.35;
-  pointer-events: none;
-}
-
-[data-desktop="true"] .context-menu-item .shortcut {
-  font-size: 12px;
-  color: var(--text-tertiary);
-  margin-left: 24px;
-}
-
-[data-desktop="true"] .context-menu-item:hover .shortcut {
-  color: rgba(255,255,255,0.7);
-}
-
-[data-desktop="true"] .context-menu-sep {
-  height: 1px;
-  background: var(--separator);
-  margin: 4px 8px;
-}
-
 /* ===== 分数统计面板 ===== */
 [data-desktop="true"] .section {
   display: flex;
   flex-wrap: wrap;
   gap: 0 28px;
   align-items: flex-start;
+}
+
+[data-desktop="true"] .section {
+  margin-left: -16px;
+  margin-right: -16px;
+  padding-left: 16px;
+  padding-right: 16px;
+  box-sizing: border-box;
 }
 
 [data-desktop="true"] .section-title,
@@ -1836,7 +1802,6 @@
 [data-desktop="true"] .must-hear-pill,
 [data-desktop="true"] .must-hear-close,
 [data-desktop="true"] .cover-remove-item,
-[data-desktop="true"] .context-menu-item,
 [data-desktop="true"] .review-toggle,
 [data-desktop="true"] .yearly-stats-row,
 [data-desktop="true"] .stats-row,

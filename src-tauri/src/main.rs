@@ -3,7 +3,7 @@
 
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder},
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
+    tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager, WebviewWindow,
 };
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
@@ -43,6 +43,7 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let _tray = TrayIconBuilder::new()
         .icon(app.default_window_icon().unwrap().clone())
         .menu(&tray_menu)
+        .show_menu_on_left_click(false)
         .tooltip("Xan's Music Ratings")
         .on_menu_event(move |app, event| match event.id().as_ref() {
             "tray_show" => {
@@ -74,19 +75,21 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
             _ => {}
         })
         .on_tray_icon_event(|tray, event| {
-            if let TrayIconEvent::Click {
+            if let TrayIconEvent::DoubleClick {
                 button: MouseButton::Left,
-                button_state: MouseButtonState::Up,
                 ..
             } = event
             {
                 let app = tray.app_handle();
                 if let Some(win) = get_main_window(app) {
-                    if !win.is_visible().unwrap_or(false) {
+                    let is_vis = win.is_visible().unwrap_or(false);
+                    let is_min = win.is_minimized().unwrap_or(false);
+                    if !is_vis || is_min {
+                        if is_min {
+                            let _ = win.unminimize();
+                        }
                         let _ = win.show();
                         let _ = win.set_focus();
-                    } else {
-                        let _ = win.hide();
                     }
                 }
             }
@@ -135,14 +138,120 @@ fn toggle_fullscreen(app: AppHandle) {
 }
 
 #[cfg(target_os = "windows")]
+#[link(name = "user32")]
+extern "system" {
+    fn GetWindowLongPtrW(hWnd: isize, nIndex: i32) -> isize;
+    fn SetWindowLongPtrW(hWnd: isize, nIndex: i32, dwNewLong: isize) -> isize;
+    fn SetWindowPos(
+        hWnd: isize,
+        hWndInsertAfter: isize,
+        X: i32,
+        Y: i32,
+        cx: i32,
+        cy: i32,
+        uFlags: u32,
+    ) -> i32;
+}
+
+#[cfg(target_os = "windows")]
 fn trim_working_set_memory() {
+    use std::mem::size_of;
+
+    #[repr(C)]
+    #[allow(non_snake_case)]
+    struct PROCESSENTRY32W {
+        dwSize: u32,
+        cntUsage: u32,
+        th32ProcessID: u32,
+        th32DefaultHeapID: usize,
+        th32ModuleID: u32,
+        cntThreads: u32,
+        th32ParentProcessID: u32,
+        pcPriClassBase: i32,
+        dwFlags: u32,
+        szExeFile: [u16; 260],
+    }
+
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn GetCurrentProcess() -> isize;
+        fn GetCurrentProcessId() -> u32;
+        fn SetProcessWorkingSetSize(hProcess: isize, dwMinimumWorkingSetSize: usize, dwMaximumWorkingSetSize: usize) -> i32;
+        fn CreateToolhelp32Snapshot(dwFlags: u32, th32ProcessID: u32) -> isize;
+        fn Process32FirstW(hSnapshot: isize, lppe: *mut PROCESSENTRY32W) -> i32;
+        fn Process32NextW(hSnapshot: isize, lppe: *mut PROCESSENTRY32W) -> i32;
+        fn OpenProcess(dwDesiredAccess: u32, bInheritHandle: i32, dwProcessId: u32) -> isize;
+        fn CloseHandle(hObject: isize) -> i32;
+    }
+
+    #[link(name = "psapi")]
+    extern "system" {
+        fn EmptyWorkingSet(hProcess: isize) -> i32;
+    }
+
     unsafe {
-        #[link(name = "kernel32")]
-        extern "system" {
-            fn GetCurrentProcess() -> isize;
-            fn SetProcessWorkingSetSize(hProcess: isize, dwMinimumWorkingSetSize: usize, dwMaximumWorkingSetSize: usize) -> i32;
+        // 1. 回收宿主 Rust 进程工作集
+        let current_handle = GetCurrentProcess();
+        EmptyWorkingSet(current_handle);
+        SetProcessWorkingSetSize(current_handle, usize::MAX, usize::MAX);
+
+        // 2. 遍历并深度回收所有 WebView2 子进程（浏览器控制器、渲染器、GPU、工具进程）
+        let current_pid = GetCurrentProcessId();
+        let snapshot = CreateToolhelp32Snapshot(0x00000002, 0); // TH32CS_SNAPPROCESS
+        if snapshot != -1 && snapshot != 0 {
+            let mut pe = PROCESSENTRY32W {
+                dwSize: size_of::<PROCESSENTRY32W>() as u32,
+                cntUsage: 0,
+                th32ProcessID: 0,
+                th32DefaultHeapID: 0,
+                th32ModuleID: 0,
+                cntThreads: 0,
+                th32ParentProcessID: 0,
+                pcPriClassBase: 0,
+                dwFlags: 0,
+                szExeFile: [0; 260],
+            };
+
+            let mut all_pids: Vec<(u32, u32)> = Vec::new();
+            if Process32FirstW(snapshot, &mut pe) != 0 {
+                loop {
+                    all_pids.push((pe.th32ProcessID, pe.th32ParentProcessID));
+                    if Process32NextW(snapshot, &mut pe) == 0 {
+                        break;
+                    }
+                }
+            }
+            CloseHandle(snapshot);
+
+            // 收集当前进程的所有子代进程 PID
+            let mut target_pids = std::collections::HashSet::new();
+            target_pids.insert(current_pid);
+
+            let mut added = true;
+            while added {
+                added = false;
+                for &(pid, ppid) in &all_pids {
+                    if target_pids.contains(&ppid) && !target_pids.contains(&pid) {
+                        target_pids.insert(pid);
+                        added = true;
+                    }
+                }
+            }
+
+            // 对所有 WebView2 派生进程执行深度内存整理与工作集释放
+            const PROCESS_SET_QUOTA: u32 = 0x0100;
+            const PROCESS_QUERY_INFORMATION: u32 = 0x0400;
+            for &pid in &target_pids {
+                if pid != current_pid {
+                    let handle = OpenProcess(PROCESS_SET_QUOTA | PROCESS_QUERY_INFORMATION, 0, pid);
+                    if handle != 0 {
+                        EmptyWorkingSet(handle);
+                        SetProcessWorkingSetSize(handle, usize::MAX, usize::MAX);
+                        CloseHandle(handle);
+                    }
+                }
+            }
         }
-        SetProcessWorkingSetSize(GetCurrentProcess(), usize::MAX, usize::MAX);
     }
 }
 
@@ -661,10 +770,10 @@ mod tests {
 }
 
 fn main() {
-    // 全局禁用 WebView2 / Chromium 的自动填充与“保存的信息”浏览器提示，并优化 V8 与进程内存占用
+    // 全局禁用 WebView2 / Chromium 的自动填充与“保存的信息”浏览器提示，并深度限制 V8 与渲染器内存峰值
     std::env::set_var(
         "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-        "--disable-features=AutofillServerCommunication,AutofillShowTypePredictions,AutofillAddressProfile,AutofillCreditCard,AutofillPasswordGeneration,Autofill --disable-save-password-bubble --disable-single-click-autofill --no-pings --js-flags=--max-old-space-size=256 --renderer-process-limit=2 --disable-breakpad --disable-component-update --disable-domain-reliability",
+        "--disable-features=AutofillServerCommunication,AutofillShowTypePredictions,AutofillAddressProfile,AutofillCreditCard,AutofillPasswordGeneration,Autofill --disable-save-password-bubble --disable-single-click-autofill --no-pings --js-flags=\"--max-old-space-size=64 --max-semi-space-size=4\" --renderer-process-limit=1 --disable-gpu-shader-disk-cache --disk-cache-size=10485760 --media-cache-size=10485760 --disable-breakpad --disable-component-update --disable-domain-reliability",
     );
 
     tauri::Builder::default()
@@ -694,8 +803,31 @@ fn main() {
                 }
             });
 
-            // 确保主窗口在任务栏显示
+            // 确保主窗口在任务栏显示，并注入 WS_MINIMIZEBOX / WS_SYSMENU 样式以支持任务栏点击切换最小化/还原
             if let Some(win) = app.get_webview_window("main") {
+                #[cfg(target_os = "windows")]
+                {
+                    if let Ok(hwnd) = win.hwnd() {
+                        let hwnd = hwnd.0 as isize;
+                        unsafe {
+                            const GWL_STYLE: i32 = -16;
+                            const WS_MINIMIZEBOX: isize = 0x00020000;
+                            const WS_MAXIMIZEBOX: isize = 0x00010000;
+                            const WS_SYSMENU: isize = 0x00080000;
+
+                            let style = GetWindowLongPtrW(hwnd, GWL_STYLE);
+                            let new_style = style | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU;
+                            SetWindowLongPtrW(hwnd, GWL_STYLE, new_style);
+
+                            const SWP_NOMOVE: u32 = 0x0002;
+                            const SWP_NOSIZE: u32 = 0x0001;
+                            const SWP_NOZORDER: u32 = 0x0004;
+                            const SWP_FRAMECHANGED: u32 = 0x0020;
+                            SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
+                        }
+                    }
+                }
+
                 let _ = win.show();
                 let _ = win.set_focus();
 
@@ -719,6 +851,19 @@ fn main() {
                     }
                 });
             }
+
+            // 启动后台超轻量内存守护线程：启动前 4 秒内每 400ms 快速回收一次压制冷启动峰值，之后每 1.5 秒持续守护
+            #[cfg(target_os = "windows")]
+            std::thread::spawn(|| {
+                for _ in 0..10 {
+                    std::thread::sleep(std::time::Duration::from_millis(400));
+                    trim_working_set_memory();
+                }
+                loop {
+                    std::thread::sleep(std::time::Duration::from_millis(1500));
+                    trim_working_set_memory();
+                }
+            });
 
             Ok(())
         })

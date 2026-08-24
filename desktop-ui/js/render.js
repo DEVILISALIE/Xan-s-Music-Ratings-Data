@@ -8,17 +8,59 @@ const coverThumbnailLoads = new Map();
 const COVER_THUMBNAIL_CACHE_LIMIT = 64;
 let coverThumbnailObserver = null;
 
+function dataUrlToBlobUrl(dataUrl) {
+  if (!dataUrl || !dataUrl.startsWith('data:')) return dataUrl;
+  try {
+    const parts = dataUrl.split(',');
+    const mime = (parts[0].match(/:(.*?);/) || [])[1] || 'image/jpeg';
+    const bstr = atob(parts[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    const blob = new Blob([u8arr], { type: mime });
+    return URL.createObjectURL(blob);
+  } catch (_) {
+    return dataUrl;
+  }
+}
+
 function cacheCoverThumbnail(entryId, dataUrl) {
+  const old = coverThumbnailCache.get(entryId);
+  if (old && old.startsWith('blob:')) {
+    URL.revokeObjectURL(old);
+  }
+  const url = dataUrlToBlobUrl(dataUrl);
   coverThumbnailCache.delete(entryId);
-  coverThumbnailCache.set(entryId, dataUrl);
+  coverThumbnailCache.set(entryId, url);
   while (coverThumbnailCache.size > COVER_THUMBNAIL_CACHE_LIMIT) {
-    coverThumbnailCache.delete(coverThumbnailCache.keys().next().value);
+    const oldestKey = coverThumbnailCache.keys().next().value;
+    const oldestVal = coverThumbnailCache.get(oldestKey);
+    if (oldestVal && oldestVal.startsWith('blob:')) {
+      URL.revokeObjectURL(oldestVal);
+    }
+    coverThumbnailCache.delete(oldestKey);
   }
 }
 
 function invalidateCoverThumbnail(entryId) {
+  const old = coverThumbnailCache.get(entryId);
+  if (old && old.startsWith('blob:')) {
+    URL.revokeObjectURL(old);
+  }
   coverThumbnailCache.delete(entryId);
   coverThumbnailLoads.delete(entryId);
+}
+
+function clearCoverThumbnailCache() {
+  for (const val of coverThumbnailCache.values()) {
+    if (val && val.startsWith('blob:')) {
+      URL.revokeObjectURL(val);
+    }
+  }
+  coverThumbnailCache.clear();
+  coverThumbnailLoads.clear();
 }
 
 function applyCoverThumbnail(entryId, dataUrl) {
@@ -870,7 +912,7 @@ function renderAlbumCard(entry, idx, sectionId, groupId, groupName, visible) {
       <span class="score-badge ${scoreClass}">${scoreText}</span>
       ${hasReview ? '<span class="review-indicator" title="' + t('content.reviewTooltip') + '"></span>' : ''}
       <button class="card-copy-btn" data-action="copy-entry" data-entry-id="${escapeHtml(entry.id)}" title="${t('tooltip.copy')}">
-        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="3" ry="3"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <svg viewBox="0 0 24 24"><use href="#icon-copy"></use></svg>
       </button>
     </div>
   </div>`;
@@ -903,7 +945,7 @@ function renderAotyCard(entry, sectionId, groupId, visible, groupName) {
         <span class="aoty-date">${escapeHtml(entry.date || '')}</span>
         <span class="aoty-score">${scoreText}</span>
         <button class="card-copy-btn" data-action="copy-entry" data-entry-id="${escapeHtml(entry.id)}" title="${t('tooltip.copy')}">
-        <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="3" ry="3"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <svg viewBox="0 0 24 24"><use href="#icon-copy"></use></svg>
       </button>
       </div>
     </div>

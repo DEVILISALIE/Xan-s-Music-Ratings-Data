@@ -130,8 +130,7 @@ a,
 .settings-item-click,
 .modal-handle,
 .must-hear-save,
-.cover-remove-item,
-.context-menu-item {
+.cover-remove-item {
   cursor: var(--cursor-pointer);
 }
 

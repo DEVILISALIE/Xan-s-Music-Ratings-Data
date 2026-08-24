@@ -11,6 +11,14 @@
 <link rel="stylesheet" href="css/macos.css" media="screen">
 </head>
 <body>
+<svg style="display:none" aria-hidden="true">
+  <defs>
+    <g id="icon-copy">
+      <rect x="9" y="9" width="13" height="13" rx="3" ry="3"></rect>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+    </g>
+  </defs>
+</svg>
 <div id="dialogContainer"></div>
 <div class="app">
   <!-- 自定义标题栏（桌面版） -->
@@ -46,8 +54,11 @@
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="sidebar-header">
-      <h1 class="sidebar-title" data-i18n="sidebar.title">Xan's Music Ratings</h1>
-      <div class="sidebar-subtitle" data-i18n="sidebar.subtitle">1950s–Now</div>
+      <div class="sidebar-header-text">
+        <h1 class="sidebar-title" data-i18n="sidebar.title">Xan's Music Ratings</h1>
+        <div class="sidebar-subtitle" data-i18n="sidebar.subtitle">1950s–Now</div>
+      </div>
+      <img class="sidebar-app-icon" id="sidebarLogo" src="assets/app-icon.png" alt="App Icon">
     </div>
     <nav class="sidebar-nav" id="sidebarNav"></nav>
     <div class="sidebar-footer">
@@ -61,7 +72,7 @@
   <main class="main" id="mainContent">
     <div class="toolbar">
       <div class="search-box">
-        <span class="search-icon">🔍</span>
+        <span class="search-icon"><img src="assets/search-icon.png" alt="Search"></span>
         <input type="text" id="searchInput" placeholder="Search title or artist…" data-i18n-placeholder="toolbar.search" aria-label="Search albums" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true">
         <span class="search-counter" id="searchCounter"></span>
       </div>
@@ -177,14 +188,6 @@
 
   <!-- 右侧统计面板（固定位置） -->
   <aside class="global-stats-sidebar" id="globalStatsSidebar"></aside>
-  <!-- 自定义右键菜单 -->
-  <div class="context-menu" id="contextMenu">
-    <div class="context-menu-item" data-action="ctx-minimize">最小化 <span class="shortcut">Alt+F4</span></div>
-    <div class="context-menu-item" data-action="ctx-maximize" id="ctxMaximizeItem">最大化 <span class="shortcut">双击标题栏</span></div>
-    <div class="context-menu-item" data-action="ctx-topmost" id="ctxTopmostItem">置顶 <span class="shortcut">Ctrl+T</span></div>
-    <div class="context-menu-sep"></div>
-    <div class="context-menu-item" data-action="ctx-close">关闭 <span class="shortcut">Alt+F4</span></div>
-  </div>
 </div>
 
 <!-- FAB -->

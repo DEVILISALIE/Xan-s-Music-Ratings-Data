@@ -13,7 +13,7 @@ fs.mkdirSync(dist, { recursive: true });
 
 // 复制前端资源
 const filesToCopy = ['index.html', 'data.json'];
-const dirsToCopy = ['css', 'js'];
+const dirsToCopy = ['css', 'js', 'assets'];
 
 for (const file of filesToCopy) {
   const src = path.join(sourceRoot, file);
