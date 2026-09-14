@@ -163,6 +163,10 @@
               <span data-i18n="settings.batchMode">多选模式</span>
               <span class="settings-value" id="settingsBatchValue">OFF</span>
             </div>
+            <div class="settings-item settings-item-click" data-action="settings-font">
+              <span data-i18n="settings.globalFont">全局字体</span>
+              <span class="settings-value" id="settingsFontValue" data-i18n="settings.fontDefault">默认</span>
+            </div>
             <div class="settings-palette" id="settingsPaletteSection">
               <div class="settings-palette-header">
                 <span data-i18n="settings.bgHue">背景色调</span>
@@ -253,124 +257,192 @@
 
 <!-- Edit Modal -->
 <div class="modal-overlay" id="editModal">
-  <div class="modal">
-    <div class="modal-handle"></div>
-    <div class="modal-title" id="modalTitle" data-i18n="modal.editTitle">Edit Album</div>
-    <input type="hidden" id="editId">
-    <input type="hidden" id="editSectionId">
-    <div class="form-group cover-section" id="coverSection">
-      <div class="cover-preview-wrap" id="coverPreviewWrap" style="display:none">
-        <img id="coverPreview" class="cover-preview-img" src="" alt="">
-      </div>
-      <div class="cover-actions">
-        <button type="button" class="cover-btn" data-action="cover-upload" data-i18n="modal.coverUpload">Upload</button>
-        <button type="button" class="cover-btn" data-action="cover-url" data-i18n="modal.coverUrl">URL</button>
-        <div class="cover-remove-wrap" id="coverRemoveWrap" style="display:none">
-          <button type="button" class="cover-btn cover-btn-remove" data-action="cover-remove" data-i18n="modal.coverRemove">Remove</button>
-          <div class="cover-remove-dropdown" id="coverRemoveDropdown">
-            <button type="button" class="cover-dropdown-item confirm" data-action="cover-remove-confirm" data-i18n="modal.coverRemoveConfirm">Confirm</button>
-            <button type="button" class="cover-dropdown-item cancel" data-action="cover-remove-cancel" data-i18n="modal.coverRemoveCancel">Cancel</button>
-          </div>
+  <div class="modal modal-scrollable">
+    <div class="modal-body" id="editModalBody">
+      <div class="modal-handle"></div>
+      <div class="modal-title" id="modalTitle" data-i18n="modal.editTitle">Edit Album</div>
+      <input type="hidden" id="editId">
+      <input type="hidden" id="editSectionId">
+      <div class="form-group cover-section" id="coverSection">
+        <div class="cover-preview-wrap" id="coverPreviewWrap" style="display:none">
+          <img id="coverPreview" class="cover-preview-img" src="" alt="">
         </div>
-      </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label" data-i18n="modal.title">Title</label>
-      <input class="form-input" id="editTitle" name="title" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="Album title…" data-i18n-placeholder="modal.placeholder.title">
-    </div>
-    <div class="form-group">
-      <label class="form-label" data-i18n="modal.artist">Artist</label>
-      <input class="form-input" id="editArtist" name="artist" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="Artist name…" data-i18n-placeholder="modal.placeholder.artist">
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label class="form-label" data-i18n="modal.score">Score</label>
-        <div class="stepper-input-wrap">
-          <input class="form-input" id="editScore" name="score" type="number" min="0" max="100" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="0–100" data-i18n-placeholder="modal.placeholder.score">
-          <div class="stepper-controls">
-            <button type="button" class="stepper-btn stepper-btn-up" data-action="score-step-up" tabindex="-1" aria-label="Increase score">
-              <svg viewBox="0 0 10 6" class="stepper-icon" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 4.5L5 1.5L8.5 4.5"/></svg>
-            </button>
-            <button type="button" class="stepper-btn stepper-btn-down" data-action="score-step-down" tabindex="-1" aria-label="Decrease score">
-              <svg viewBox="0 0 10 6" class="stepper-icon" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 1.5L5 4.5L8.5 1.5"/></svg>
-            </button>
+        <div class="cover-actions">
+          <button type="button" class="cover-btn" id="coverViewBtn" data-action="cover-view" data-i18n="modal.coverView" style="display:none">View</button>
+          <button type="button" class="cover-btn" data-action="cover-upload" data-i18n="modal.coverUpload">Upload</button>
+          <button type="button" class="cover-btn" data-action="cover-url" data-i18n="modal.coverUrl">URL</button>
+          <div class="cover-remove-wrap" id="coverRemoveWrap" style="display:none">
+            <button type="button" class="cover-btn cover-btn-remove" data-action="cover-remove" data-i18n="modal.coverRemove">Remove</button>
+            <div class="cover-remove-dropdown" id="coverRemoveDropdown">
+              <button type="button" class="cover-dropdown-item confirm" data-action="cover-remove-confirm" data-i18n="modal.coverRemoveConfirm">Confirm</button>
+              <button type="button" class="cover-dropdown-item cancel" data-action="cover-remove-cancel" data-i18n="modal.coverRemoveCancel">Cancel</button>
+            </div>
           </div>
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label" data-i18n="modal.date">Date</label>
-        <input class="form-input" id="editDate" name="date" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="MM.DD" data-i18n-placeholder="modal.placeholder.date">
+        <label class="form-label" data-i18n="modal.title">Title</label>
+        <input class="form-input" id="editTitle" name="title" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="Album title…" data-i18n-placeholder="modal.placeholder.title">
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="modal.artist">Artist</label>
+        <input class="form-input" id="editArtist" name="artist" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="Artist name…" data-i18n-placeholder="modal.placeholder.artist">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" data-i18n="modal.score">Score</label>
+          <div class="stepper-input-wrap">
+            <input class="form-input" id="editScore" name="score" type="number" min="0" max="100" inputmode="numeric" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="0–100" data-i18n-placeholder="modal.placeholder.score">
+            <div class="stepper-controls">
+              <button type="button" class="stepper-btn stepper-btn-up" data-action="score-step-up" tabindex="-1" aria-label="Increase score">
+                <svg viewBox="0 0 10 6" class="stepper-icon" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 4.5L5 1.5L8.5 4.5"/></svg>
+              </button>
+              <button type="button" class="stepper-btn stepper-btn-down" data-action="score-step-down" tabindex="-1" aria-label="Decrease score">
+                <svg viewBox="0 0 10 6" class="stepper-icon" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1.5 1.5L5 4.5L8.5 1.5"/></svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" data-i18n="modal.date">Date</label>
+          <input class="form-input" id="editDate" name="date" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="MM.DD" data-i18n-placeholder="modal.placeholder.date">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="modal.scoreNote">Score Note</label>
+        <input class="form-input" id="editScoreNote" name="scoreNote" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="e.g. Top1, NR…" data-i18n-placeholder="modal.placeholder.note">
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="modal.tags">Tags</label>
+        <div class="form-tags" id="editTags">
+          <button type="button" class="form-tag" data-tag="EP">EP</button>
+          <button type="button" class="form-tag" data-tag="Mixtape">Mixtape</button>
+          <button type="button" class="form-tag" data-tag="Reissue">Reissue</button>
+          <button type="button" class="form-tag" data-tag="Soundtrack">Soundtrack</button>
+          <button type="button" class="form-tag" data-tag="Live">Live</button>
+          <button type="button" class="form-tag" data-tag="Compilation">Compilation</button>
+          <button type="button" class="form-tag" data-tag="Unofficial">Unofficial</button>
+          <button type="button" class="form-tag" data-tag="DJ Mix">DJ Mix</button>
+          <button type="button" class="form-tag" data-tag="Video">Video</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="form-row-between">
+          <label class="form-label" style="margin-bottom:0" data-i18n="modal.aoty" id="aotyLabel">Album of the Year</label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="editAotyToggle" aria-label="Album of the Year">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="form-group" id="sotyGroup" style="display:none">
+        <div class="form-row-between">
+          <label class="form-label" style="margin-bottom:0" data-i18n="modal.soty">Song of the Year</label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="editSotyToggle" aria-label="Song of the Year">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="form-group" id="editSectionGroup" style="display:none">
+        <label class="form-label" data-i18n="modal.section">Add to Section</label>
+        <div class="custom-select" id="editSectionSelect">
+          <button class="custom-select-trigger" id="editSectionTrigger"></button>
+          <div class="custom-select-menu" id="editSectionMenu"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="modal.trackRatings">Track Ratings</label>
+        <div class="track-list" id="trackList"></div>
+        <button type="button" class="track-add" data-action="add-disc" data-i18n="modal.addDisc" style="margin-top:8px">+ Add Disc</button>
+        <button type="button" class="track-add track-batch-add" data-action="batch-add-tracks" data-i18n="modal.batchAddTracks" style="margin-top:8px">Batch Add</button>
+        <div class="track-summary" id="trackSummary"></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" data-i18n="modal.review">Review / AOTY Write-up</label>
+        <textarea class="form-input" id="editReview" name="review" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="Write your review here…" data-i18n-placeholder="modal.placeholder.review"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn secondary" id="pasteBtn" data-action="paste-entry" data-i18n="modal.paste">Paste</button>
+        <button class="modal-btn secondary" data-action="modal-cancel" data-i18n="modal.cancel">Cancel</button>
+        <button class="modal-btn danger" id="deleteBtn" data-action="modal-delete" data-i18n="modal.delete">Delete</button>
+        <button class="modal-btn primary" data-action="modal-save" data-i18n="modal.save">Save</button>
       </div>
     </div>
-    <div class="form-group">
-      <label class="form-label" data-i18n="modal.scoreNote">Score Note</label>
-      <input class="form-input" id="editScoreNote" name="scoreNote" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="e.g. Top1, NR…" data-i18n-placeholder="modal.placeholder.note">
-    </div>
-    <div class="form-group">
-      <label class="form-label" data-i18n="modal.tags">Tags</label>
-      <div class="form-tags" id="editTags">
-        <button type="button" class="form-tag" data-tag="EP">EP</button>
-        <button type="button" class="form-tag" data-tag="Mixtape">Mixtape</button>
-        <button type="button" class="form-tag" data-tag="Reissue">Reissue</button>
-        <button type="button" class="form-tag" data-tag="Soundtrack">Soundtrack</button>
-        <button type="button" class="form-tag" data-tag="Live">Live</button>
-        <button type="button" class="form-tag" data-tag="Compilation">Compilation</button>
-        <button type="button" class="form-tag" data-tag="Unofficial">Unofficial</button>
-        <button type="button" class="form-tag" data-tag="DJ Mix">DJ Mix</button>
-        <button type="button" class="form-tag" data-tag="Video">Video</button>
+  </div>
+</div>
+
+<!-- 全局字体设置弹窗 -->
+<div class="modal-overlay" id="fontSettingsModal">
+  <div class="modal font-settings-modal">
+    <div class="modal-body" id="fontSettingsModalBody">
+      <div class="modal-handle"></div>
+      <div class="modal-title" data-i18n="font.title">全局字体设置</div>
+      
+      <!-- 字体搜索与选择列表 -->
+      <div class="form-group">
+        <label class="form-label" data-i18n="settings.globalFont">全局字体</label>
+        <!-- 字体分类选项卡（中文模式下提供中/英文分开选择，英文模式下隐藏） -->
+        <div class="font-tabs" id="fontCategoryTabs">
+          <button type="button" class="font-tab active" id="fontTabZh" data-tab="zh">
+            <span class="font-tab-label" data-i18n="font.tabZh">中文字体</span>
+            <span class="font-tab-current" id="fontTabZhCurrent">苹方</span>
+          </button>
+          <button type="button" class="font-tab" id="fontTabEn" data-tab="en">
+            <span class="font-tab-label" data-i18n="font.tabEn">英文字体</span>
+            <span class="font-tab-current" id="fontTabEnCurrent">SF Pro</span>
+          </button>
+        </div>
+        <input type="text" class="form-input font-search-input" id="fontSearchInput" autocomplete="off" spellcheck="false" placeholder="搜索已安装字体…" data-i18n-placeholder="font.searchPlaceholder">
+        <div class="font-list-container" id="fontListContainer">
+          <div class="font-list" id="fontList"></div>
+        </div>
+        <div class="font-count-hint" id="fontCountHint"></div>
       </div>
-    </div>
-    <div class="form-group">
-      <div class="form-row-between">
-        <label class="form-label" style="margin-bottom:0" data-i18n="modal.aoty" id="aotyLabel">Album of the Year</label>
-        <label class="toggle-switch">
-          <input type="checkbox" id="editAotyToggle" aria-label="Album of the Year">
-          <span class="toggle-slider"></span>
-        </label>
+
+      <!-- 字体粗细调节滑块（按参考图标准设计） -->
+      <div class="form-group font-weight-group">
+        <div class="font-weight-header">
+          <div class="font-weight-title-wrap">
+            <span class="font-weight-icon">B</span>
+            <span class="font-weight-label" data-i18n="font.weight">字体粗细</span>
+          </div>
+          <span class="font-weight-val" id="fontWeightVal">400</span>
+        </div>
+        <div class="font-weight-slider-wrap">
+          <input type="range" class="font-weight-slider" id="fontWeightSlider" min="100" max="900" step="50" value="400" aria-label="Font weight">
+        </div>
       </div>
-    </div>
-    <div class="form-group" id="sotyGroup" style="display:none">
-      <div class="form-row-between">
-        <label class="form-label" style="margin-bottom:0" data-i18n="modal.soty">Song of the Year</label>
-        <label class="toggle-switch">
-          <input type="checkbox" id="editSotyToggle" aria-label="Song of the Year">
-          <span class="toggle-slider"></span>
-        </label>
+
+      <!-- 实时多语种效果预览区 -->
+      <div class="form-group font-preview-group">
+        <label class="form-label" data-i18n="font.preview">效果预览</label>
+        <div class="font-preview-card" id="fontPreviewCard">
+          <div class="font-preview-title">Hit Me Hard and Soft</div>
+          <div class="font-preview-meta">Billie Eilish · 2024 · 88分 · ★Must Hear Album</div>
+          <div class="font-preview-tracks">01. Skinny · 02. Lunch · 03. Chihiro · 04. Birds of a Feather</div>
+          <div class="font-preview-review">中英文混合排版预览效果：The quick brown fox jumps over the lazy dog. 1234567890 苹方与西文字体和谐共存。</div>
+        </div>
       </div>
-    </div>
-    <div class="form-group" id="editSectionGroup" style="display:none">
-      <label class="form-label" data-i18n="modal.section">Add to Section</label>
-      <div class="custom-select" id="editSectionSelect">
-        <button class="custom-select-trigger" id="editSectionTrigger"></button>
-        <div class="custom-select-menu" id="editSectionMenu"></div>
+
+      <!-- 底部操作按钮 -->
+      <div class="modal-actions font-modal-actions">
+        <button type="button" class="modal-btn secondary" id="fontResetBtn" data-action="font-reset" data-i18n="font.resetDefault">恢复默认</button>
+        <button type="button" class="modal-btn secondary" id="fontCancelBtn" data-action="font-cancel" data-i18n="font.cancel">取消</button>
+        <button type="button" class="modal-btn primary" id="fontSaveBtn" data-action="font-save" data-i18n="font.save">保存</button>
       </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label" data-i18n="modal.trackRatings">Track Ratings</label>
-      <div class="track-list" id="trackList"></div>
-      <button type="button" class="track-add" data-action="add-disc" data-i18n="modal.addDisc" style="margin-top:8px">+ Add Disc</button>
-      <button type="button" class="track-add track-batch-add" data-action="batch-add-tracks" data-i18n="modal.batchAddTracks" style="margin-top:8px">Batch Add</button>
-      <div class="track-summary" id="trackSummary"></div>
-    </div>
-    <div class="form-group">
-      <label class="form-label" data-i18n="modal.review">Review / AOTY Write-up</label>
-      <textarea class="form-input" id="editReview" name="review" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="Write your review here…" data-i18n-placeholder="modal.placeholder.review"></textarea>
-    </div>
-    <div class="modal-actions">
-      <button class="modal-btn secondary" id="pasteBtn" data-action="paste-entry" data-i18n="modal.paste">Paste</button>
-      <button class="modal-btn secondary" data-action="modal-cancel" data-i18n="modal.cancel">Cancel</button>
-      <button class="modal-btn danger" id="deleteBtn" data-action="modal-delete" data-i18n="modal.delete">Delete</button>
-      <button class="modal-btn primary" data-action="modal-save" data-i18n="modal.save">Save</button>
     </div>
   </div>
 </div>
 
 <!-- 年度平均分弹窗 -->
 <div class="modal-overlay" id="yearlyStatsModal">
-  <div class="modal">
+  <div class="modal yearly-stats-modal">
     <div class="modal-handle"></div>
     <div class="modal-title" id="yearlyStatsTitle"></div>
-    <div class="yearly-stats-list" id="yearlyStatsList"></div>
+    <div class="yearly-stats-wrap" id="yearlyStatsWrap">
+      <div class="yearly-stats-list" id="yearlyStatsList"></div>
+    </div>
     <div class="modal-actions">
       <button class="modal-btn secondary" data-action="yearly-stats-close" data-i18n="modal.cancel">Close</button>
     </div>
@@ -380,7 +452,7 @@
 <!-- 封面图片放大查看器 -->
 <div class="cover-viewer-overlay" id="coverViewer">
   <div class="cover-viewer-close" data-action="cover-viewer-close">×</div>
-  <img class="cover-viewer-img" id="coverViewerImg" src="" alt="">
+  <img class="cover-viewer-img" id="coverViewerImg" src="" alt="" draggable="false" ondragstart="return false;">
 </div>
 
 <script>

@@ -57,6 +57,9 @@ function openEditModal(entryId, sectionId, groupId) {
   loadCoverPreview(entry.cover, entry.id);
 
   document.getElementById('editModal').classList.add('active');
+  const modalBody = document.getElementById('editModalBody');
+  const modalCard = document.querySelector('#editModal .modal');
+  if (modalBody && modalCard) attachMacScrollbar(modalBody, { parent: modalCard, id: 'editModalScrollTrack' });
 }
 
 function openAddModal() {
@@ -89,6 +92,9 @@ function openAddModal() {
 
   clearCoverPreview();
   document.getElementById('editModal').classList.add('active');
+  const modalBody = document.getElementById('editModalBody');
+  const modalCard = document.querySelector('#editModal .modal');
+  if (modalBody && modalCard) attachMacScrollbar(modalBody, { parent: modalCard, id: 'editModalScrollTrack' });
 }
 
 function closeModal() {
@@ -362,6 +368,8 @@ async function saveEntry() {
               targetSection.groups.push(targetGroup);
             }
             targetGroup.entries.push(editingEntry);
+            // 切换年份分区后立即按目标分区规则自动排序
+            sortGroupEntries(targetGroup, targetSection.id);
             console.log('[Move] 移动后目标组条目数:', targetGroup.entries.length);
             didMove = true;
           }
@@ -382,50 +390,7 @@ async function saveEntry() {
       section.groups.push(group);
     }
     group.entries.push(data);
-    // 2025及以后：MM.DD 按日期排序，XXXX 按年份排序（新在前），无日期按标题排序
-    // 1990-2024：按标题排序；1980s及以前按年份排序（新在前）
-    const year = parseInt(section.id);
-    const isFuture = !isNaN(year) && year >= 2025;
-    const isOld = !isNaN(year) && year <= 1989;
-    const needsSort = isFuture || (!isNaN(year) && year >= 1990 && year <= 2024) || isOld;
-    if (needsSort) {
-      const special = group.entries.filter(e => e.isAoty || e.isSoty);
-      const normal = group.entries.filter(e => !e.isAoty && !e.isSoty);
-      normal.sort((a, b) => {
-        if (isFuture) {
-          const da = a.date || '';
-          const db = b.date || '';
-          const aHas = !!da, bHas = !!db;
-          if (!aHas && !bHas) { /* fall through to title */ }
-          else if (!aHas) return 1;
-          else if (!bHas) return -1;
-          else {
-            const aDot = da.includes('.');
-            const bDot = db.includes('.');
-            if (aDot && !bDot) return -1;
-            if (!aDot && bDot) return 1;
-            if (aDot && bDot) {
-              if (da !== db) return da.localeCompare(db);
-            } else {
-              if (da !== db) return db.localeCompare(da); // 年份越新越靠前
-            }
-          }
-        }
-        if (isOld) {
-          const ya = a.date || '9999';
-          const yb = b.date || '9999';
-          if (ya !== yb) return yb.localeCompare(ya); // 年份越新越靠前
-        }
-        const ta = (a.title || '');
-        const tb = (b.title || '');
-        const oa = charPriority(ta.charAt(0));
-        const ob = charPriority(tb.charAt(0));
-        if (oa !== ob) return oa - ob;
-        if (oa === 3) return ta.localeCompare(tb, 'zh-CN');
-        return ta.localeCompare(tb, undefined, { numeric: true });
-      });
-      group.entries = [...special, ...normal];
-    }
+    sortGroupEntries(group, section.id);
   }
 
   debugAotyCount('saveEntry 后');
@@ -600,12 +565,14 @@ function loadCoverPreview(cover, entryId) {
   const wrap = document.getElementById('coverPreviewWrap');
   const img = document.getElementById('coverPreview');
   const removeWrap = document.getElementById('coverRemoveWrap');
+  const viewBtn = document.getElementById('coverViewBtn');
   const requestId = ++coverPreviewRequestId;
 
   if (!cover) {
     wrap.style.display = 'none';
     img.src = '';
     removeWrap.style.display = 'none';
+    if (viewBtn) viewBtn.style.display = 'none';
     return;
   }
 
@@ -613,19 +580,23 @@ function loadCoverPreview(cover, entryId) {
     img.src = cover;
     wrap.style.display = '';
     removeWrap.style.display = '';
+    if (viewBtn) viewBtn.style.display = '';
   } else if (window.__TAURI__) {
     wrap.style.display = 'none';
     removeWrap.style.display = 'none';
+    if (viewBtn) viewBtn.style.display = 'none';
     window.__TAURI__.core.invoke('read_cover', { entryId: entryId }).then(dataUrl => {
       if (requestId === coverPreviewRequestId && (editingEntry?.id === entryId || document.getElementById('editId').value === entryId)) {
         img.src = dataUrl;
         wrap.style.display = '';
         removeWrap.style.display = '';
+        if (viewBtn) viewBtn.style.display = '';
       }
     }).catch(() => {
       if (requestId === coverPreviewRequestId) {
         wrap.style.display = 'none';
         removeWrap.style.display = 'none';
+        if (viewBtn) viewBtn.style.display = 'none';
       }
     });
   }
@@ -634,6 +605,8 @@ function loadCoverPreview(cover, entryId) {
 function releaseCoverPreview() {
   coverPreviewRequestId++;
   document.getElementById('coverPreviewWrap').style.display = 'none';
+  const viewBtn = document.getElementById('coverViewBtn');
+  if (viewBtn) viewBtn.style.display = 'none';
   const img = document.getElementById('coverPreview');
   img.onload = null;
   img.src = '';
@@ -645,37 +618,73 @@ function clearCoverPreview() {
   releaseCoverPreview();
   document.getElementById('coverRemoveWrap').style.display = 'none';
   document.getElementById('coverRemoveDropdown').classList.remove('active');
+  const viewBtn = document.getElementById('coverViewBtn');
+  if (viewBtn) viewBtn.style.display = 'none';
 }
 
 function setupCoverEvents() {
   const section = document.getElementById('coverSection');
   if (!section) return;
 
+  // 查看大图
+  section.querySelector('[data-action="cover-view"]')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openCoverViewer();
+  });
+
   // 本地上传
   section.querySelector('[data-action="cover-upload"]').addEventListener('click', async () => {
-    if (!window.__TAURI__) return;
     let entryId = document.getElementById('editId').value;
     if (!entryId) {
       entryId = generateId();
       document.getElementById('editId').value = entryId;
     }
-    try {
-      const { open } = window.__TAURI_PLUGIN_DIALOG__;
-      const selected = await open({
-        multiple: false,
-        filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'avif'] }]
-      });
-      if (!selected) return;
-      const filename = await window.__TAURI__.core.invoke('upload_cover', {
-        entryId: entryId,
-        sourcePath: selected
-      });
-      currentModalCover = filename;
-      if (editingEntry) editingEntry.cover = filename;
-      invalidateCoverThumbnail(entryId);
-      loadCoverPreview(filename, entryId);
-    } catch (err) {
-      console.error('封面上传失败:', err);
+    if (window.__TAURI__ && window.__TAURI_PLUGIN_DIALOG__) {
+      try {
+        const { open } = window.__TAURI_PLUGIN_DIALOG__;
+        const selected = await open({
+          multiple: false,
+          filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'avif'] }]
+        });
+        if (!selected) return;
+        const filename = await window.__TAURI__.core.invoke('upload_cover', {
+          entryId: entryId,
+          sourcePath: selected
+        });
+        currentModalCover = filename;
+        if (editingEntry) editingEntry.cover = filename;
+        invalidateCoverThumbnail(entryId);
+        loadCoverPreview(filename, entryId);
+      } catch (err) {
+        console.error('封面上传失败:', err);
+      }
+    } else {
+      // 纯网页环境 fallback：通过隐藏的 file input 导入
+      let input = document.getElementById('browserCoverFileInput');
+      if (!input) {
+        input = document.createElement('input');
+        input.id = 'browserCoverFileInput';
+        input.type = 'file';
+        input.accept = 'image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif';
+        input.style.display = 'none';
+        document.body.appendChild(input);
+      }
+      input.value = '';
+      input.onchange = (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const dataUrl = evt.target.result;
+          currentModalCover = dataUrl;
+          if (editingEntry) editingEntry.cover = dataUrl;
+          invalidateCoverThumbnail(entryId);
+          loadCoverPreview(dataUrl, entryId);
+        };
+        reader.readAsDataURL(file);
+      };
+      input.click();
     }
   });
 
@@ -772,9 +781,18 @@ function setupCoverEvents() {
   let viewerScale = 1;
   let panX = 0, panY = 0;
   let isDragging = false, dragStartX = 0, dragStartY = 0, dragStartPanX = 0, dragStartPanY = 0;
+  let transformRafId = null;
 
   function updateViewerTransform() {
-    viewerImg.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + viewerScale + ')';
+    viewerImg.style.transform = 'translate3d(' + panX.toFixed(2) + 'px,' + panY.toFixed(2) + 'px, 0px) scale(' + viewerScale.toFixed(4) + ')';
+  }
+
+  function scheduleViewerTransform() {
+    if (transformRafId) return;
+    transformRafId = requestAnimationFrame(() => {
+      transformRafId = null;
+      updateViewerTransform();
+    });
   }
 
   function openCoverViewer(customSrc) {
@@ -790,7 +808,13 @@ function setupCoverEvents() {
   window.openCoverViewer = openCoverViewer;
 
   function closeCoverViewer() {
-    viewer.classList.remove('active');
+    if (transformRafId) {
+      cancelAnimationFrame(transformRafId);
+      transformRafId = null;
+    }
+    isDragging = false;
+    viewer.classList.remove('active', 'is-dragging');
+    viewerImg.classList.remove('is-dragging');
     viewerImg.src = '';
   }
   window.closeCoverViewer = closeCoverViewer;
@@ -809,7 +833,11 @@ function setupCoverEvents() {
     if (e.target === viewer) closeCoverViewer();
   });
 
-  // 滚轮缩放（以鼠标位置为中心）
+  // 禁止原生的拖拽幽灵图像与上下文菜单
+  viewerImg.setAttribute('draggable', 'false');
+  viewerImg.addEventListener('dragstart', (e) => e.preventDefault());
+
+  // 滚轮缩放（严格以鼠标光标所在像素点为绝对中心进行几何等比缩放）
   viewer.addEventListener('wheel', (e) => {
     e.preventDefault();
     const rect = viewerImg.getBoundingClientRect();
@@ -818,40 +846,59 @@ function setupCoverEvents() {
     const mouseX = e.clientX - imgCenterX;
     const mouseY = e.clientY - imgCenterY;
     const oldScale = viewerScale;
-    const delta = e.deltaY > 0 ? -0.15 : 0.15;
-    viewerScale = Math.max(0.3, Math.min(5, viewerScale + delta));
-    const r = viewerScale / oldScale;
-    panX = panX * r - mouseX * (r - 1);
-    panY = panY * r - mouseY * (r - 1);
+
+    // 指数等比缩放因子（每次滚轮滚动保持 22% 恒定比例扩展/缩小，全尺度感知速率完全恒定且灵敏迅捷）
+    const zoomFactor = 1.22;
+    const factor = e.deltaY < 0 ? zoomFactor : (1 / zoomFactor);
+    const newScale = Math.max(0.25, Math.min(8.0, viewerScale * factor));
+    if (newScale === oldScale) return;
+
+    const r = newScale / oldScale;
+    // 严格以鼠标光标当前点为锚点：平移量只做几何偏差修正，光标所指位置保持绝对不动
+    panX -= (r - 1) * mouseX;
+    panY -= (r - 1) * mouseY;
+    viewerScale = newScale;
+
     updateViewerTransform();
   }, { passive: false });
 
-  // 鼠标拖拽平移
-  viewerImg.addEventListener('mousedown', (e) => {
+  // 鼠标 / Pointer 拖拽平移（使用 PointerCapture + rAF 流畅对齐，杜绝果冻撕裂与拖拽丢失）
+  viewerImg.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return; // 仅限左键拖拽
     e.preventDefault();
+    e.stopPropagation();
     isDragging = true;
     dragStartX = e.clientX;
     dragStartY = e.clientY;
     dragStartPanX = panX;
     dragStartPanY = panY;
-    viewerImg.style.cursor = 'grabbing';
-    viewerImg.style.transition = 'none'; // 拖拽时去掉过渡，跟手
+    viewer.classList.add('is-dragging');
+    viewerImg.classList.add('is-dragging');
+    viewerImg.style.transition = 'none';
+    try { viewerImg.setPointerCapture(e.pointerId); } catch (_) {}
   });
 
-  document.addEventListener('mousemove', (e) => {
+  viewerImg.addEventListener('pointermove', (e) => {
     if (!isDragging) return;
     panX = dragStartPanX + (e.clientX - dragStartX);
     panY = dragStartPanY + (e.clientY - dragStartY);
-    updateViewerTransform();
+    scheduleViewerTransform();
   });
 
-  document.addEventListener('mouseup', () => {
+  const stopDrag = (e) => {
     if (isDragging) {
       isDragging = false;
-      viewerImg.style.cursor = 'grab';
-      viewerImg.style.transition = 'transform 0.15s ease'; // 松开后恢复过渡
+      viewer.classList.remove('is-dragging');
+      viewerImg.classList.remove('is-dragging');
+      viewerImg.style.transition = 'none';
+      if (e && e.pointerId) {
+        try { viewerImg.releasePointerCapture(e.pointerId); } catch (_) {}
+      }
     }
-  });
+  };
+
+  viewerImg.addEventListener('pointerup', stopDrag);
+  viewerImg.addEventListener('pointercancel', stopDrag);
 
   // Escape 关闭放大查看器（捕获阶段拦截，防止关闭下层编辑弹窗）
   document.addEventListener('keydown', (e) => {

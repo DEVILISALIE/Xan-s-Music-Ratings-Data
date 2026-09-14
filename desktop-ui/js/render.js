@@ -394,7 +394,7 @@ function renderSidebar() {
   const nav = document.getElementById('sidebarNav');
   let html = '';
   // 添加新年份按钮
-  html += `<div style="padding:8px 16px;">
+  html += `<div style="padding:6px 14px 8px 14px;">
     <button class="sidebar-add-year-btn" data-action="add-new-year">${t('sidebar.newYear')}</button>
   </div>`;
   const mergedSections = getMergedSections();
@@ -856,6 +856,9 @@ function openYearlyStats(type) {
   document.getElementById('yearlyStatsTitle').textContent = t(titleKey);
   document.getElementById('yearlyStatsList').innerHTML = html;
   document.getElementById('yearlyStatsModal').classList.add('active');
+  const yearlyList = document.getElementById('yearlyStatsList');
+  const yearlyWrap = document.getElementById('yearlyStatsWrap');
+  if (yearlyList && yearlyWrap) attachMacScrollbar(yearlyList, { parent: yearlyWrap, id: 'yearlyStatsScrollTrack' });
 }
 
 // 封面缩略图 HTML — 供 renderAlbumCard / renderAotyCard 共用

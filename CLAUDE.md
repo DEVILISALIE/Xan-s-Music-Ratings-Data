@@ -73,6 +73,23 @@ npm run tauri build              # 构建 MSI 安装包
 | `mustHearEnabled` | `"true"` / `"false"` | 必听专辑功能开关，默认 `true` |
 | `bgHue` | `"default"` / `0–360` 数字字符串 | 浅色背景色调（仅浅色生效），默认 `default` |
 | `showFps` | `"true"` / `"false"` | 桌面标题栏 FPS/1% Low 监视器，默认关闭 |
+| `customFontZh` | 字符串 | 用户选中的全局中文字体（如 `"PingFang SC"`、`"华文楷体"` 等），默认 `"PingFang SC"` |
+| `customFontEn` | 字符串 | 用户选中的全局英文字体（如 `"-apple-system"`、`"Georgia"` 等），默认 `"-apple-system"` |
+| `customFontWeight` | 数字字符串 | 用户自定义全局字重（`100`–`900`），默认 `400` |
+| `customFontWeightEnabled` | `"true"` / `"false"` | 自定义字重开关，默认 `false` |
+
+## v1.6.0 更新（相对 v1.5.4）
+
+- **全局字体与字重体系**：
+  - **中英双语分开独立选择**：提供中文与英文字体独立 Tab 切换与配置。默认采用 Apple 原生苹方（PingFang SC）与 SF Pro 黄金混排搭配；中文模式下中英文分开选择，英文模式下专注纯西文字体列表。
+  - **Rust 后端原生枚举本机系统字体**：通过 Windows GDI `EnumFontFamiliesExW` 原生枚举本机 500+ 款已安装字体（过滤 `@` 垂直字体并去重排序），前端结合汉字 Unicode 与 30+ 拼音关键字精准归类；字体列表项以自身真实字形自渲染展示。
+  - **100–900 无极字重调节**：滑块支持全档位字重平滑微调（步长 50），现代变长字体（Variable Fonts）原生平滑无级粗细渐变，传统字体引擎智能微合成。
+  - **双层字重精准加权体系**：基准字重（`--custom-font-weight`）控制常规文本、标签、乐评与列表；加权层（`calc(var(--custom-font-weight) + 150)`）智能强化卡片分数徽标、大标题、年份与主操作按钮，维持排版主次节奏。
+  - **全域穿透与无缝继承**：字体族与字重下发覆盖全站主界面、专辑卡片、年份侧边栏、工具栏、统计面板、二级编辑菜单、各种下拉菜单及各类弹窗。
+- **高质感效果实时双向预览**：
+  - 字体设置弹窗内嵌独立预览卡片（`.font-preview-card`），中英文模式动态切换示范专辑与混排评语，双向联动字形与粗细。
+  - 预览卡片针对极窄视口（低于 480px）与特大字号深度适配，建立安全边距与盒模型溢出保护，接入 `text-wrap: balance / pretty`、`overflow-wrap: break-word` 与连字符自动断词（`-webkit-hyphens: auto`）。
+- **一键恢复默认**：随时可一键重置为初始调校的苹方 + SF Pro 黄金比例。
 
 ## v1.5.0 更新（相对 v1.4.3）
 
@@ -144,7 +161,12 @@ GitHub 上一次正式 Release 为 `v1.4.0`（commit `ede5a58`，2026-07-14）�
 - 桌面版固定使用 `musicData_desktop` 作为 WebView2 本地镜像
 - `build-frontend.js` 构建时将 `desktop-ui/index.html`、`desktop-ui/css`、`desktop-ui/js` 和可选 `desktop-ui/data.json` 复制到 `dist/`，再由 Tauri 打包进二进制
 - Tauri 插件：dialog、fs、global-shortcut、shell、single-instance；Rust 依赖 `base64` 与 `image`
-- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.5.4`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.5.4`
+- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.6.0`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.6.0`
+
+**v1.6.0 更新日志**：
+- **全局字体与字重体系**：支持中英文分开独立选择字体，内置 530+ 款系统字体智能识别与多语种分类；支持 100-900 自定义字重平滑调节；下发覆盖全站主界面、专辑卡片、年份栏、二级编辑菜单与所有弹窗；
+- **实时效果双向预览**：字体设置弹窗内嵌高质感实时预览卡片，动态联动多语种字形与粗细排版；
+- **窄屏排版与优雅断词**：为预览卡片与弹窗建立视口自适应安全边距，采用 `text-wrap: balance / pretty` 与优雅断词，杜绝边缘贴紧与单词溢出；
 
 **v1.5.4 更新日志**：
 - **搜索图标重塑**：搜索栏放大镜更换为清晰纯正的 iOS 风格微图标（`assets/search-icon.png`），去除旧版噪点与 AI 味；
@@ -245,3 +267,12 @@ GitHub 上一次正式 Release 为 `v1.4.0`（commit `ede5a58`，2026-07-14）�
 - 卡片曲目标签：多碟时显示 `2 Discs 28T`（英文）/ `2碟 28首`（中文），单碟保持原样
 - 编辑弹窗内多碟专辑额外显示每碟独立平均分，用「·」分隔，如 `碟1：平均 85.2 · 碟2：平均 79.4`
 - i18n 键：`content.discLabel`（`{count} Discs ` / `{count}碟 `）、`modal.discAvg`（`Disc {disc}: avg {avg}` / `碟{disc}：平均 {avg}`）
+
+**全局字体与字重体系（v1.6.0）**：
+- **数据持久化**：全局字体与字重偏好保存在 localStorage：`customFontZh`（默认 `"PingFang SC"`）、`customFontEn`（默认 `"-apple-system"`）、`customFontWeight`（默认 `400`）、`customFontWeightEnabled`（默认 `false`）。启动时由 `initCustomFontSettings()` 自动还原。
+- **系统字体枚举**：Rust 端实现 `get_system_fonts` 命令，调用 Windows GDI `EnumFontFamiliesExW` 枚举本机所有字体，过滤 `@` 垂直排版字体并去重排序返回 `Vec<String>`；前端缓存至 `_allSystemFonts`。
+- **字体智能分类与独立 Tab**：`isChineseFont(fontName)` 结合汉字 Unicode 范围（`\u4e00-\u9fa5`）与 30+ 常用中文字体拼音关键字（`kaiti`、`fangzheng`、`huawen`、`simsun`、`yahei`、`pingfang` 等）精准划分。中文模式下提供「中文字体」与「英文字体」两个分段选项卡；英文模式下自动隐藏选项卡并专注西文字体列表。字体列表项通过 `font-family: "${fontName}", sans-serif !important;` 实现自身真实字形自渲染展示。
+- **字体堆叠构建与全域下发**：`buildFontFamilyStack(en, zh)` 生成标准 CSS font-family 字符串并绑定到根变量 `--custom-font-family`。CSS 中通过通配与全域选择器强制下发覆盖 `body`、所有表单输入框、卡片、侧边栏、工具栏、统计面板、二级编辑菜单、各种下拉菜单与各类模态弹窗。
+- **双层字重穿透体系**：滑块支持 100–900 范围调节（步长 50）。开启自定义字重时，通过 `[data-font-weight-custom="true"]` 激活：常规元素采用基准字重 `var(--custom-font-weight) !important`；标题、年份、分数徽标、统计大标题与关键按钮采用阶梯加权 `calc(var(--custom-font-weight) + 150) !important`，确保视觉层次清晰。
+- **实时效果双向预览**：字体弹窗内嵌独立预览卡片（`#fontPreviewCard`），中英文模式动态切换示范专辑与混排评语，双向联动字形与粗细。具备极窄视口（低于 480px）自适应安全边距与盒模型保护（`width: min(580px, calc(100vw - 32px))`），并接入 `text-wrap: balance / pretty`、`overflow-wrap: break-word`、`word-break: break-word` 与连字符自动断词（`-webkit-hyphens: auto`）。
+- **一键重置与防误触**：提供「恢复默认」按钮一键重置为苹方 + SF Pro 系统原生组合；搜索框防止输入法回车误保存，需点击保存、按 Shift+Enter 或失焦后 Enter 确认保存。

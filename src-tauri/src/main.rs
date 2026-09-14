@@ -720,6 +720,81 @@ fn read_cover(app: AppHandle, entry_id: String) -> Result<String, String> {
     original_cover_data_url(&path)
 }
 
+#[tauri::command]
+fn get_system_fonts() -> Vec<String> {
+    let mut font_set = std::collections::BTreeSet::new();
+
+    #[cfg(target_os = "windows")]
+    {
+        #[link(name = "advapi32")]
+        extern "system" {
+            fn RegOpenKeyExW(hKey: isize, lpSubKey: *const u16, ulOptions: u32, samDesired: u32, phkResult: *mut isize) -> i32;
+            fn RegEnumValueW(
+                hKey: isize,
+                dwIndex: u32,
+                lpValueName: *mut u16,
+                lpcchValueName: *mut u32,
+                lpReserved: *mut u32,
+                lpType: *mut u32,
+                lpData: *mut u8,
+                lpcbData: *mut u32,
+            ) -> i32;
+            fn RegCloseKey(hKey: isize) -> i32;
+        }
+
+        const HKEY_LOCAL_MACHINE: isize = -2147483646; // 0x80000002
+        const HKEY_CURRENT_USER: isize = -2147483647;  // 0x80000001
+        const KEY_READ: u32 = 0x20019;
+
+        let scan_registry = |root: isize, subkey: &str, set: &mut std::collections::BTreeSet<String>| {
+            let sub_key_u16: Vec<u16> = subkey.encode_utf16().chain(std::iter::once(0)).collect();
+            let mut h_key: isize = 0;
+            unsafe {
+                if RegOpenKeyExW(root, sub_key_u16.as_ptr(), 0, KEY_READ, &mut h_key) == 0 {
+                    let mut index = 0u32;
+                    let mut name_buf = [0u16; 512];
+                    loop {
+                        let mut name_len = name_buf.len() as u32;
+                        let res = RegEnumValueW(
+                            h_key,
+                            index,
+                            name_buf.as_mut_ptr(),
+                            &mut name_len,
+                            std::ptr::null_mut(),
+                            std::ptr::null_mut(),
+                            std::ptr::null_mut(),
+                            std::ptr::null_mut(),
+                        );
+                        if res != 0 {
+                            break;
+                        }
+                        let raw_name = String::from_utf16_lossy(&name_buf[..name_len as usize]);
+                        let trimmed = raw_name.trim();
+                        let base_name = if let Some(idx) = trimmed.rfind('(') {
+                            trimmed[..idx].trim()
+                        } else {
+                            trimmed
+                        };
+                        for part in base_name.split('&') {
+                            let clean = part.trim();
+                            if !clean.is_empty() && !clean.starts_with('@') {
+                                set.insert(clean.to_string());
+                            }
+                        }
+                        index += 1;
+                    }
+                    RegCloseKey(h_key);
+                }
+            }
+        };
+
+        scan_registry(HKEY_LOCAL_MACHINE, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts", &mut font_set);
+        scan_registry(HKEY_CURRENT_USER, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Fonts", &mut font_set);
+    }
+
+    font_set.into_iter().collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -873,7 +948,8 @@ fn main() {
             is_window_maximized, is_window_fullscreen, is_window_topmost,
             save_data_to_disk, load_data_from_disk, check_disk_data, get_data_file_size, write_log,
             graceful_exit, trim_memory,
-            upload_cover, remove_cover, read_cover_thumbnail, read_cover, clean_orphan_covers
+            upload_cover, remove_cover, read_cover_thumbnail, read_cover, clean_orphan_covers,
+            get_system_fonts
         ])
         .run(tauri::generate_context!())
         .expect("启动 Tauri 应用失败");

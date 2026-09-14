@@ -424,12 +424,37 @@
   width: 100%;
   max-width: 560px;
   max-height: 85vh;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 24px;
+  overflow: hidden;
+  position: relative;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
   transform: scale(0.95);
   opacity: 0;
   transition: transform var(--duration-modal) var(--ease-spring), opacity var(--duration-modal) var(--ease-out);
+}
+
+.modal-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 24px 24px 32px;
+  max-height: 100%;
+  height: 100%;
+  flex: 1;
+  min-height: 0;
+  box-sizing: border-box;
+  scrollbar-width: none !important;
+}
+
+.modal-body::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+}
+
+.modal > .mac-scrollbar-track {
+  top: 14px;
+  bottom: 14px;
+  right: 4px;
 }
 
 [data-style="glass"] .modal {
@@ -1060,6 +1085,22 @@ textarea.form-input::-webkit-scrollbar-corner {
 }
 
 /* ===== Yearly Stats Modal ===== */
+.yearly-stats-modal {
+  padding: 24px !important;
+}
+
+.yearly-stats-wrap {
+  position: relative;
+  overflow: hidden;
+  margin: 12px 0 16px 0;
+}
+
+.yearly-stats-wrap > .mac-scrollbar-track {
+  top: 6px;
+  bottom: 6px;
+  right: 2px;
+}
+
 .yearly-stats-list {
   display: flex;
   flex-direction: column;
@@ -1067,7 +1108,14 @@ textarea.form-input::-webkit-scrollbar-corner {
   max-height: 60vh;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 4px;
+  padding: 4px 20px 4px 4px;
+  box-sizing: border-box;
+  scrollbar-width: none !important;
+}
+
+.yearly-stats-list::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
 }
 
 .yearly-stats-row {
@@ -2082,13 +2130,16 @@ textarea.form-input::-webkit-scrollbar-corner {
   display: none;
   position: fixed;
   inset: 0;
-  z-index: 9999;
-  background: rgba(0,0,0,0.85);
+  z-index: 99999;
+  background: rgba(8, 8, 10, 0.96);
+  backdrop-filter: blur(28px) saturate(160%);
+  -webkit-backdrop-filter: blur(28px) saturate(160%);
   justify-content: center;
   align-items: center;
   cursor: zoom-out;
   user-select: none;
   -webkit-user-select: none;
+  overflow: hidden;
 }
 
 .cover-viewer-overlay.active {
@@ -2100,9 +2151,24 @@ textarea.form-input::-webkit-scrollbar-corner {
   max-height: 90vh;
   border-radius: 8px;
   object-fit: contain;
-  transition: transform 0.05s ease;
+  transition: none !important;
   pointer-events: auto;
-  cursor: var(--cursor-grab);
+  cursor: var(--cursor-grab) !important;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  touch-action: none;
+  will-change: transform;
+  transform-origin: center center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6);
+}
+
+.cover-viewer-overlay.is-dragging,
+.cover-viewer-overlay.is-dragging *,
+.cover-viewer-img.is-dragging {
+  cursor: var(--cursor-grabbing) !important;
 }
 
 .cover-viewer-close {
@@ -2115,9 +2181,568 @@ textarea.form-input::-webkit-scrollbar-corner {
   opacity: 0.7;
   transition: opacity 0.15s;
   line-height: 1;
-  z-index: 1;
+  z-index: 10;
 }
 
 .cover-viewer-close:hover {
   opacity: 1;
 }
+
+/* ===== 全局字体设置弹窗 ===== */
+.font-settings-modal {
+  width: min(580px, calc(100vw - 32px));
+  max-width: 580px;
+  max-height: 90vh;
+}
+
+/* ===== 字体分类选项卡 (iOS 分段选择器) ===== */
+.font-tabs {
+  display: flex;
+  gap: 4px;
+  background: var(--hover-bg);
+  border: 1px solid var(--separator);
+  border-radius: 10px;
+  padding: 3px;
+  margin-bottom: 10px;
+}
+
+[data-style="glass"] .font-tabs {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+[data-style="glass"][data-theme="dark"] .font-tabs {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.font-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-family: inherit;
+  cursor: var(--cursor-pointer);
+  transition: background-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+  user-select: none;
+}
+
+.font-tab:hover {
+  color: var(--text);
+}
+
+.font-tab.active {
+  background: var(--card-bg);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="dark"] .font-tab.active {
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.font-tab-current {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  background: rgba(10, 132, 255, 0.12);
+  color: var(--accent);
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.font-search-input {
+  margin-bottom: 8px;
+}
+
+.font-list-container {
+  position: relative;
+  max-height: 140px;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid var(--separator);
+  background: var(--input-bg);
+}
+
+[data-style="glass"] .font-list-container {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+[data-style="glass"][data-theme="dark"] .font-list-container {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.font-list {
+  max-height: 140px;
+  overflow-y: auto;
+  padding: 4px;
+  box-sizing: border-box;
+  scrollbar-width: none !important;
+}
+
+.font-list::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+}
+
+.font-list-container > .mac-scrollbar-track {
+  top: 4px;
+  bottom: 4px;
+  right: 3px;
+}
+
+.font-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text);
+  cursor: var(--cursor-pointer);
+  user-select: none;
+  -webkit-user-select: none;
+  content-visibility: auto;
+  contain-intrinsic-size: 36px;
+  transition: background-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+}
+
+.font-item:hover {
+  background: var(--hover-bg);
+}
+
+.font-item:active {
+  transform: scale(0.98);
+}
+
+.font-item.active {
+  background: var(--pill-active-bg);
+  color: var(--pill-active-text);
+  font-weight: 600;
+}
+
+.font-item-check {
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0;
+}
+
+.font-item.active .font-item-check {
+  opacity: 1;
+}
+
+.font-count-hint {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 6px;
+  text-align: right;
+  padding-right: 2px;
+}
+
+/* ===== 字体粗细拖拽滑块 ===== */
+.font-weight-group {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--separator);
+}
+
+[data-style="glass"] .font-weight-group {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+[data-style="glass"][data-theme="dark"] .font-weight-group {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.font-weight-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.font-weight-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.font-weight-icon {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 1;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.font-weight-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.font-weight-val {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+}
+
+.font-weight-slider-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 2px 0;
+}
+
+.font-weight-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--progress, 37.5%), rgba(120, 120, 128, 0.24) var(--progress, 37.5%), rgba(120, 120, 128, 0.24) 100%);
+  outline: none;
+  cursor: var(--cursor-pointer);
+  transition: background 0.05s ease;
+}
+
+.font-weight-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 0.5px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.22), 0 1px 2px rgba(0, 0, 0, 0.12);
+  cursor: var(--cursor-pointer);
+  transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.font-weight-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28), 0 1px 3px rgba(0, 0, 0, 0.16);
+}
+
+.font-weight-slider::-webkit-slider-thumb:active {
+  transform: scale(0.95);
+}
+
+/* ===== 实时预览区 ===== */
+.font-preview-group {
+  margin-top: 12px;
+}
+
+.font-preview-card,
+.font-preview-card * {
+  font-family: var(--preview-font-family, inherit) !important;
+}
+
+.font-preview-card {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--separator);
+  transition: border-color 0.2s;
+  font-weight: var(--preview-font-weight, 400) !important;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+[data-style="glass"] .font-preview-card {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+[data-style="glass"][data-theme="dark"] .font-preview-card {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.font-preview-title,
+.font-preview-meta,
+.font-preview-tracks,
+.font-preview-review {
+  box-sizing: border-box;
+  max-width: 100%;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
+.font-preview-title {
+  font-size: 16px;
+  font-weight: calc(var(--preview-font-weight, 400) + 150) !important;
+  letter-spacing: -0.2px;
+  line-height: 1.35;
+  margin-bottom: 3px;
+  color: var(--text);
+  text-wrap: balance;
+}
+
+.font-preview-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  line-height: 1.45;
+  font-weight: var(--preview-font-weight, 400) !important;
+  text-wrap: pretty;
+}
+
+.font-preview-tracks {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-bottom: 4px;
+  line-height: 1.45;
+  font-weight: var(--preview-font-weight, 400) !important;
+  text-wrap: pretty;
+}
+
+.font-preview-review {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.55;
+  font-weight: var(--preview-font-weight, 400) !important;
+  text-wrap: pretty;
+}
+
+@media (max-width: 480px) {
+  .font-settings-modal {
+    width: calc(100vw - 20px);
+    margin: 10px;
+  }
+  .font-preview-card {
+    padding: 10px 12px;
+  }
+  .font-preview-title {
+    font-size: 15px;
+  }
+  .font-preview-meta,
+  .font-preview-tracks {
+    font-size: 11.5px;
+  }
+  .font-preview-review {
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+}
+
+.font-modal-actions {
+  margin-top: 16px;
+}
+
+/* ===== 全局字体族与字重下发：覆盖主界面、卡片、侧边栏、工具栏、统计面板与所有弹窗二级菜单 ===== */
+body,
+button,
+input,
+textarea,
+select,
+optgroup,
+.content,
+.content *,
+.album-card,
+.album-card *,
+.aoty-card,
+.aoty-card *,
+.sidebar,
+.sidebar *,
+.sidebar-title,
+.sidebar-subtitle,
+.sidebar-footer,
+.sidebar-footer *,
+.toolbar,
+.toolbar *,
+.global-stats-sidebar,
+.global-stats-sidebar *,
+.modal,
+.modal *,
+.modal-overlay,
+.modal-body,
+.custom-select,
+.custom-select *,
+.dropdown-menu,
+.dropdown-menu *,
+.settings-dropdown,
+.settings-dropdown *,
+.batch-dropdown-menu,
+.batch-dropdown-menu *,
+.batch-bar,
+.batch-bar *,
+.popover,
+.popover *,
+.must-hear-popover,
+.must-hear-popover *,
+.dialog-box,
+.dialog-box *,
+.cover-remove-dropdown,
+.cover-remove-dropdown *,
+.context-menu,
+.context-menu *,
+.custom-context-menu,
+.custom-context-menu *,
+.yearly-stats-modal,
+.yearly-stats-modal *,
+.toast {
+  font-family: var(--custom-font-family, inherit);
+}
+
+/* 字体列表项与其子文本强制使用 font-item 自身指定的字体 */
+.font-item * {
+  font-family: inherit !important;
+}
+
+/* 实时预览卡片与其子元素强制绑定预览字体变量 */
+.font-preview-card,
+.font-preview-card * {
+  font-family: var(--preview-font-family, inherit) !important;
+}
+
+/* 保持帧率数字使用经典等宽字体 */
+#fpsCounter strong,
+.fps-monitor-value {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace !important;
+}
+
+/* 当开启自定义字重时，全站普通元素联动生效 */
+[data-font-weight-custom="true"] body,
+[data-font-weight-custom="true"] .album-title,
+[data-font-weight-custom="true"] .album-artist,
+[data-font-weight-custom="true"] .album-date,
+[data-font-weight-custom="true"] .album-index,
+[data-font-weight-custom="true"] .album-score-note,
+[data-font-weight-custom="true"] .album-notes,
+[data-font-weight-custom="true"] .tag,
+[data-font-weight-custom="true"] .tag *,
+[data-font-weight-custom="true"] .disc-label,
+[data-font-weight-custom="true"] .nav-item,
+[data-font-weight-custom="true"] .nav-item *,
+[data-font-weight-custom="true"] .nav-item-count,
+[data-font-weight-custom="true"] .sidebar-subtitle,
+[data-font-weight-custom="true"] .sidebar-add-year-btn,
+[data-font-weight-custom="true"] .sidebar-footer button,
+[data-font-weight-custom="true"] .overview-item,
+[data-font-weight-custom="true"] .toolbar-stats,
+[data-font-weight-custom="true"] .search-input,
+[data-font-weight-custom="true"] .search-counter,
+[data-font-weight-custom="true"] .review-text,
+[data-font-weight-custom="true"] .review-full,
+[data-font-weight-custom="true"] .review-toggle,
+[data-font-weight-custom="true"] .aoty-artist,
+[data-font-weight-custom="true"] .aoty-review-toggle,
+[data-font-weight-custom="true"] .aoty-note,
+[data-font-weight-custom="true"] .aoty-track-list,
+[data-font-weight-custom="true"] .aoty-track-list *,
+[data-font-weight-custom="true"] .stats-label,
+[data-font-weight-custom="true"] .stats-count,
+[data-font-weight-custom="true"] .stats-meta-row,
+[data-font-weight-custom="true"] .stats-meta-label,
+[data-font-weight-custom="true"] .stats-meta-val,
+[data-font-weight-custom="true"] .stats-dist-label,
+[data-font-weight-custom="true"] .stats-dist-count,
+[data-font-weight-custom="true"] .stats-row:hover .stats-count,
+[data-font-weight-custom="true"] .yearly-stats-count,
+[data-font-weight-custom="true"] .modal,
+[data-font-weight-custom="true"] .modal-body,
+[data-font-weight-custom="true"] .form-input,
+[data-font-weight-custom="true"] .form-tag,
+[data-font-weight-custom="true"] .track-name-input,
+[data-font-weight-custom="true"] .track-score-input,
+[data-font-weight-custom="true"] .track-summary,
+[data-font-weight-custom="true"] .track-add,
+[data-font-weight-custom="true"] .cover-btn,
+[data-font-weight-custom="true"] .cover-dropdown-item,
+[data-font-weight-custom="true"] .custom-select-trigger,
+[data-font-weight-custom="true"] .custom-select-option,
+[data-font-weight-custom="true"] .custom-select-menu,
+[data-font-weight-custom="true"] .dropdown-menu,
+[data-font-weight-custom="true"] .dropdown-item,
+[data-font-weight-custom="true"] .settings-item,
+[data-font-weight-custom="true"] .settings-value,
+[data-font-weight-custom="true"] .settings-palette-reset,
+[data-font-weight-custom="true"] .batch-dropdown-item,
+[data-font-weight-custom="true"] .batch-bar-btn,
+[data-font-weight-custom="true"] .dialog-message,
+[data-font-weight-custom="true"] .dialog-input,
+[data-font-weight-custom="true"] .font-item,
+[data-font-weight-custom="true"] .font-tab-label,
+[data-font-weight-custom="true"] .font-tab-current,
+[data-font-weight-custom="true"] .font-preview-meta,
+[data-font-weight-custom="true"] .font-preview-tracks,
+[data-font-weight-custom="true"] .font-preview-review,
+[data-font-weight-custom="true"] .fps-monitor-label,
+[data-font-weight-custom="true"] .context-menu-item,
+[data-font-weight-custom="true"] .must-hear-popover,
+[data-font-weight-custom="true"] .must-hear-popover *,
+[data-font-weight-custom="true"] .must-hear-input,
+[data-font-weight-custom="true"] .fab {
+  font-weight: var(--custom-font-weight) !important;
+}
+
+/* 带有加粗属性的标题、年份分组标题、分数、标签与按钮在基准字重上适度增重保持层次 */
+[data-font-weight-custom="true"] .nav-group-header,
+[data-font-weight-custom="true"] .nav-group-header *,
+[data-font-weight-custom="true"] .sidebar-title,
+[data-font-weight-custom="true"] .section-title,
+[data-font-weight-custom="true"] .group-title,
+[data-font-weight-custom="true"] .group-count,
+[data-font-weight-custom="true"] .score-badge,
+[data-font-weight-custom="true"] .album-score,
+[data-font-weight-custom="true"] .aoty-title,
+[data-font-weight-custom="true"] .aoty-score,
+[data-font-weight-custom="true"] .must-hear,
+[data-font-weight-custom="true"] .must-hear-save,
+[data-font-weight-custom="true"] .aoty-badge,
+[data-font-weight-custom="true"] .soty-badge,
+[data-font-weight-custom="true"] .stats-card-title,
+[data-font-weight-custom="true"] .stats-avg-value,
+[data-font-weight-custom="true"] .stats-avg,
+[data-font-weight-custom="true"] .batch-bar-center,
+[data-font-weight-custom="true"] .batch-bar-count,
+[data-font-weight-custom="true"] .yearly-stats-year,
+[data-font-weight-custom="true"] .yearly-stats-score,
+[data-font-weight-custom="true"] .modal-title,
+[data-font-weight-custom="true"] .form-label,
+[data-font-weight-custom="true"] .modal-btn,
+[data-font-weight-custom="true"] .track-num,
+[data-font-weight-custom="true"] .track-disc-header,
+[data-font-weight-custom="true"] .disc-title,
+[data-font-weight-custom="true"] .disc-avg,
+[data-font-weight-custom="true"] .dialog-title,
+[data-font-weight-custom="true"] .dialog-btn,
+[data-font-weight-custom="true"] .toast,
+[data-font-weight-custom="true"] .font-tab.active,
+[data-font-weight-custom="true"] .font-item.active,
+[data-font-weight-custom="true"] .font-item-check,
+[data-font-weight-custom="true"] .font-weight-title-wrap,
+[data-font-weight-custom="true"] .font-weight-label,
+[data-font-weight-custom="true"] .font-weight-val,
+[data-font-weight-custom="true"] .font-preview-title {
+  font-weight: calc(var(--custom-font-weight) + 150) !important;
+}
+

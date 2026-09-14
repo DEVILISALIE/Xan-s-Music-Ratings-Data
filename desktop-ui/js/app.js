@@ -243,6 +243,14 @@ function portalOpen(menu, anchor, opts = {}) {
 
   // 在下一渲染帧自动重校准一次，彻底消除弹窗打开时的瞬态几何偏差
   schedulePortalReposition();
+
+  // 为可滚动的二级下拉菜单挂载专属 macOS 平滑滚动条
+  setTimeout(() => {
+    if (menu.scrollHeight > menu.clientHeight + 4) {
+      attachMacScrollbar(menu, { follow: true, id: 'portalTrack_' + (menu.id || 'menu') });
+      menu.__macScrollbar?.update();
+    }
+  }, 10);
 }
 
 function portalClose(menu, opts = {}) {
@@ -250,6 +258,10 @@ function portalClose(menu, opts = {}) {
   menu.classList.remove('portal-open');
   _openPortals.delete(menu);
   if (opts.openClass) menu.classList.remove(opts.openClass);
+
+  const pTrack = document.getElementById('portalTrack_' + (menu.id || 'menu'));
+  if (pTrack) pTrack.style.display = 'none';
+
   menu.style.top = '';
   menu.style.left = '';
   menu.style.right = '';
@@ -524,6 +536,10 @@ async function init() {
   renderContent();
   setupScrollSync();
 
+  // 挂载全 DOM macOS 专属覆盖式平滑滚动条（支持鼠标拖拽，完全杜绝系统原生光标劫持）
+  attachMacScrollbar(document.getElementById('sidebarNav'), { parent: document.querySelector('.sidebar'), id: 'sidebarScrollTrack', sidebar: true });
+  attachMacScrollbar(document.getElementById('mainContent'), { fixed: true, mainContent: true, id: 'mainContentScrollTrack' });
+
   bindStaticButtons();
   bindScoreFilter();
   bindTagFilter();
@@ -541,6 +557,13 @@ async function init() {
     setTimeout(() => {
       window.__TAURI__.core.invoke('trim_memory').catch(() => {});
     }, 1500);
+  }
+
+  // 后台空闲时预加载系统字体列表，使用户点开字体设置弹窗时零延迟即开
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(() => { fetchAvailableFonts(); }, { timeout: 2000 });
+  } else {
+    setTimeout(() => { fetchAvailableFonts(); }, 500);
   }
 }
 
@@ -658,6 +681,52 @@ function bindStaticButtons() {
     setFpsMonitorEnabled(e.target.checked);
   });
   document.querySelector('[data-action="settings-lang"]').addEventListener('click', () => { toggleLang(); });
+  document.querySelector('[data-action="settings-font"]')?.addEventListener('click', () => { openFontSettingsModal(); });
+  document.querySelector('[data-action="font-save"]')?.addEventListener('click', saveFontSettings);
+  document.querySelector('[data-action="font-cancel"]')?.addEventListener('click', closeFontSettingsModal);
+  document.querySelector('[data-action="font-reset"]')?.addEventListener('click', resetFontSettings);
+
+  const fontSlider = document.getElementById('fontWeightSlider');
+  if (fontSlider) {
+    fontSlider.addEventListener('input', (e) => {
+      updateFontWeightSliderUI(Number(e.target.value));
+    });
+  }
+
+  const fontSearch = document.getElementById('fontSearchInput');
+  if (fontSearch) {
+    fontSearch.addEventListener('input', (e) => {
+      renderFontList(e.target.value);
+    });
+  }
+
+  const fontTabs = document.getElementById('fontCategoryTabs');
+  if (fontTabs) {
+    fontTabs.addEventListener('click', (e) => {
+      const btn = e.target.closest('.font-tab');
+      if (!btn || !btn.dataset.tab) return;
+      switchFontTab(btn.dataset.tab);
+    });
+  }
+
+  const fontListEl = document.getElementById('fontList');
+  if (fontListEl) {
+    fontListEl.addEventListener('click', (e) => {
+      const item = e.target.closest('.font-item');
+      if (!item) return;
+      const font = item.dataset.font || 'default';
+      if (_currentFontTab === 'zh' && currentLang !== 'en') {
+        _modalSelectedZhFont = font;
+      } else {
+        _modalSelectedEnFont = font;
+      }
+      document.querySelectorAll('#fontList .font-item').forEach(el => {
+        el.classList.toggle('active', el === item);
+      });
+      updateFontPreviewCard();
+    });
+  }
+
 
   // 背景色调（仅浅色）
   const bgHuePresets = document.getElementById('bgHuePresets');
@@ -1423,6 +1492,7 @@ async function batchMoveToSection(targetSectionId) {
   itemsToMove.reverse();
 
   // 添加到目标 section 对应的分组中（Albums 归入 Albums，Singles 归入 Singles）
+  const modifiedGroups = new Set();
   for (const item of itemsToMove) {
     let targetGroup = targetSection.groups.find(g => g.name === item.groupName);
     if (!targetGroup) {
@@ -1430,6 +1500,12 @@ async function batchMoveToSection(targetSectionId) {
       targetSection.groups.push(targetGroup);
     }
     targetGroup.entries.push(item.entry);
+    modifiedGroups.add(targetGroup);
+  }
+
+  // 批量移动后立即按目标分区规则自动排序
+  for (const grp of modifiedGroups) {
+    sortGroupEntries(grp, targetSection.id);
   }
 
   batchSelectedIds.clear();
@@ -1523,6 +1599,414 @@ function syncBgHueControls(value = readBgHue()) {
     }
     sw.classList.toggle('active', active);
   });
+}
+
+// ===== 全局字体与字重管理 =====
+
+let _availableFonts = [];
+let _zhFonts = [];
+let _enFonts = [];
+let _currentFontTab = 'zh'; // 'zh' 或 'en'
+let _modalSelectedEnFont = 'default';
+let _modalSelectedZhFont = 'default';
+let _modalSelectedWeight = 400;
+
+function isChineseFont(name) {
+  if (!name) return false;
+  if (/[\u4e00-\u9fa5]/.test(name)) return true;
+  const lower = name.toLowerCase();
+  const zhKeywords = [
+    'pingfang', '苹方', 'yahei', '微软雅黑', 'simsun', '宋体', 'simhei', '黑体',
+    'kaiti', '楷体', 'fangsong', '仿宋', 'stkaiti', 'stsong', 'stxihei', 'stfangsong',
+    'stzhongsong', 'sthupo', 'stcaiyun', 'stliti', 'stxingkai', 'stxinwei',
+    'youyuan', '幼圆', 'lisu', '隶书', 'mingliu', 'pmingliu', 'dfkai',
+    'source han', '思源', 'harmonyos', 'misans', 'oppo sans', 'honor sans',
+    'dengxian', '等线', 'jhenghei', '正黑', 'nsimsun', '新宋体',
+    'noto sans sc', 'noto sans tc', 'noto sans hk',
+    'noto serif sc', 'noto serif tc', 'lxgw', '霞鹜', 'fangzheng', 'huawen'
+  ];
+  return zhKeywords.some(kw => lower.includes(kw));
+}
+
+function readGlobalFont() {
+  let en = localStorage.getItem('globalFontEn');
+  let zh = localStorage.getItem('globalFontZh');
+  // 兼容旧版单一设置
+  if (!en && !zh) {
+    const legacy = localStorage.getItem('globalFontFamily');
+    if (legacy && legacy !== 'default') {
+      if (isChineseFont(legacy)) {
+        zh = legacy;
+        en = 'default';
+      } else {
+        en = legacy;
+        zh = 'default';
+      }
+    }
+  }
+  en = en || 'default';
+  zh = zh || 'default';
+
+  const weightStr = localStorage.getItem('globalFontWeight');
+  const weight = weightStr ? (parseInt(weightStr, 10) || 400) : 400;
+  return { en, zh, weight };
+}
+
+function buildFontFamilyStack(enFont = 'default', zhFont = 'default') {
+  const isEnDefault = !enFont || enFont === 'default';
+  const isZhDefault = !zhFont || zhFont === 'default';
+
+  if (isEnDefault && isZhDefault) {
+    return '';
+  }
+
+  const parts = [];
+  // 西文字体优先排在前面，只负责 ASCII 与西文字符渲染
+  if (!isEnDefault) {
+    parts.push(`"${enFont}"`);
+  } else {
+    parts.push('-apple-system', 'BlinkMacSystemFont', '"SF Pro"', '"SF Pro Text"', '"SF Pro Display"');
+  }
+
+  // 中文字体紧随其后，负责汉字回退渲染
+  if (!isZhDefault) {
+    if (/pingfang|苹方/i.test(zhFont)) {
+      parts.push('"PingFang SC"', '"PingFang SC Regular"', '"苹方-简"', '".苹方-简"', '"苹方"', '"PingFang"');
+    } else {
+      parts.push(`"${zhFont}"`);
+    }
+  }
+  parts.push('"PingFang SC"', '"PingFang SC Regular"', '"苹方-简"', '".苹方-简"', '"苹方"', '"PingFang"', '"Hiragino Sans GB"', '"Microsoft YaHei"', '"Segoe UI"', 'system-ui', 'sans-serif');
+  return parts.join(', ');
+}
+
+function applyGlobalFont(en = null, zh = null, weight = null) {
+  const current = readGlobalFont();
+  const enFont = en != null ? en : current.en;
+  const zhFont = zh != null ? zh : current.zh;
+  const w = weight != null ? weight : current.weight;
+  const root = document.documentElement;
+
+  const stack = buildFontFamilyStack(enFont, zhFont);
+  if (!stack) {
+    root.style.removeProperty('--custom-font-family');
+  } else {
+    root.style.setProperty('--custom-font-family', stack);
+  }
+
+  if (w === 400 || !w) {
+    root.style.removeProperty('--custom-font-weight');
+    root.removeAttribute('data-font-weight-custom');
+  } else {
+    root.style.setProperty('--custom-font-weight', String(w));
+    root.setAttribute('data-font-weight-custom', 'true');
+  }
+
+  syncFontSettingsUI(enFont, zhFont, w);
+}
+
+function syncFontSettingsUI(en = null, zh = null, weight = null) {
+  const current = readGlobalFont();
+  const enFont = en != null ? en : current.en;
+  const zhFont = zh != null ? zh : current.zh;
+  const valEl = document.getElementById('settingsFontValue');
+  if (valEl) {
+    if (currentLang === 'zh') {
+      const enLabel = (enFont === 'default' || !enFont) ? 'SF Pro' : enFont;
+      const zhLabel = (zhFont === 'default' || !zhFont) ? '苹方' : zhFont;
+      if (enFont === 'default' && zhFont === 'default') {
+        valEl.textContent = t('settings.fontDefault');
+      } else {
+        valEl.textContent = `${enLabel} / ${zhLabel}`;
+      }
+    } else {
+      valEl.textContent = (enFont === 'default' || !enFont) ? t('settings.fontDefault') : enFont;
+    }
+  }
+}
+
+async function fetchAvailableFonts() {
+  if (_availableFonts.length > 0) return _availableFonts;
+
+  let fonts = [];
+  // 1. 桌面端优先从 Rust 后端即时读取 Windows 已安装字体
+  if (window.__TAURI__) {
+    try {
+      fonts = await window.__TAURI__.core.invoke('get_system_fonts');
+    } catch (_) {}
+  }
+
+  // 2. 网页端尝试使用现代 Chromium 本地字体 API (queryLocalFonts)
+  if ((!fonts || fonts.length === 0) && window.queryLocalFonts) {
+    try {
+      const localFonts = await window.queryLocalFonts();
+      const set = new Set();
+      for (const item of localFonts) {
+        if (item.family && !item.family.startsWith('@')) {
+          set.add(item.family);
+        }
+      }
+      fonts = Array.from(set);
+    } catch (_) {}
+  }
+
+  // 3. 降级备用字体清单（精选中英美主流系统字体）
+  if (!fonts || fonts.length === 0) {
+    fonts = [
+      'Arial', 'Calibri', 'Cascadia Code', 'Comic Sans MS', 'Consolas', 'Courier New',
+      'Franklin Gothic Medium', 'Georgia', 'HarmonyOS Sans', 'HarmonyOS Sans SC',
+      'Helvetica', 'Impact', 'Inter', 'JetBrains Mono', 'KaiTi', 'Lucida Console',
+      'Microsoft YaHei', 'Microsoft YaHei UI', 'MiSans', 'MingLiU', 'PingFang SC',
+      'Segoe UI', 'Segoe UI Variable', 'SimHei', 'SimSun', 'Source Han Sans SC',
+      'Source Han Serif SC', 'Tahoma', 'Times New Roman', 'Trebuchet MS', 'Verdana'
+    ];
+  }
+
+  const unique = Array.from(new Set(fonts.map(s => s.trim()).filter(Boolean)));
+  // 归一化字体列表：将 Windows 注册表中 24 个碎裂的苹方条目（如 .苹方-、苹方-港等）合并归纳为规范的 PingFang SC
+  const cleanFonts = [];
+  let hasPingFang = false;
+  for (const f of unique) {
+    if (/pingfang|苹方/i.test(f)) {
+      hasPingFang = true;
+      continue;
+    }
+    cleanFonts.push(f);
+  }
+  if (hasPingFang) {
+    cleanFonts.unshift('PingFang SC');
+  }
+
+  _availableFonts = cleanFonts;
+  _zhFonts = cleanFonts.filter(f => isChineseFont(f)).sort((a, b) => {
+    if (a === 'PingFang SC') return -1;
+    if (b === 'PingFang SC') return 1;
+    return a.localeCompare(b, 'zh-CN');
+  });
+  _enFonts = cleanFonts.filter(f => !isChineseFont(f)).sort((a, b) => a.localeCompare(b, 'en'));
+  return _availableFonts;
+}
+
+function updateFontPreviewCard() {
+  const card = document.getElementById('fontPreviewCard');
+  if (!card) return;
+  const en = _modalSelectedEnFont;
+  const zh = _modalSelectedZhFont;
+  const w = _modalSelectedWeight;
+
+  const defaultEnStack = '-apple-system, BlinkMacSystemFont, "SF Pro", "SF Pro Text", "SF Pro Display"';
+  const defaultZhStack = '"PingFang SC", "PingFang SC Regular", "苹方-简", ".苹方-简", "苹方", "PingFang", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif';
+  const fullDefaultStack = `${defaultEnStack}, ${defaultZhStack}`;
+
+  const stack = buildFontFamilyStack(en, zh);
+  const finalStack = stack || fullDefaultStack;
+
+  card.style.setProperty('--preview-font-family', finalStack);
+  card.style.setProperty('--preview-font-weight', String(w));
+
+  const titleEl = card.querySelector('.font-preview-title');
+  const metaEl = card.querySelector('.font-preview-meta');
+  const tracksEl = card.querySelector('.font-preview-tracks');
+  const reviewEl = card.querySelector('.font-preview-review');
+
+  if (currentLang === 'zh') {
+    if (titleEl) titleEl.textContent = '范特西 Fantasy · 周杰伦';
+    if (metaEl) metaEl.textContent = '周杰伦 Jay Chou · 2001 · 94分 · ★Must Hear Album';
+    if (tracksEl) tracksEl.textContent = '01. 爱在西元前 · 02. 简单爱 · 03. 晴天 · 04. 搁浅 · 05. 安静';
+    if (reviewEl) reviewEl.textContent = '中英文混排：The quick brown fox jumps over the lazy dog. 1234567890 经典旋律与现代编曲交织，字形优美呈现。';
+  } else {
+    if (titleEl) titleEl.textContent = 'Hit Me Hard and Soft';
+    if (metaEl) metaEl.textContent = 'Billie Eilish · 2024 · 88 · ★Must Hear Album';
+    if (tracksEl) tracksEl.textContent = '01. Skinny · 02. Lunch · 03. Chihiro · 04. Birds of a Feather';
+    if (reviewEl) reviewEl.textContent = 'Album review preview: The quick brown fox jumps over the lazy dog. 1234567890 Clean typography and balanced layout.';
+  }
+
+  syncFontTabsUI();
+}
+
+function updateFontWeightSliderUI(weight) {
+  const slider = document.getElementById('fontWeightSlider');
+  const valEl = document.getElementById('fontWeightVal');
+  const w = Math.max(100, Math.min(900, Math.round(weight / 50) * 50));
+  _modalSelectedWeight = w;
+  if (slider) {
+    slider.value = String(w);
+    const progress = ((w - 100) / 800) * 100;
+    slider.style.setProperty('--progress', `${progress}%`);
+  }
+  if (valEl) {
+    valEl.textContent = String(w);
+  }
+  updateFontPreviewCard();
+}
+
+function switchFontTab(tab) {
+  _currentFontTab = tab;
+  syncFontTabsUI();
+  const searchInput = document.getElementById('fontSearchInput');
+  if (searchInput) {
+    searchInput.value = '';
+    searchInput.placeholder = _currentFontTab === 'zh' ? t('font.searchPlaceholderZh') : t('font.searchPlaceholderEn');
+  }
+  renderFontList('');
+  setTimeout(() => {
+    const activeItem = document.querySelector('#fontList .font-item.active');
+    const fontList = document.getElementById('fontList');
+    if (activeItem && fontList) {
+      activeItem.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }
+  }, 40);
+}
+
+function syncFontTabsUI() {
+  document.querySelectorAll('#fontCategoryTabs .font-tab').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.tab === _currentFontTab);
+  });
+  const zhBadge = document.getElementById('fontTabZhCurrent');
+  const enBadge = document.getElementById('fontTabEnCurrent');
+  if (zhBadge) {
+    zhBadge.textContent = (_modalSelectedZhFont === 'default' || !_modalSelectedZhFont) ? '默认(苹方)' : _modalSelectedZhFont;
+  }
+  if (enBadge) {
+    enBadge.textContent = (_modalSelectedEnFont === 'default' || !_modalSelectedEnFont) ? '默认(SF Pro)' : _modalSelectedEnFont;
+  }
+}
+
+function renderFontList(searchQuery = '') {
+  const listEl = document.getElementById('fontList');
+  const countEl = document.getElementById('fontCountHint');
+  if (!listEl) return;
+
+  const isZhTab = _currentFontTab === 'zh' && currentLang !== 'en';
+  const targetFonts = isZhTab ? _zhFonts : _enFonts;
+  const currentSelected = isZhTab ? _modalSelectedZhFont : _modalSelectedEnFont;
+
+  const q = (searchQuery || '').trim().toLowerCase();
+  const matched = targetFonts.filter(f => !q || f.toLowerCase().includes(q));
+
+  let html = '';
+
+  // 默认项
+  const isDefaultActive = currentSelected === 'default' || !currentSelected;
+  const defaultLabel = isZhTab ? t('font.defaultOptionZh') : t('font.defaultOptionEn');
+  if (!q || defaultLabel.toLowerCase().includes(q) || 'default 默认 sf pro 苹方 微软雅黑'.includes(q)) {
+    html += `
+      <div class="font-item ${isDefaultActive ? 'active' : ''}" data-font="default" style="font-family: inherit">
+        <span>${escapeHtml(defaultLabel)}</span>
+        <span class="font-item-check">✓</span>
+      </div>
+    `;
+  }
+
+  for (const font of matched) {
+    const isActive = currentSelected === font;
+    html += `
+      <div class="font-item ${isActive ? 'active' : ''}" data-font="${escapeHtml(font)}" style="font-family: &quot;${escapeHtml(font)}&quot;, sans-serif !important">
+        <span>${escapeHtml(font)}</span>
+        <span class="font-item-check">✓</span>
+      </div>
+    `;
+  }
+
+  listEl.innerHTML = html;
+  if (countEl) {
+    countEl.textContent = isZhTab
+      ? t('font.installedCountZh', { count: _zhFonts.length })
+      : t('font.installedCountEn', { count: _enFonts.length });
+  }
+
+  const container = document.getElementById('fontListContainer');
+  if (container && container.__macScrollbar) {
+    container.__macScrollbar.update();
+  }
+}
+
+async function openFontSettingsModal() {
+  closeAllDropdowns();
+  const modal = document.getElementById('fontSettingsModal');
+  const modalBody = document.getElementById('fontSettingsModalBody');
+  const modalCard = modal?.querySelector('.modal');
+  if (!modal) return;
+
+  const saved = readGlobalFont();
+  _modalSelectedEnFont = saved.en;
+  _modalSelectedZhFont = saved.zh;
+  _modalSelectedWeight = saved.weight;
+
+  // 英文模式下仅有英文字体选择；中文模式下显示分类选项卡
+  const tabsContainer = document.getElementById('fontCategoryTabs');
+  if (currentLang === 'en') {
+    _currentFontTab = 'en';
+    if (tabsContainer) tabsContainer.style.display = 'none';
+  } else {
+    _currentFontTab = 'zh';
+    if (tabsContainer) {
+      tabsContainer.style.display = 'flex';
+      syncFontTabsUI();
+    }
+  }
+
+  const searchInput = document.getElementById('fontSearchInput');
+  if (searchInput) {
+    searchInput.value = '';
+    searchInput.placeholder = _currentFontTab === 'zh' ? t('font.searchPlaceholderZh') : t('font.searchPlaceholderEn');
+  }
+
+  updateFontWeightSliderUI(_modalSelectedWeight);
+  updateFontPreviewCard();
+
+  modal.classList.add('active');
+
+  if (modalBody && modalCard) {
+    attachMacScrollbar(modalBody, { parent: modalCard, id: 'fontSettingsModalScrollTrack' });
+  }
+  const fontListContainer = document.getElementById('fontListContainer');
+  const fontList = document.getElementById('fontList');
+  if (fontListContainer && fontList) {
+    attachMacScrollbar(fontList, { parent: fontListContainer, id: 'fontListScrollTrack' });
+  }
+
+  // 预取或使用已缓存的字体数据，单次高效渲染
+  await fetchAvailableFonts();
+  renderFontList('');
+
+  const activeItem = document.querySelector('#fontList .font-item.active');
+  if (activeItem && fontList) {
+    activeItem.scrollIntoView({ block: 'nearest' });
+  }
+}
+
+function closeFontSettingsModal() {
+  const modal = document.getElementById('fontSettingsModal');
+  if (modal) modal.classList.remove('active');
+  const saved = readGlobalFont();
+  _modalSelectedEnFont = saved.en;
+  _modalSelectedZhFont = saved.zh;
+  _modalSelectedWeight = saved.weight;
+}
+
+function saveFontSettings() {
+  localStorage.setItem('globalFontEn', _modalSelectedEnFont || 'default');
+  localStorage.setItem('globalFontZh', _modalSelectedZhFont || 'default');
+  localStorage.setItem('globalFontWeight', String(_modalSelectedWeight || 400));
+  // 移除旧版单一键值
+  localStorage.removeItem('globalFontFamily');
+
+  closeFontSettingsModal();
+
+  runWithoutTransitions(() => {
+    applyGlobalFont(_modalSelectedEnFont, _modalSelectedZhFont, _modalSelectedWeight);
+  });
+}
+
+function resetFontSettings() {
+  _modalSelectedEnFont = 'default';
+  _modalSelectedZhFont = 'default';
+  _modalSelectedWeight = 400;
+  updateFontWeightSliderUI(400);
+  const searchInput = document.getElementById('fontSearchInput');
+  renderFontList(searchInput?.value || '');
+  updateFontPreviewCard();
 }
 
 // ===== 桌面帧率监视器 =====
@@ -1624,6 +2108,7 @@ function applyTheme() {
   if (styleCb) styleCb.checked = savedStyle === 'glass';
 
   applyBgHue();
+  applyGlobalFont();
 }
 
 function updateLangTexts() {
@@ -1732,6 +2217,7 @@ function syncSettingsToggles() {
   if (fpsCb) fpsCb.checked = !!window.__TAURI__ && localStorage.getItem('showFps') === 'true';
   if (langVal) langVal.textContent = currentLang === 'zh' ? '中文' : 'English';
   syncBgHueControls();
+  syncFontSettingsUI();
 }
 
 // ===== 弹窗全局事件 =====
@@ -1749,13 +2235,25 @@ document.addEventListener('click', (e) => {
   if (e.target.id === 'editModal' && modalMouseDownOnOverlay) closeModal();
 });
 
+let fontModalMouseDownOnOverlay = false;
+document.getElementById('fontSettingsModal')?.addEventListener('mousedown', (e) => {
+  fontModalMouseDownOnOverlay = (e.target.id === 'fontSettingsModal');
+});
+document.addEventListener('click', (e) => {
+  if (e.target.id === 'fontSettingsModal' && fontModalMouseDownOnOverlay) closeFontSettingsModal();
+});
+
 document.addEventListener('keydown', (e) => {
   // 核心组合快捷键 (Ctrl 或 Meta)
   if (e.ctrlKey || e.metaKey) {
     const key = e.key.toLowerCase();
     if (key === 's') {
       e.preventDefault();
-      exportJSON();
+      if (document.getElementById('fontSettingsModal')?.classList.contains('active')) {
+        saveFontSettings();
+      } else {
+        exportJSON();
+      }
       return;
     }
     if (key === 'o') {
@@ -1800,14 +2298,21 @@ document.addEventListener('keydown', (e) => {
 
   if (e.key === 'Escape') {
     closeModal();
-    document.getElementById('yearlyStatsModal').classList.remove('active');
+    document.getElementById('yearlyStatsModal')?.classList.remove('active');
+    closeFontSettingsModal();
   }
-  if (e.key === 'Enter' && e.shiftKey && document.getElementById('editModal').classList.contains('active')) {
+  if (e.key === 'Enter' && e.shiftKey && document.getElementById('editModal')?.classList.contains('active')) {
     e.preventDefault();
     if (document.activeElement && typeof document.activeElement.blur === 'function') {
       document.activeElement.blur();
     }
     saveEntry();
+  }
+  if (e.key === 'Enter' && document.getElementById('fontSettingsModal')?.classList.contains('active')) {
+    if (e.shiftKey || e.target.id !== 'fontSearchInput') {
+      e.preventDefault();
+      saveFontSettings();
+    }
   }
   
   if (searchQuery && !document.getElementById('editModal').classList.contains('active')) {
@@ -2094,7 +2599,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.5.4");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.6.0");
         break;
     }
   });

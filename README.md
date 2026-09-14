@@ -17,7 +17,7 @@
 
 前往 [GitHub Releases](https://github.com/DEVILISALIE/Xan-s-Music-Ratings-Data/releases) 下载 Windows MSI 安装包。
 
-当前版本：`v1.5.4`
+当前版本：`v1.6.0`
 
 ## 把几十年的音乐放在一张时间轴上
 
@@ -104,20 +104,24 @@
 
 ## 外观不是固定模板
 
-深色模式和毛玻璃风格彼此独立，可以组合成不同外观。浅色模式还支持预设色板和完整色相滑条；这些设置只改变呈现，不触碰音乐数据。
+深色模式和毛玻璃风格彼此独立，可以组合成不同外观，浅色模式支持色相微调；此外，还支持中英文独立选择字体、枚举本机已安装字体与 100–900 无级字重调节。这些设置只改变呈现，不触碰音乐数据。
 
 <table>
   <tr>
-    <td width="76%" valign="top">
+    <td width="58%" valign="top">
       <a href="docs/screenshots/dark-mode.png"><img src="docs/screenshots/dark-mode.png" alt="深色毛玻璃主界面" width="100%"></a>
     </td>
-    <td width="24%" valign="top">
+    <td width="20%" valign="top">
       <a href="docs/screenshots/appearance-settings.png"><img src="docs/screenshots/appearance-settings.png" alt="外观与帧率设置" width="100%"></a>
+    </td>
+    <td width="22%" valign="top">
+      <a href="docs/screenshots/font-settings.png"><img src="docs/screenshots/font-settings.png" alt="全局字体与字重设置" width="100%"></a>
     </td>
   </tr>
   <tr>
-    <td align="center"><strong>深色毛玻璃</strong><br><sub>标题栏、工具栏、侧边栏与统计面板保持统一层次</sub></td>
-    <td align="center"><strong>个性化设置</strong><br><sub>主题、毛玻璃、FPS、语言和背景色调</sub></td>
+    <td align="center"><strong>深色毛玻璃</strong><br><sub>标题栏、工具栏与面板层次统一</sub></td>
+    <td align="center"><strong>个性化设置</strong><br><sub>主题、毛玻璃、色调与 FPS</sub></td>
+    <td align="center"><strong>全局字体与字重</strong><br><sub>中英独立选择与实时预览</sub></td>
   </tr>
 </table>
 
@@ -168,7 +172,7 @@
 | 整理 | 自动排序、同组拖拽、范围选择、批量标签、批量移动 |
 | 统计 | 专辑/单曲平均分、七档分布（级联展开/单行探索）、年度平均分 |
 | 交互 | 原生 macOS 鼠标光标体系、设计工程微动效系统、键盘快捷搜索翻页 |
-| 外观 | 中英文、亮暗模式、纯色/毛玻璃、背景色调、FPS 监视器 |
+| 外观 | 中英文、亮暗模式、纯色/毛玻璃、背景色调、全局字体与字重、FPS 监视器 |
 
 ## 数据与可靠性
 
