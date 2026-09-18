@@ -2599,7 +2599,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.6.0");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.6.1");
         break;
     }
   });

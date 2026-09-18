@@ -78,6 +78,11 @@ npm run tauri build              # 构建 MSI 安装包
 | `customFontWeight` | 数字字符串 | 用户自定义全局字重（`100`–`900`），默认 `400` |
 | `customFontWeightEnabled` | `"true"` / `"false"` | 自定义字重开关，默认 `false` |
 
+## v1.6.1 更新（相对 v1.6.0）
+
+- **弹窗遮罩层级与交互修复**：修复桌面模式下右下角悬浮按钮（新建 `+`、搜索翻页 `↑` / `↓`）原本 `z-index: 200` 高于弹窗遮罩层（`100`）导致穿透突兀、未被毛玻璃变暗模糊且拦截背景点击的问题；将桌面端 FAB z-index 调整为 `60`，日常保持在各内容层上方，进入编辑或各类弹窗时完全被全屏遮罩覆盖，视觉上融入背景，点击按钮区域由遮罩捕获直接触发取消退出。
+- **年度平均分柱状图基准优化**：修复年度平均分（专辑 / 单曲）水平柱状图此前以历年最高平均分（`maxAvg`）作为分母导致 90 分就 100% 填满轨道的逻辑缺陷；统一改为以满分 100 分为标准基准满格显示（`pct = Math.min(100, Math.max(0, row.avg)).toFixed(1)`），距离满分的差距与比例真实直观呈现。
+
 ## v1.6.0 更新（相对 v1.5.4）
 
 - **全局字体与字重体系**：
@@ -161,7 +166,11 @@ GitHub 上一次正式 Release 为 `v1.4.0`（commit `ede5a58`，2026-07-14）�
 - 桌面版固定使用 `musicData_desktop` 作为 WebView2 本地镜像
 - `build-frontend.js` 构建时将 `desktop-ui/index.html`、`desktop-ui/css`、`desktop-ui/js` 和可选 `desktop-ui/data.json` 复制到 `dist/`，再由 Tauri 打包进二进制
 - Tauri 插件：dialog、fs、global-shortcut、shell、single-instance；Rust 依赖 `base64` 与 `image`
-- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.6.0`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.6.0`
+- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.6.1`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.6.1`
+
+**v1.6.1 更新日志**：
+- **弹窗遮罩层级修复**：桌面版悬浮按钮（`+` / `↑` / `↓`）z-index 降至 60，避免穿透弹窗遮罩层（100），打开弹窗时自动被全屏遮罩覆盖变暗并毛玻璃模糊，点击按钮区域由遮罩捕获触发取消退出；
+- **年度平均分柱状图基准优化**：年度平均分水平柱状图统一以满分 100 分为基准满格显示（`Math.min(100, Math.max(0, row.avg)).toFixed(1)`），修复此前以历年最高分当分母导致 90 分就顶格占满轨道的缺陷。
 
 **v1.6.0 更新日志**：
 - **全局字体与字重体系**：支持中英文分开独立选择字体，内置 500+ 款系统字体智能识别与多语种分类；支持 100-900 自定义字重平滑调节；下发覆盖全站主界面、专辑卡片、年份栏、二级编辑菜单与所有弹窗；
@@ -182,7 +191,7 @@ GitHub 上一次正式 Release 为 `v1.4.0`（commit `ede5a58`，2026-07-14）�
 - **侧边栏高保真 Logo**：侧边栏标题右侧置入高保真原生 Logo，支持悬停微交互与连续 3 击全屏放大查看细节。
 
 
-**分数统计面板**：`render.js` 中 `updateGlobalStatsSidebar()` 在右侧固定位置渲染两个统计卡片（专辑 / 单曲），各自显示平均分、7 档分数分布柱状图（100 / 90-99 / 80-89 / 70-79 / 60-69 / 50-59 / 0-49）、已打分/未打分/条目数。所有标签均支持中英文切换，通过 `t()` 函数实现。每次数据变更后通过 `refreshAll()` 实时更新。**点击统计卡片弹出年度平均分弹窗**（`#yearlyStatsModal`），展示每一年的独立平均分和条目数，水平柱状图按最高分等比缩放，支持 ESC / 点击遮罩关闭。
+**分数统计面板**：`render.js` 中 `updateGlobalStatsSidebar()` 在右侧固定位置渲染两个统计卡片（专辑 / 单曲），各自显示平均分、7 档分数分布柱状图（100 / 90-99 / 80-89 / 70-79 / 60-69 / 50-59 / 0-49）、已打分/未打分/条目数。所有标签均支持中英文切换，通过 `t()` 函数实现。每次数据变更后通过 `refreshAll()` 实时更新。**点击统计卡片弹出年度平均分弹窗**（`#yearlyStatsModal`），展示每一年的独立平均分和条目数，水平柱状图以满分 100 分为基准满格显示，支持 ESC / 点击遮罩关闭。
 
 **搜索结果计数**：搜索框内右侧 `.search-counter` 显示 `当前/总数`，`applyFilters()` 初始化时设置，`goToNextResult()` / `goToPrevResult()` 翻页时同步更新，清空搜索时隐藏。
 

@@ -836,15 +836,13 @@ function openYearlyStats(type) {
 
   if (rows.length === 0) return;
 
-  const maxAvg = Math.max(...rows.map(r => r.avg));
-
   const countLabel = type === 'albums'
     ? (currentLang === 'zh' ? '张' : 'A')
     : (currentLang === 'zh' ? '首' : 'S');
 
   let html = '';
   for (const row of rows) {
-    const pct = Math.round(row.avg / maxAvg * 100);
+    const pct = Math.min(100, Math.max(0, row.avg)).toFixed(1);
     html += '<div class="yearly-stats-row">' +
       '<span class="yearly-stats-year">' + escapeHtml(row.year) + '</span>' +
       '<div class="yearly-stats-bar-track"><div class="yearly-stats-bar" style="width:' + pct + '%"></div></div>' +

@@ -117,7 +117,7 @@ npm run tauri build              # 构建 MSI 安装包并覆盖 release\music-r
 - 桌面版 localStorage 域名与网页版隔离，需单独导入一次数据
 - `build-frontend.js` 构建时将 index.html/css/js/data.json 复制到 dist/，Tauri 打包进二进制
 - Tauri 插件：dialog、fs、global-shortcut、shell、single-instance
-- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.6.0`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.6.0`
+- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.6.1`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.6.1`
 
 **macOS 原生鼠标光标体系（v1.5.0）**：应用内统一使用纯矢量 macOS 原生风格光标：
 - `--cursor-default`：macOS 经典白边黑底箭头（带柔和投影）
@@ -131,7 +131,7 @@ npm run tauri build              # 构建 MSI 安装包并覆盖 release\music-r
 - 弹窗防闪烁：移除进场动画容器内部子表单控件的 `backdrop-filter`，防止 GPU FBO 隔离导致的表单纯白闪烁；统一曲目序号、封面操作按钮与输入框质感底色
 - 搜索快捷键：在搜索模式下支持键盘 ↑ / ↓ 方向键在搜索结果间循环跳转
 
-**分数统计面板**：`render.js` 中 `updateGlobalStatsSidebar()` 在右侧固定位置渲染两个统计卡片（专辑 / 单曲），各自显示平均分、7 档分数分布柱状图（100 / 90-99 / 80-89 / 70-79 / 60-69 / 50-59 / 0-49）、已打分/未打分/条目数。所有标签均支持中英文切换，通过 `t()` 函数实现。每次数据变更后通过 `refreshAll()` 实时更新。**点击统计卡片弹出年度平均分弹窗**（`#yearlyStatsModal`），展示每一年的独立平均分和条目数，水平柱状图按最高分等比缩放，支持 ESC / 点击遮罩关闭。
+**分数统计面板**：`render.js` 中 `updateGlobalStatsSidebar()` 在右侧固定位置渲染两个统计卡片（专辑 / 单曲），各自显示平均分、7 档分数分布柱状图（100 / 90-99 / 80-89 / 70-79 / 60-69 / 50-59 / 0-49）、已打分/未打分/条目数。所有标签均支持中英文切换，通过 `t()` 函数实现。每次数据变更后通过 `refreshAll()` 实时更新。**点击统计卡片弹出年度平均分弹窗**（`#yearlyStatsModal`），展示每一年的独立平均分和条目数，水平柱状图以满分 100 分为基准满格显示，支持 ESC / 点击遮罩关闭。**年度统计弹窗（v1.5.0）**：去除非必要的横向滚动条，重构盒模型自适应宽度。
 
 **搜索结果计数**：搜索框内右侧 `.search-counter` 显示 `当前/总数`，`applyFilters()` 初始化时设置，`goToNextResult()` / `goToPrevResult()` 翻页时同步更新，清空搜索时隐藏。
 
