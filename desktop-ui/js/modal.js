@@ -44,6 +44,7 @@ function openEditModal(entryId, sectionId, groupId) {
   // Section selector — 定位条目所在的原始 section/group
   populateSectionSelector(entry.id);
   updateAotyLabel();
+  syncTagsGroupVisibility(false);
 
   const activeTags = entry.tags || [];
   document.querySelectorAll('#editTags .form-tag').forEach(tag => {
@@ -86,6 +87,7 @@ function openAddModal() {
   // Section selector
   populateSectionSelector();
   updateAotyLabel();
+  syncTagsGroupVisibility(false);
   document.getElementById('editSectionGroup').style.display = 'block';
 
   document.querySelectorAll('#editTags .form-tag').forEach(t => t.classList.remove('active'));
@@ -303,7 +305,9 @@ async function saveEntry() {
     score = null;
   }
   const tags = [];
-  document.querySelectorAll('#editTags .form-tag.active').forEach(t => tags.push(t.dataset.tag));
+  if (sel.groupName !== 'Singles') {
+    document.querySelectorAll('#editTags .form-tag.active').forEach(t => tags.push(t.dataset.tag));
+  }
 
   // 同步曲目输入框当前最新数据，防止未触发 change 时数据落后
   document.querySelectorAll('#trackList .track-row').forEach(row => {
@@ -472,6 +476,34 @@ function updateAotyLabel() {
   } catch (_) {}
 }
 
+function syncTagsGroupVisibility(animate = false) {
+  const group = document.getElementById('editTagsGroup');
+  if (!group) return;
+
+  let isSingles = false;
+  try {
+    if (selectedSectionValue) {
+      const sel = JSON.parse(selectedSectionValue);
+      isSingles = (sel.groupName === 'Singles');
+    }
+  } catch (_) {}
+
+  if (!animate) {
+    group.classList.add('no-transition');
+    group.classList.toggle('collapsed', isSingles);
+    // 强制回流应用当前几何状态，杜绝任何开窗时的初次动画闪烁
+    void group.offsetHeight;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        group.classList.remove('no-transition');
+      });
+    });
+  } else {
+    group.classList.remove('no-transition');
+    group.classList.toggle('collapsed', isSingles);
+  }
+}
+
 // ===== 复制粘贴 =====
 
 function copyEntry(entry, sectionId, groupName) {
@@ -555,6 +587,7 @@ function pasteEntry() {
   renderTracks();
 
   updateAotyLabel();
+  syncTagsGroupVisibility(false);
 }
 
 // ===== 封面管理 =====

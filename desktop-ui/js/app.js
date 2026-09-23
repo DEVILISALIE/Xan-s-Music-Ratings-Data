@@ -970,12 +970,10 @@ function bindSectionSelector() {
     selectedSectionValue = opt.dataset.value;
     select.classList.remove('open');
     portalClose(menu);
-    // 根据分组切换 AOTY/SOTY 标签
-    try {
-      const sel = JSON.parse(selectedSectionValue);
-      const aotyLabel = document.querySelector('[data-i18n="modal.aoty"]');
-      if (aotyLabel) aotyLabel.textContent = sel.groupName === 'Singles' ? t('modal.soty') : t('modal.aoty');
-    } catch (_) {}
+    // 根据分组切换 AOTY/SOTY 标签与开关
+    if (typeof updateAotyLabel === 'function') updateAotyLabel();
+    // 触发带 Apple Design 流体物理动效的标签收起/反向展开动画
+    if (typeof syncTagsGroupVisibility === 'function') syncTagsGroupVisibility(true);
   });
 }
 
@@ -2599,7 +2597,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.6.1");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.6.2");
         break;
     }
   });

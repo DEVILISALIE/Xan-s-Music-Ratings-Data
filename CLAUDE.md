@@ -78,6 +78,13 @@ npm run tauri build              # 构建 MSI 安装包
 | `customFontWeight` | 数字字符串 | 用户自定义全局字重（`100`–`900`），默认 `400` |
 | `customFontWeightEnabled` | `"true"` / `"false"` | 自定义字重开关，默认 `false` |
 
+## v1.6.2 更新（相对 v1.6.1）
+
+- **专辑/单曲标签智能流体收起与展开（Apple Design）**：
+  - **业务规则与分区联动**：针对 EP、Mixtape、Live 等仅对专辑适用的标签，在添加或编辑条目时若切换到 Singles 分组，自动优雅收起；切回 Albums 分组时反向平滑展开；单曲保存时自动排除专辑标签，避免脏数据残留；
+  - **流体动画质感**：基于 Apple 流体界面规范，采用现代 CSS `grid-template-rows: 0fr ↔ 1fr` 物理轨道折叠技术与 Apple 签名曲线 `cubic-bezier(0.32, 0.72, 0, 1)`（360ms），搭配 `translateY(-8px)`、`scale(0.98)` 与先行淡出，平稳舒展、克制高级，下方表单与曲目列表平滑顺推排开；
+  - **开窗瞬态无动画机制**：点击专辑卡片打开弹窗直接静态完全展示（无展开动画），点击单曲卡片打开弹窗直接静态隐藏折叠（无收起动画），通过双重 rAF 与强制回流彻底消除开窗瞬间的微动闪烁，仅在用户手动下拉切换分区时展现物理动画。
+
 ## v1.6.1 更新（相对 v1.6.0）
 
 - **弹窗遮罩层级与交互修复**：修复桌面模式下右下角悬浮按钮（新建 `+`、搜索翻页 `↑` / `↓`）原本 `z-index: 200` 高于弹窗遮罩层（`100`）导致穿透突兀、未被毛玻璃变暗模糊且拦截背景点击的问题；将桌面端 FAB z-index 调整为 `60`，日常保持在各内容层上方，进入编辑或各类弹窗时完全被全屏遮罩覆盖，视觉上融入背景，点击按钮区域由遮罩捕获直接触发取消退出。
@@ -166,7 +173,12 @@ GitHub 上一次正式 Release 为 `v1.4.0`（commit `ede5a58`，2026-07-14）�
 - 桌面版固定使用 `musicData_desktop` 作为 WebView2 本地镜像
 - `build-frontend.js` 构建时将 `desktop-ui/index.html`、`desktop-ui/css`、`desktop-ui/js` 和可选 `desktop-ui/data.json` 复制到 `dist/`，再由 Tauri 打包进二进制
 - Tauri 插件：dialog、fs、global-shortcut、shell、single-instance；Rust 依赖 `base64` 与 `image`
-- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.6.1`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.6.1`
+- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.6.2`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.6.2`
+
+**v1.6.2 更新日志**：
+- **专辑/单曲标签智能流体收起与展开（Apple Design）**：添加/编辑弹窗中切换到 Singles 分区时，专辑标签基于现代 Grid 0fr↔1fr 轨道折叠与 Apple 签名阻尼曲线（360ms）优雅收起，切回 Albums 分区反向平滑展开；
+- **开窗瞬态无动画机制**：点击专辑卡片打开弹窗直接静态显示标签（无展开动画），点击单曲卡片打开弹窗直接静态折叠隐藏（无收起动画），彻底消除开窗微动闪烁；
+- **单曲保存数据纯净**：条目保存归属于 Singles 时自动排除专辑标签，避免脏数据残留。
 
 **v1.6.1 更新日志**：
 - **弹窗遮罩层级修复**：桌面版悬浮按钮（`+` / `↑` / `↓`）z-index 降至 60，避免穿透弹窗遮罩层（100），打开弹窗时自动被全屏遮罩覆盖变暗并毛玻璃模糊，点击按钮区域由遮罩捕获触发取消退出；

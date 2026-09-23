@@ -625,6 +625,49 @@ textarea.form-input::-webkit-scrollbar-corner {
   pointer-events: none;
 }
 
+/* ===== Apple Design 流体标签折叠容器 ===== */
+.form-tags-collapsible {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transform-origin: top center;
+  margin-bottom: 16px;
+  transition: 
+    grid-template-rows 360ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 260ms cubic-bezier(0.32, 0.72, 0, 1),
+    transform 360ms cubic-bezier(0.32, 0.72, 0, 1),
+    margin-bottom 360ms cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: grid-template-rows, opacity, transform;
+}
+
+.form-tags-collapsible .tags-collapsible-inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* 折叠/收起状态 */
+.form-tags-collapsible.collapsed {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-8px) scale(0.98);
+  margin-bottom: 0;
+  pointer-events: none;
+}
+
+/* 瞬态无动画类（用于弹窗初始化时静态就绪，杜绝开窗过渡与闪烁） */
+.form-tags-collapsible.no-transition,
+.form-tags-collapsible.no-transition * {
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .form-tags-collapsible {
+    transition: opacity 160ms ease !important;
+    transform: none !important;
+  }
+}
+
 .form-tags {
   display: flex;
   flex-wrap: wrap;

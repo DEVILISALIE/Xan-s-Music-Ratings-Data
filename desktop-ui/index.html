@@ -312,18 +312,20 @@
         <label class="form-label" data-i18n="modal.scoreNote">Score Note</label>
         <input class="form-input" id="editScoreNote" name="scoreNote" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" placeholder="e.g. Top1, NR…" data-i18n-placeholder="modal.placeholder.note">
       </div>
-      <div class="form-group">
-        <label class="form-label" data-i18n="modal.tags">Tags</label>
-        <div class="form-tags" id="editTags">
-          <button type="button" class="form-tag" data-tag="EP">EP</button>
-          <button type="button" class="form-tag" data-tag="Mixtape">Mixtape</button>
-          <button type="button" class="form-tag" data-tag="Reissue">Reissue</button>
-          <button type="button" class="form-tag" data-tag="Soundtrack">Soundtrack</button>
-          <button type="button" class="form-tag" data-tag="Live">Live</button>
-          <button type="button" class="form-tag" data-tag="Compilation">Compilation</button>
-          <button type="button" class="form-tag" data-tag="Unofficial">Unofficial</button>
-          <button type="button" class="form-tag" data-tag="DJ Mix">DJ Mix</button>
-          <button type="button" class="form-tag" data-tag="Video">Video</button>
+      <div class="form-group form-tags-collapsible" id="editTagsGroup">
+        <div class="tags-collapsible-inner">
+          <label class="form-label" data-i18n="modal.tags">Tags</label>
+          <div class="form-tags" id="editTags">
+            <button type="button" class="form-tag" data-tag="EP">EP</button>
+            <button type="button" class="form-tag" data-tag="Mixtape">Mixtape</button>
+            <button type="button" class="form-tag" data-tag="Reissue">Reissue</button>
+            <button type="button" class="form-tag" data-tag="Soundtrack">Soundtrack</button>
+            <button type="button" class="form-tag" data-tag="Live">Live</button>
+            <button type="button" class="form-tag" data-tag="Compilation">Compilation</button>
+            <button type="button" class="form-tag" data-tag="Unofficial">Unofficial</button>
+            <button type="button" class="form-tag" data-tag="DJ Mix">DJ Mix</button>
+            <button type="button" class="form-tag" data-tag="Video">Video</button>
+          </div>
         </div>
       </div>
       <div class="form-group">
