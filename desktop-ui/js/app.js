@@ -439,6 +439,8 @@ async function init() {
   applyLang();
   applyTheme();
 
+  let needsInitialSave = false;
+
   try {
     // 桌面版：优先从磁盘加载（最新数据源）
     if (window.__TAURI__) {
@@ -446,9 +448,17 @@ async function init() {
       const diskData = await loadDataFromDiskWithRetry(3);
       if (diskData) {
         appData = diskData;
-        // 同步到 localStorage
-        localStorage.setItem(getStorageKey(), JSON.stringify(appData));
-        if (isDev()) logMsg('[Init] 磁盘数据已同步到 localStorage');
+        // 关键优化：非阻塞异步将磁盘数据同步在 localStorage，绝不卡慢首屏渲染
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(() => {
+            try { localStorage.setItem(getStorageKey(), JSON.stringify(appData)); } catch (_) {}
+          });
+        } else {
+          setTimeout(() => {
+            try { localStorage.setItem(getStorageKey(), JSON.stringify(appData)); } catch (_) {}
+          }, 600);
+        }
+        if (isDev()) logMsg('[Init] 磁盘数据已载入内存');
       } else {
         // 磁盘无数据，尝试 localStorage
         if (isDev()) logMsg('[Init] 磁盘无数据，尝试 localStorage');
@@ -461,8 +471,7 @@ async function init() {
           if (!appData.sections.some(s => s.id === '1950s')) {
             appData.sections.push({ id: '1950s', title: '1950s', groups: [{ name: 'Albums', entries: [] }, { name: 'Singles', entries: [] }] });
           }
-          // localStorage 有数据但磁盘没有，写入磁盘
-          await saveData();
+          needsInitialSave = true;
         } else {
           // 两者都没有，检查磁盘文件是否存在（可能读取失败）
           let hasDiskFile = false;
@@ -487,7 +496,7 @@ async function init() {
             if (!appData.sections.some(s => s.id === '1950s')) {
               appData.sections.push({ id: '1950s', title: '1950s', groups: [{ name: 'Albums', entries: [] }, { name: 'Singles', entries: [] }] });
             }
-            await saveData();
+            needsInitialSave = true;
           } else {
             appData = { meta: { title: "Xan's Music Ratings", lastUpdated: new Date().toISOString().slice(0, 10) }, sections: [] };
           }
@@ -502,25 +511,25 @@ async function init() {
         appData = savedData;
       } else if (__MUSIC_DATA__ && __MUSIC_DATA__.sections && __MUSIC_DATA__.sections.length > 0) {
         appData = __MUSIC_DATA__;
-        saveData();
+        needsInitialSave = true;
       } else {
         const resp = await fetch('data.json');
         const fetched = await resp.json();
         if (fetched && fetched.sections && fetched.sections.length > 0) {
           appData = fetched;
-          saveData();
+          needsInitialSave = true;
         } else {
           appData = { meta: { title: "Xan's Music Ratings", lastUpdated: new Date().toISOString().slice(0, 10) }, sections: [] };
         }
       }
     }
-    if (migrateVolSections()) await saveData();
-    ensureDefaultGroups();
-    // 仅在有真实数据时才持久化
-    if (hasRealData(appData)) {
+    if (migrateVolSections()) needsInitialSave = true;
+    if (ensureDefaultGroups()) needsInitialSave = true;
+    // 关键优化：仅当数据首次生成或结构迁移时才在启动时保存，避免每次正常冷启动多余的写盘阻塞
+    if (needsInitialSave && hasRealData(appData)) {
       await saveData();
     } else {
-      if (isDev()) logMsg('[Init] 警告: appData 无真实数据，跳过保存');
+      if (isDev()) logMsg('[Init] 数据已处于最新状态，跳过冷启动多余保存');
     }
   } catch (e) {
     console.error('Init error:', e);
@@ -553,6 +562,10 @@ async function init() {
   setupCoverEvents();
   if (window.__TAURI__) {
     setupFpsMonitor();
+    // 关键优化：首屏初始化与绘制完成后，通知 Tauri 窗口立即呈现（0 白屏、0 闪烁瞬开）
+    requestAnimationFrame(() => {
+      window.__TAURI__.core.invoke('show_main_window').catch(() => {});
+    });
     // 首屏渲染完成后 1.5 秒静默回收初始阶段峰值内存
     setTimeout(() => {
       window.__TAURI__.core.invoke('trim_memory').catch(() => {});
@@ -2597,7 +2610,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.6.2");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.6.3");
         break;
     }
   });
@@ -2627,13 +2640,7 @@ init();
     }
   });
 
-  window.addEventListener('blur', () => {
-    if (window.__TAURI__) {
-      invoke('trim_memory').catch(() => {});
-    }
-  });
-
-  // 智能空闲内存回收器：用户停止操作 20 秒后静默清理 WorkingSet
+  // 智能空闲内存回收器：用户停止操作 60 秒后温和清理 WorkingSet
   let _idleTimer = null;
   function resetIdleMemoryTimer() {
     clearTimeout(_idleTimer);
@@ -2641,7 +2648,7 @@ init();
       if (window.__TAURI__) {
         invoke('trim_memory').catch(() => {});
       }
-    }, 20000);
+    }, 60000);
   }
 
   ['pointerdown', 'keydown', 'scroll', 'touchstart'].forEach(evt => {

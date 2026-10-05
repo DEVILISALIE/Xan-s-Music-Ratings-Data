@@ -13,6 +13,8 @@ use base64::Engine;
 const MAX_COVER_BYTES: u64 = 20 * 1024 * 1024;
 const COVER_THUMBNAIL_SIZE: u32 = 256;
 
+static IS_PROCESSING_IMAGE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
 // 向前端发送菜单动作事件
 fn emit_menu_action(app: &AppHandle, action: &str) {
     if let Some(win) = app.get_webview_window("main") {
@@ -155,6 +157,9 @@ extern "system" {
 
 #[cfg(target_os = "windows")]
 fn trim_working_set_memory() {
+    if IS_PROCESSING_IMAGE.load(std::sync::atomic::Ordering::Relaxed) {
+        return;
+    }
     use std::mem::size_of;
 
     #[repr(C)]
@@ -259,6 +264,14 @@ fn trim_working_set_memory() {
 fn trim_memory() {
     #[cfg(target_os = "windows")]
     trim_working_set_memory();
+}
+
+#[tauri::command]
+fn show_main_window(app: AppHandle) {
+    if let Some(win) = get_main_window(&app) {
+        let _ = win.show();
+        let _ = win.set_focus();
+    }
 }
 
 #[tauri::command]
@@ -511,28 +524,63 @@ fn thumbnail_path(app: &AppHandle, entry_id: &str) -> Result<std::path::PathBuf,
     Ok(dir.join(format!("{}.png", entry_id)))
 }
 
+fn detect_image_mime(bytes: &[u8]) -> &'static str {
+    if bytes.starts_with(&[0x89, b'P', b'N', b'G']) {
+        "image/png"
+    } else if bytes.starts_with(&[0xFF, 0xD8, 0xFF]) {
+        "image/jpeg"
+    } else if bytes.starts_with(b"GIF8") {
+        "image/gif"
+    } else if bytes.len() >= 12 && &bytes[0..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
+        "image/webp"
+    } else if bytes.starts_with(b"BM") {
+        "image/bmp"
+    } else {
+        "image/jpeg"
+    }
+}
+
 fn create_cover_thumbnail(source: &std::path::Path, destination: &std::path::Path) -> Result<(), String> {
-    let image = image::ImageReader::open(source)
-        .map_err(|e| format!("无法打开封面: {}", e))?
-        .with_guessed_format()
-        .map_err(|e| format!("无法识别封面格式: {}", e))?
-        .decode()
-        .map_err(|e| format!("无法解码封面: {}", e))?;
-    let thumbnail = image.thumbnail(COVER_THUMBNAIL_SIZE, COVER_THUMBNAIL_SIZE);
-    if let Some(parent) = destination.parent() {
-        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
-    }
-    let temporary = destination.with_extension("png.tmp");
-    let _ = fs::remove_file(&temporary);
-    if let Err(error) = thumbnail.save_with_format(&temporary, image::ImageFormat::Png) {
+    let source_path = source.to_path_buf();
+    let dest_path = destination.to_path_buf();
+
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(move || -> Result<(), String> {
+        let mut reader = image::ImageReader::open(&source_path)
+            .map_err(|e| format!("无法打开封面: {}", e))?
+            .with_guessed_format()
+            .map_err(|e| format!("无法识别封面格式: {}", e))?;
+
+        // 配置大图安全边界，防止恶性超大分辨率图片导致 OOM 崩溃闪退
+        let mut limits = image::Limits::default();
+        limits.max_image_width = Some(10000);
+        limits.max_image_height = Some(10000);
+        limits.max_alloc = Some(256 * 1024 * 1024);
+        reader.limits(limits);
+
+        let img = reader.decode().map_err(|e| format!("无法解码封面: {}", e))?;
+        let thumbnail = img.thumbnail(COVER_THUMBNAIL_SIZE, COVER_THUMBNAIL_SIZE);
+
+        if let Some(parent) = dest_path.parent() {
+            fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+        }
+        let temporary = dest_path.with_extension("png.tmp");
         let _ = fs::remove_file(&temporary);
-        return Err(format!("无法保存封面缩略图: {}", error));
+
+        if let Err(error) = thumbnail.save_with_format(&temporary, image::ImageFormat::Png) {
+            let _ = fs::remove_file(&temporary);
+            return Err(format!("无法保存封面缩略图: {}", error));
+        }
+        let _ = fs::remove_file(&dest_path);
+        fs::rename(&temporary, &dest_path).map_err(|error| {
+            let _ = fs::remove_file(&temporary);
+            format!("无法替换封面缩略图: {}", error)
+        })
+    }));
+
+    match result {
+        Ok(res) => res,
+        Err(_) => Err("解码或缩放图片发生未捕获异常".into()),
     }
-    let _ = fs::remove_file(destination);
-    fs::rename(&temporary, destination).map_err(|error| {
-        let _ = fs::remove_file(&temporary);
-        format!("无法替换封面缩略图: {}", error)
-    })
 }
 
 fn original_cover_data_url(path: &std::path::Path) -> Result<String, String> {
@@ -568,16 +616,21 @@ fn upload_cover(app: AppHandle, entry_id: String, source_path: String) -> Result
         return Err("源文件不存在".into());
     }
     // 限制文件大小 20MB
-    if let Ok(meta) = fs::metadata(src) {
+    let file_len = if let Ok(meta) = fs::metadata(src) {
         if meta.len() > MAX_COVER_BYTES {
             return Err("图片文件过大（最大 20MB）".into());
         }
-    }
+        meta.len()
+    } else {
+        0
+    };
     let ext = src.extension()
         .and_then(|e| e.to_str())
         .unwrap_or("jpg");
     let filename = format!("{}.{}", entry_id, ext);
     let dest = dir.join(&filename);
+
+    let _ = write_log(app.clone(), format!("[Rust] 开始上传封面: id={}, 来源={}, 大小={}KB", entry_id, source_path, file_len / 1024));
 
     // 清除该 entry 的旧封面（不同扩展名）
     if let Ok(entries) = fs::read_dir(&dir) {
@@ -594,11 +647,27 @@ fn upload_cover(app: AppHandle, entry_id: String, source_path: String) -> Result
         }
     }
 
-    fs::copy(src, &dest).map_err(|e| e.to_string())?;
+    // 锁定图片处理状态，防止 WorkingSet 内存置换干扰
+    IS_PROCESSING_IMAGE.store(true, std::sync::atomic::Ordering::SeqCst);
+    let copy_res = fs::copy(src, &dest);
+    if let Err(e) = copy_res {
+        IS_PROCESSING_IMAGE.store(false, std::sync::atomic::Ordering::SeqCst);
+        let _ = write_log(app.clone(), format!("[Rust] 封面文件复制失败: {}", e));
+        return Err(e.to_string());
+    }
+
     let thumb_path = thumbnail_path(&app, &entry_id)?;
     let _ = fs::remove_file(&thumb_path);
-    // 极少数系统不支持的格式仍保留原图，读取卡片时会回退到原图。
-    let _ = create_cover_thumbnail(&dest, &thumb_path);
+    // 生成缩略图（有 catch_unwind 与 limits 保护）
+    let thumb_res = create_cover_thumbnail(&dest, &thumb_path);
+    IS_PROCESSING_IMAGE.store(false, std::sync::atomic::Ordering::SeqCst);
+
+    if let Err(ref e) = thumb_res {
+        let _ = write_log(app.clone(), format!("[Rust] 缩略图生成失败({}): {}", entry_id, e));
+    } else {
+        let _ = write_log(app.clone(), format!("[Rust] 封面上传成功并已生成缩略图: id={}", entry_id));
+    }
+
     Ok(filename)
 }
 
@@ -686,7 +755,10 @@ fn read_cover_thumbnail(app: AppHandle, entry_id: String) -> Result<String, Stri
     let source = find_cover_file(&dir, &entry_id).ok_or("封面文件不存在")?;
     let thumb_path = thumbnail_path(&app, &entry_id)?;
     if !thumb_path.exists() {
-        if create_cover_thumbnail(&source, &thumb_path).is_err() {
+        IS_PROCESSING_IMAGE.store(true, std::sync::atomic::Ordering::SeqCst);
+        let res = create_cover_thumbnail(&source, &thumb_path);
+        IS_PROCESSING_IMAGE.store(false, std::sync::atomic::Ordering::SeqCst);
+        if res.is_err() {
             return original_cover_data_url(&source);
         }
     }
@@ -694,7 +766,10 @@ fn read_cover_thumbnail(app: AppHandle, entry_id: String) -> Result<String, Stri
         Ok(b) if !b.is_empty() => b,
         _ => {
             let _ = fs::remove_file(&thumb_path);
-            if create_cover_thumbnail(&source, &thumb_path).is_ok() {
+            IS_PROCESSING_IMAGE.store(true, std::sync::atomic::Ordering::SeqCst);
+            let res = create_cover_thumbnail(&source, &thumb_path);
+            IS_PROCESSING_IMAGE.store(false, std::sync::atomic::Ordering::SeqCst);
+            if res.is_ok() {
                 fs::read(&thumb_path).unwrap_or_default()
             } else {
                 return original_cover_data_url(&source);
@@ -707,8 +782,9 @@ fn read_cover_thumbnail(app: AppHandle, entry_id: String) -> Result<String, Stri
     if bytes.len() > 2 * 1024 * 1024 {
         return Err("封面缩略图过大".into());
     }
+    let mime = detect_image_mime(&bytes);
     let b64 = base64::engine::general_purpose::STANDARD.encode(&bytes);
-    Ok(format!("data:image/png;base64,{}", b64))
+    Ok(format!("data:{};base64,{}", mime, b64))
 }
 
 #[tauri::command]
@@ -717,7 +793,10 @@ fn read_cover(app: AppHandle, entry_id: String) -> Result<String, String> {
     let dir = covers_dir(&app).ok_or("无法获取数据目录")?;
     if !dir.exists() { return Err("covers 目录不存在".into()); }
     let path = find_cover_file(&dir, &entry_id).ok_or("封面文件不存在")?;
-    original_cover_data_url(&path)
+    IS_PROCESSING_IMAGE.store(true, std::sync::atomic::Ordering::SeqCst);
+    let res = original_cover_data_url(&path);
+    IS_PROCESSING_IMAGE.store(false, std::sync::atomic::Ordering::SeqCst);
+    res
 }
 
 #[tauri::command]
@@ -845,10 +924,10 @@ mod tests {
 }
 
 fn main() {
-    // 全局禁用 WebView2 / Chromium 的自动填充与“保存的信息”浏览器提示，并深度限制 V8 与渲染器内存峰值
+    // 深度调优 WebView2 / Chromium 启动参数：启用 GPU Shader 磁盘缓存，加速冷启动渲染；禁用无用云服务与密码气泡
     std::env::set_var(
         "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS",
-        "--disable-features=AutofillServerCommunication,AutofillShowTypePredictions,AutofillAddressProfile,AutofillCreditCard,AutofillPasswordGeneration,Autofill --disable-save-password-bubble --disable-single-click-autofill --no-pings --js-flags=\"--max-old-space-size=64 --max-semi-space-size=4\" --renderer-process-limit=1 --disable-gpu-shader-disk-cache --disk-cache-size=10485760 --media-cache-size=10485760 --disable-breakpad --disable-component-update --disable-domain-reliability",
+        "--disable-features=AutofillServerCommunication,AutofillShowTypePredictions,AutofillAddressProfile,AutofillCreditCard,AutofillPasswordGeneration,Autofill --disable-save-password-bubble --disable-single-click-autofill --no-pings --renderer-process-limit=1 --disk-cache-size=20971520 --disable-breakpad --disable-component-update --disable-domain-reliability",
     );
 
     tauri::Builder::default()
@@ -918,33 +997,23 @@ fn main() {
                                 trim_working_set_memory();
                             }
                         }
-                        tauri::WindowEvent::Focused(false) => {
-                            #[cfg(target_os = "windows")]
-                            trim_working_set_memory();
-                        }
                         _ => {}
                     }
                 });
             }
 
-            // 启动后台超轻量内存守护线程：启动前 4 秒内每 400ms 快速回收一次压制冷启动峰值，之后每 1.5 秒持续守护
+            // 仅在应用冷启动完成后延迟 3 秒温和整理一次初始阶段内存峰值，彻底杜绝后台死循环对图像处理与渲染的打断
             #[cfg(target_os = "windows")]
             std::thread::spawn(|| {
-                for _ in 0..10 {
-                    std::thread::sleep(std::time::Duration::from_millis(400));
-                    trim_working_set_memory();
-                }
-                loop {
-                    std::thread::sleep(std::time::Duration::from_millis(1500));
-                    trim_working_set_memory();
-                }
+                std::thread::sleep(std::time::Duration::from_secs(3));
+                trim_working_set_memory();
             });
 
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             get_app_version, toggle_topmost, toggle_fullscreen,
-            minimize_window, toggle_maximize, close_window, start_window_drag,
+            show_main_window, minimize_window, toggle_maximize, close_window, start_window_drag,
             is_window_maximized, is_window_fullscreen, is_window_topmost,
             save_data_to_disk, load_data_from_disk, check_disk_data, get_data_file_size, write_log,
             graceful_exit, trim_memory,

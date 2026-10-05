@@ -615,10 +615,25 @@ function loadCoverPreview(cover, entryId) {
     removeWrap.style.display = '';
     if (viewBtn) viewBtn.style.display = '';
   } else if (window.__TAURI__) {
-    wrap.style.display = 'none';
-    removeWrap.style.display = 'none';
-    if (viewBtn) viewBtn.style.display = 'none';
-    window.__TAURI__.core.invoke('read_cover', { entryId: entryId }).then(dataUrl => {
+    // 若已有列表缩略图缓存，先瞬间作为底图呈现，杜绝白屏与跳动
+    const thumbCached = (typeof coverThumbnailCache !== 'undefined') ? coverThumbnailCache.get(entryId) : null;
+    if (thumbCached) {
+      img.src = thumbCached;
+      wrap.style.display = '';
+      removeWrap.style.display = '';
+      if (viewBtn) viewBtn.style.display = '';
+    } else {
+      img.src = '';
+      wrap.style.display = 'none';
+      removeWrap.style.display = 'none';
+      if (viewBtn) viewBtn.style.display = 'none';
+    }
+
+    // 关键优化：编辑详情页加载高清原画，呈现最细腻清晰的封面细节
+    window.__TAURI__.core.invoke('read_cover', { entryId: entryId }).catch(() => {
+      // 容错兜底：若原图损坏则回退至缩略图
+      return window.__TAURI__.core.invoke('read_cover_thumbnail', { entryId: entryId });
+    }).then(dataUrl => {
       if (requestId === coverPreviewRequestId && (editingEntry?.id === entryId || document.getElementById('editId').value === entryId)) {
         img.src = dataUrl;
         wrap.style.display = '';
@@ -627,6 +642,7 @@ function loadCoverPreview(cover, entryId) {
       }
     }).catch(() => {
       if (requestId === coverPreviewRequestId) {
+        img.src = '';
         wrap.style.display = 'none';
         removeWrap.style.display = 'none';
         if (viewBtn) viewBtn.style.display = 'none';
@@ -667,7 +683,8 @@ function setupCoverEvents() {
   });
 
   // 本地上传
-  section.querySelector('[data-action="cover-upload"]').addEventListener('click', async () => {
+  const uploadBtn = section.querySelector('[data-action="cover-upload"]');
+  uploadBtn?.addEventListener('click', async () => {
     let entryId = document.getElementById('editId').value;
     if (!entryId) {
       entryId = generateId();
@@ -681,16 +698,30 @@ function setupCoverEvents() {
           filters: [{ name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'bmp', 'avif'] }]
         });
         if (!selected) return;
-        const filename = await window.__TAURI__.core.invoke('upload_cover', {
-          entryId: entryId,
-          sourcePath: selected
-        });
-        currentModalCover = filename;
-        if (editingEntry) editingEntry.cover = filename;
-        invalidateCoverThumbnail(entryId);
-        loadCoverPreview(filename, entryId);
+
+        // 加载保护状态，防止快速重复连击造成并发 IO 冲突
+        const originalText = uploadBtn.textContent;
+        uploadBtn.disabled = true;
+        uploadBtn.textContent = t('modal.coverUploading');
+
+        try {
+          const filename = await window.__TAURI__.core.invoke('upload_cover', {
+            entryId: entryId,
+            sourcePath: selected
+          });
+          currentModalCover = filename;
+          if (editingEntry) editingEntry.cover = filename;
+          invalidateCoverThumbnail(entryId);
+          loadCoverPreview(filename, entryId);
+        } catch (uploadErr) {
+          console.error('封面上传失败:', uploadErr);
+          showAlert(t('modal.coverUploadFailed') + '\n(' + (uploadErr?.message || uploadErr || 'Unknown error') + ')');
+        } finally {
+          uploadBtn.disabled = false;
+          uploadBtn.textContent = originalText;
+        }
       } catch (err) {
-        console.error('封面上传失败:', err);
+        console.error('打开文件对话框失败:', err);
       }
     } else {
       // 纯网页环境 fallback：通过隐藏的 file input 导入
@@ -837,6 +868,19 @@ function setupCoverEvents() {
     panY = 0;
     updateViewerTransform();
     viewer.classList.add('active');
+
+    // 处于桌面版环境且当前为本地图片时，全屏查看器打开后异步提升加载原画（若为自定义图片如 Logo 则不覆盖）
+    const entryId = editingEntry?.id || document.getElementById('editId')?.value;
+    const coverVal = currentModalCover !== null ? currentModalCover : (editingEntry?.cover || '');
+    if (!customSrc && window.__TAURI__ && entryId && coverVal && !/^https?:\/\//i.test(coverVal)) {
+      window.__TAURI__.core.invoke('read_cover', { entryId: entryId }).then(originalDataUrl => {
+        if (viewer.classList.contains('active') && originalDataUrl) {
+          viewerImg.src = originalDataUrl;
+        }
+      }).catch(err => {
+        console.warn('全屏查看器读取原图失败，继续保持缩略图展示:', err);
+      });
+    }
   }
   window.openCoverViewer = openCoverViewer;
 

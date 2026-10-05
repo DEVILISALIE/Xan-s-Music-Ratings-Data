@@ -65,10 +65,16 @@ function sortGroupEntries(group, sectionId) {
 function updateToolbarStats() {
   let albumCount = 0;
   let singleCount = 0;
-  for (const { card } of allCards) {
-    const group = card.dataset.group || '';
-    if (group.includes('singles')) singleCount++;
-    else albumCount++;
+  if (appData && Array.isArray(appData.sections)) {
+    for (const section of appData.sections) {
+      if (Array.isArray(section.groups)) {
+        for (const group of section.groups) {
+          const count = Array.isArray(group.entries) ? group.entries.length : 0;
+          if (group.name === 'Singles') singleCount += count;
+          else albumCount += count;
+        }
+      }
+    }
   }
   const albumEl = document.getElementById('albumCount');
   const singleEl = document.getElementById('singleCount');
@@ -125,14 +131,18 @@ function getSectionDisplayName(section) {
 
 // 确保每个 section 都有 Albums 和 Singles 两个默认分组
 function ensureDefaultGroups() {
+  let modified = false;
   for (const section of appData.sections) {
     if (!section.groups.some(g => g.name === 'Albums')) {
       section.groups.push({ name: 'Albums', entries: [] });
+      modified = true;
     }
     if (!section.groups.some(g => g.name === 'Singles')) {
       section.groups.push({ name: 'Singles', entries: [] });
+      modified = true;
     }
   }
+  return modified;
 }
 
 let selectedSectionValue = '';

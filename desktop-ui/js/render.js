@@ -602,94 +602,150 @@ function setupScrollSync() {
 
 
 // ===== Content Rendering =====
+function renderSectionHtml(section) {
+  let html = `<div class="section" id="section-${escapeHtml(section.id)}">`;
+  const displayYear = getSectionDisplayName(section);
+  html += `<h2 class="section-title">${escapeHtml(displayYear)}</h2>`;
+
+  // 动态重组：AOTY 条目(isAoty)归入 Albums 顶部，SOTY 条目(isSoty)归入 Singles 顶部
+  const aotyAlbumEntries = [];
+  const sotySingleEntries = [];
+  const normalEntriesMap = {};
+  for (const group of section.groups) {
+    if (group.name === 'AOTY') continue;
+    normalEntriesMap[group.name] = [];
+    for (const entry of group.entries) {
+      if (group.name === 'Singles' && entry.isSoty) {
+        sotySingleEntries.push(entry);
+      } else if (group.name !== 'Singles' && entry.isAoty) {
+        aotyAlbumEntries.push(entry);
+      } else {
+        normalEntriesMap[group.name].push(entry);
+      }
+    }
+  }
+
+  const displayGroups = [];
+  const albumEntries = [...aotyAlbumEntries, ...(normalEntriesMap['Albums'] || [])];
+  const singleEntries = [...sotySingleEntries, ...(normalEntriesMap['Singles'] || [])];
+
+  if (albumEntries.length > 0) displayGroups.push({ name: 'Albums', entries: albumEntries });
+  if (singleEntries.length > 0) displayGroups.push({ name: 'Singles', entries: singleEntries });
+
+  const hasAoty = aotyAlbumEntries.length > 0;
+  const hasSoty = sotySingleEntries.length > 0;
+
+  if (hasAoty) {
+    html += `<div id="group-${escapeHtml(getGroupId(section.id, 'aoty'))}" style="height:1px;margin:0;padding:0;overflow:hidden"></div>`;
+  }
+
+  for (const group of displayGroups) {
+    const gid = getGroupId(section.id, group.name);
+
+    if (group.name === 'Singles' && hasSoty) {
+      html += `<div id="group-${escapeHtml(getGroupId(section.id, 'soty'))}" style="height:1px;margin:0;padding:0;overflow:hidden"></div>`;
+    }
+
+    if (group.entries.length > 0) {
+      const groupLabel = group.name === 'Albums' ? t('toolbar.albums') : group.name === 'Singles' ? t('toolbar.singles') : group.name;
+      html += `<div class="group-title" id="group-${escapeHtml(gid)}">${escapeHtml(groupLabel)}</div>`;
+      html += `<div class="group-cards-list">`;
+    }
+
+    let idx = 0;
+    for (const entry of group.entries) {
+      idx++;
+      const visible = matchesFilter(entry);
+      const isSpecial = (group.name === 'Singles' && entry.isSoty) || (group.name !== 'Singles' && entry.isAoty);
+      if (isSpecial) {
+        html += renderAotyCard(entry, section.id, gid, visible, group.name);
+      } else {
+        html += renderAlbumCard(entry, idx, section.id, gid, group.name, visible);
+      }
+    }
+
+    if (group.entries.length > 0) {
+      html += `</div>`;
+    }
+  }
+
+  html += `</div>`;
+  return html;
+}
+
+let _initialProgressiveDone = false;
+let _progressiveRafId = null;
+
 function renderContent() {
   const area = document.getElementById('contentArea');
-  let html = '';
-  let totalCount = 0;
-  let visibleCount = 0;
-
   const mergedSections = getMergedSections();
+
+  // 若存在尚未完成的渐进追加任务，先取消它防止多次渲染引发重复追加
+  if (_progressiveRafId) {
+    cancelAnimationFrame(_progressiveRafId);
+    _progressiveRafId = null;
+  }
+
+  // 关键优化：冷启动首次渲染采用渐进首批直出（前 3 个年份已远超 4K 屏幕可视区），将首屏解析渲染降至毫秒级
+  if (!_initialProgressiveDone && mergedSections.length > 3) {
+    _initialProgressiveDone = true;
+    const firstBatch = mergedSections.slice(0, 3);
+    const restBatch = mergedSections.slice(3);
+
+    let firstHtml = '';
+    for (const s of firstBatch) firstHtml += renderSectionHtml(s);
+
+    _lastContentHtml = '';
+    area.innerHTML = firstHtml;
+    observeCoverThumbnails(area);
+    rebuildCardCache();
+    scheduleScrollCacheRebuild();
+    updateToolbarStats();
+    updateGlobalStatsSidebar();
+
+    // 首屏首帧挂载完毕，通知桌面窗口立即无感呈现
+    if (window.__TAURI__) {
+      requestAnimationFrame(() => {
+        window.__TAURI__.core.invoke('show_main_window').catch(() => {});
+      });
+    }
+
+    // 在下一个事件循环中无缝追加剩余历史年份，用户无感知且完全不影响交互
+    _progressiveRafId = requestAnimationFrame(() => {
+      _progressiveRafId = null;
+      let restHtml = '';
+      for (const s of restBatch) restHtml += renderSectionHtml(s);
+      area.insertAdjacentHTML('beforeend', restHtml);
+      _lastContentHtml = firstHtml + restHtml;
+      observeCoverThumbnails(area);
+      rebuildCardCache();
+      scheduleScrollCacheRebuild();
+      updateToolbarStats();
+
+      // 同步搜索结果与计数器
+      searchResults = [];
+      for (const { card } of allCards) {
+        if (!card.classList.contains('hidden')) searchResults.push(card);
+      }
+      const nextBtn = document.getElementById('searchNextBtn');
+      const prevBtn = document.getElementById('searchPrevBtn');
+      if (searchQuery && searchResults.length > 0) {
+        if (typeof syncSearchResultsInDomOrder === 'function') {
+          syncSearchResultsInDomOrder();
+        }
+      } else if (!searchQuery) {
+        if (nextBtn) nextBtn.style.display = 'none';
+        if (prevBtn) prevBtn.style.display = 'none';
+        clearSearchHighlight();
+        searchIndex = -1;
+      }
+    });
+    return;
+  }
+
+  let html = '';
   for (const section of mergedSections) {
-    html += `<div class="section" id="section-${escapeHtml(section.id)}">`;
-    // 沿用侧边栏的显示逻辑（年代 sections 直接取 title，整十年份显示为 xxxxs）
-    const displayYear = getSectionDisplayName(section);
-    html += `<h2 class="section-title">${escapeHtml(displayYear)}</h2>`;
-
-    // 动态重组：AOTY 条目(isAoty)归入 Albums 顶部，SOTY 条目(isSoty)归入 Singles 顶部
-    const aotyAlbumEntries = [];
-    const sotySingleEntries = [];
-    const normalEntriesMap = {}; // groupName → normalEntries[]
-    for (const group of section.groups) {
-      if (group.name === 'AOTY') continue;
-      normalEntriesMap[group.name] = [];
-      for (const entry of group.entries) {
-        if (group.name === 'Singles' && entry.isSoty) {
-          sotySingleEntries.push(entry);
-        } else if (group.name !== 'Singles' && entry.isAoty) {
-          aotyAlbumEntries.push(entry);
-        } else {
-          normalEntriesMap[group.name].push(entry);
-        }
-      }
-    }
-
-    // 始终显示 Albums 和 Singles（即使为空），AOTY/SOTY 条目置顶
-    const displayGroups = [];
-    const albumEntries = [...aotyAlbumEntries, ...(normalEntriesMap['Albums'] || [])];
-    const singleEntries = [...sotySingleEntries, ...(normalEntriesMap['Singles'] || [])];
-
-    if (albumEntries.length > 0) displayGroups.push({ name: 'Albums', entries: albumEntries });
-    if (singleEntries.length > 0) displayGroups.push({ name: 'Singles', entries: singleEntries });
-
-    // AOTY/SOTY 锚点是否需要的标记
-    const hasAoty = aotyAlbumEntries.length > 0;
-    const hasSoty = sotySingleEntries.length > 0;
-
-    // AOTY 锚点放在 section 顶部，Albums 标题上方
-    if (hasAoty) {
-      html += `<div id="group-${escapeHtml(getGroupId(section.id, 'aoty'))}" style="height:1px;margin:0;padding:0;overflow:hidden"></div>`;
-    }
-
-    for (const group of displayGroups) {
-      const gid = getGroupId(section.id, group.name);
-
-      // SOTY 锚点放在 Albums 下方、Singles 标题上方
-      if (group.name === 'Singles' && hasSoty) {
-        html += `<div id="group-${escapeHtml(getGroupId(section.id, 'soty'))}" style="height:1px;margin:0;padding:0;overflow:hidden"></div>`;
-      }
-
-      // 渲染分组标题（支持中英文）
-      if (group.entries.length > 0) {
-        const groupLabel = group.name === 'Albums' ? t('toolbar.albums') : group.name === 'Singles' ? t('toolbar.singles') : group.name;
-        html += `<div class="group-title" id="group-${escapeHtml(gid)}">${escapeHtml(groupLabel)}</div>`;
-      }
-
-      // 卡片列表
-      if (group.entries.length > 0) {
-        html += `<div class="group-cards-list">`;
-      }
-
-      let idx = 0;
-      for (const entry of group.entries) {
-        idx++;
-        totalCount++;
-        const visible = matchesFilter(entry);
-        if (visible) visibleCount++;
-
-        const isSpecial = (group.name === 'Singles' && entry.isSoty) || (group.name !== 'Singles' && entry.isAoty);
-        if (isSpecial) {
-          html += renderAotyCard(entry, section.id, gid, visible, group.name);
-        } else {
-          html += renderAlbumCard(entry, idx, section.id, gid, group.name, visible);
-        }
-      }
-
-      if (group.entries.length > 0) {
-        html += `</div>`; // .group-cards-list
-      }
-    }
-
-    html += `</div>`;
+    html += renderSectionHtml(section);
   }
 
   // 更新右侧固定统计面板
@@ -705,7 +761,7 @@ function renderContent() {
   area.innerHTML = html;
   observeCoverThumbnails(area);
   rebuildCardCache();
-  rebuildScrollCache();
+  scheduleScrollCacheRebuild();
 
   updateToolbarStats();
   searchResults = [];

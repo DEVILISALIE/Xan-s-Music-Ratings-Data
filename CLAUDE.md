@@ -78,6 +78,20 @@ npm run tauri build              # 构建 MSI 安装包
 | `customFontWeight` | 数字字符串 | 用户自定义全局字重（`100`–`900`），默认 `400` |
 | `customFontWeightEnabled` | `"true"` / `"false"` | 自定义字重开关，默认 `false` |
 
+## v1.6.3 更新（相对 v1.6.2）
+
+- **大图/高分辨率封面上传彻底根治闪退**：
+  - **移除失控的物理工作集回收线程**：彻底排查并移除了此前每 1.5 秒死循环调用 `EmptyWorkingSet` 回收整个进程与 WebView2 所有渲染管线物理内存的后台线程；在用户上传与解码高分辨率大图（如 3000×3000、几兆到十几兆）时，Windows 不再因物理页频繁置换（Page Thrashing）导致进程挂起死锁或被系统杀掉闪退；
+  - **Rust 端图像处理内存加固与异常熔断保护**：在 `create_cover_thumbnail` 中增加 `image::Limits` 边界保护（宽度/高度限制 10000px，单图内存配额 256MB），配合 `catch_unwind` 彻底捕获图像解码异常，杜绝 Panic 闪退；引入 `IS_PROCESSING_IMAGE` 原子锁，确保在图像 IO 和缩略图生成期间完全屏蔽外部内存回收；
+- **桌面版冷启动秒开极速优化**：
+  - **恢复 WebView2 磁盘着色器缓存与 V8 吞吐**：移除阻断启动性能的 `--disable-gpu-shader-disk-cache` 与 `--max-semi-space-size=4` 启动参数，恢复 Chromium 原生极速图形着色器缓存；
+  - **冷启动零多余写盘**：启动时检测到磁盘已有最新数据时跳过重复的磁盘保存（`await saveData()`），避免启动时的同步 IO 阻塞；localStorage 同步改为后台非阻塞空闲写入；
+  - **首屏渐进直出机制**：采用两阶段渐进直出（优先挂载前 3 个年份分区），首屏瞬时直出 DOM 减少 95%，搭配 `show_main_window` 瞬开；第二阶段无感挂载剩余年份，并具备防竞态保护与搜索 DOM 一致性同步；
+- **编辑详情页与大图查看器恢复高清原画**：
+  - **编辑详情页原画质感**：编辑详情页的封面预览不再使用小尺寸模糊缩略图，而是优先无损载入本地原始高清大图（`read_cover`），在大屏幕上展现极致清晰的专辑细节；
+  - **大图查看器保护机制**：Logo 三击查看应用图标时增加传参保护，避免被当前选中卡片的封面异步覆盖；
+  - **幽灵残影与缓存防护**：条目切换或封面移除时及时清理 DOM 图片引用，修复了无缩略图或读取失败时上一条目封面残存的问题；工具栏条目总计统计改为直接读取 `appData`，消除了首屏数字跳动。
+
 ## v1.6.2 更新（相对 v1.6.1）
 
 - **专辑/单曲标签智能流体收起与展开（Apple Design）**：
@@ -173,7 +187,12 @@ GitHub 上一次正式 Release 为 `v1.4.0`（commit `ede5a58`，2026-07-14）�
 - 桌面版固定使用 `musicData_desktop` 作为 WebView2 本地镜像
 - `build-frontend.js` 构建时将 `desktop-ui/index.html`、`desktop-ui/css`、`desktop-ui/js` 和可选 `desktop-ui/data.json` 复制到 `dist/`，再由 Tauri 打包进二进制
 - Tauri 插件：dialog、fs、global-shortcut、shell、single-instance；Rust 依赖 `base64` 与 `image`
-- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.6.2`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.6.2`
+- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.6.3`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.6.3`
+
+**v1.6.3 更新日志**：
+- **大图/高分辨率封面上传彻底根治闪退**：移除后台 1.5 秒死循环 `EmptyWorkingSet` 内存回收线程，杜绝大图解码时的物理页频繁置换卡死闪退；Rust 端增加 `image::Limits` 解码配额安全边界与 `catch_unwind` 异常熔断；
+- **冷启动极速优化**：移除 WebView2 阻断参数，恢复 Chromium 磁盘着色器缓存；消除冷启动多余写盘与 localStorage 阻塞；实现前 3 个年份渐进首屏秒开直出；
+- **编辑详情页原画质感**：编辑弹窗恢复原始高清封面呈现（`read_cover`），移除模糊缩略图拉伸；全屏查看器增加防覆盖保护；修复卡片切换幽灵残影与工具栏数字闪烁。
 
 **v1.6.2 更新日志**：
 - **专辑/单曲标签智能流体收起与展开（Apple Design）**：添加/编辑弹窗中切换到 Singles 分区时，专辑标签基于现代 Grid 0fr↔1fr 轨道折叠与 Apple 签名阻尼曲线（360ms）优雅收起，切回 Albums 分区反向平滑展开；

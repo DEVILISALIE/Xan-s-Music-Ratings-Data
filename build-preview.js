@@ -77,7 +77,7 @@ if (fs.existsSync(appIconPath)) {
 
 
 // 读取 package.json 版本号
-let appVersion = '1.6.2';
+let appVersion = '1.6.3';
 try {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   if (pkg.version) appVersion = pkg.version;
