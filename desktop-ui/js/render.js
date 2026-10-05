@@ -227,14 +227,76 @@ function findCurrentScrollGroup(scrollTop) {
   return match;
 }
 
-function syncActiveNavItemToScrollPosition(main = document.getElementById('mainContent')) {
-  if (!main || _cachedGroupPositions.length === 0) return;
+function getNavGroupForCard(card) {
+  if (!card) return '';
+  const sectionId = card.dataset.section || '';
+  const cardGroup = card.dataset.group || '';
 
-  const currentGroup = findCurrentScrollGroup(main.scrollTop + _scrollActivationOffset);
-  const currentSectionId = currentGroup ? currentGroup.split('-')[0] : '';
-  setActiveNavItem(_navItemByGroup.get(currentGroup));
+  if (card.classList.contains('soty-card')) {
+    const sotyNav = getGroupId(sectionId, 'soty');
+    if (document.querySelector('.nav-item[data-nav="' + sotyNav + '"]')) return sotyNav;
+  } else if (card.classList.contains('aoty-card')) {
+    const aotyNav = getGroupId(sectionId, 'aoty');
+    if (document.querySelector('.nav-item[data-nav="' + aotyNav + '"]')) return aotyNav;
+  }
+
+  if (document.querySelector('.nav-item[data-nav="' + cardGroup + '"]')) {
+    return cardGroup;
+  }
+  const firstItem = document.querySelector(`.nav-group[data-section="${sectionId}"] .nav-item`);
+  return firstItem ? firstItem.dataset.nav : cardGroup;
+}
+
+function getClosestSearchCardIndex() {
+  if (!searchResults || searchResults.length === 0) return -1;
+  const main = document.getElementById('mainContent');
+  if (!main) return -1;
+  const mainRect = main.getBoundingClientRect();
+  const centerY = mainRect.top + mainRect.height / 2;
+
+  let closestIndex = -1;
+  let minDiff = Infinity;
+  for (let i = 0; i < searchResults.length; i++) {
+    const card = searchResults[i];
+    const rect = card.getBoundingClientRect();
+    const cardCenterY = rect.top + rect.height / 2;
+    const diff = Math.abs(cardCenterY - centerY);
+    if (diff < minDiff) {
+      minDiff = diff;
+      closestIndex = i;
+    }
+  }
+  return closestIndex;
+}
+
+function syncActiveNavItemToScrollPosition(main = document.getElementById('mainContent')) {
+  if (!main) return;
+
+  let currentGroup = '';
+
+  // 搜索状态专属逻辑：始终与选中的卡片或当前视口中心的搜索卡片保持一一对应，绝不回退至视口顶部计算
+  if (searchQuery && searchResults.length > 0) {
+    let targetCard = null;
+    if (searchIndex >= 0 && searchResults[searchIndex]) {
+      targetCard = searchResults[searchIndex];
+    } else {
+      const closestIdx = getClosestSearchCardIndex();
+      targetCard = closestIdx >= 0 ? searchResults[closestIdx] : searchResults[0];
+    }
+    if (targetCard) {
+      currentGroup = getNavGroupForCard(targetCard);
+    }
+  }
+
+  if (!currentGroup && _cachedGroupPositions.length > 0) {
+    currentGroup = findCurrentScrollGroup(main.scrollTop + _scrollActivationOffset);
+  }
 
   if (!currentGroup) return;
+  const currentSectionId = currentGroup.split('-')[0] || '';
+  const navTarget = _navItemByGroup.get(currentGroup) || document.querySelector(`.nav-item[data-nav="${currentGroup}"]`);
+  setActiveNavItem(navTarget);
+
   const group = document.querySelector(`.nav-group[data-section="${currentSectionId}"]`);
   if (!group) return;
   const header = group.querySelector('.nav-group-header');
@@ -256,6 +318,16 @@ function holdActiveNavItemDuringScroll(target) {
   window._navActiveTimeout = setTimeout(() => {
     window._navActiveTimeout = null;
     content.classList.remove('overview-scroll');
+    // 如果处于搜索状态，绝不根据视口顶部重新计算，始终与选中的搜索卡片保持一致！
+    if (searchQuery && searchResults.length > 0 && searchIndex >= 0) {
+      const activeCard = searchResults[searchIndex];
+      const navGroup = getNavGroupForCard(activeCard);
+      const navItem = navGroup ? (document.querySelector('.nav-item[data-nav="' + navGroup + '"]') || _navItemByGroup.get(navGroup)) : null;
+      if (navItem) {
+        setActiveNavItem(navItem);
+        return;
+      }
+    }
     syncActiveNavItemToScrollPosition(main);
   }, 1500);
 }
@@ -265,6 +337,15 @@ function releaseNavScrollLockForManualScroll(main) {
   if (!content?.classList.contains('overview-scroll')) return;
   resetNavScrollLock();
   content.classList.remove('overview-scroll');
+  if (searchQuery && searchResults.length > 0 && searchIndex >= 0) {
+    const activeCard = searchResults[searchIndex];
+    const navGroup = getNavGroupForCard(activeCard);
+    const navItem = navGroup ? (document.querySelector('.nav-item[data-nav="' + navGroup + '"]') || _navItemByGroup.get(navGroup)) : null;
+    if (navItem) {
+      setActiveNavItem(navItem);
+      return;
+    }
+  }
   syncActiveNavItemToScrollPosition(main);
 }
 
@@ -560,6 +641,13 @@ function setupScrollSync() {
       lastSyncTime = performance.now();
       // 点击期间完全跳过滚动同步
       if (document.getElementById('contentArea').classList.contains('overview-scroll')) {
+        ticking = false;
+        return;
+      }
+
+      // 搜索状态保护：直接调用 syncActiveNavItemToScrollPosition 处理，与搜索卡片保持一致
+      if (searchQuery && searchResults.length > 0) {
+        syncActiveNavItemToScrollPosition(main);
         ticking = false;
         return;
       }

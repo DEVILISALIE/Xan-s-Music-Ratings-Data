@@ -110,7 +110,7 @@ function applyFilters() {
     searchIndex = 0;
     highlightSearchResult(0);
     searchResults[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
-    var grp = searchResults[0].dataset.group;
+    var grp = (typeof getNavGroupForCard === 'function') ? getNavGroupForCard(searchResults[0]) : searchResults[0].dataset.group;
     if (grp) activateNavItem(grp);
     if (counter) counter.textContent = '1/' + searchResults.length;
   } else {
@@ -119,6 +119,9 @@ function applyFilters() {
     clearSearchHighlight();
     searchIndex = -1;
     if (counter) counter.textContent = searchQuery ? '0' : '';
+    if (typeof syncActiveNavItemToScrollPosition === 'function') {
+      syncActiveNavItemToScrollPosition();
+    }
   }
   updateToolbarStats();
 }
@@ -129,7 +132,7 @@ function goToNextResult() {
   searchIndex = (searchIndex + 1) % searchResults.length;
   highlightSearchResult(searchIndex);
   searchResults[searchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
-  var grp = searchResults[searchIndex].dataset.group;
+  var grp = (typeof getNavGroupForCard === 'function') ? getNavGroupForCard(searchResults[searchIndex]) : searchResults[searchIndex].dataset.group;
   if (grp) activateNavItem(grp);
   var counter = document.getElementById('searchCounter');
   if (counter) counter.textContent = (searchIndex + 1) + '/' + searchResults.length;
@@ -140,7 +143,7 @@ function goToPrevResult() {
   searchIndex = (searchIndex - 1 + searchResults.length) % searchResults.length;
   highlightSearchResult(searchIndex);
   searchResults[searchIndex].scrollIntoView({ behavior: 'smooth', block: 'center' });
-  var grp = searchResults[searchIndex].dataset.group;
+  var grp = (typeof getNavGroupForCard === 'function') ? getNavGroupForCard(searchResults[searchIndex]) : searchResults[searchIndex].dataset.group;
   if (grp) activateNavItem(grp);
   var counter = document.getElementById('searchCounter');
   if (counter) counter.textContent = (searchIndex + 1) + '/' + searchResults.length;

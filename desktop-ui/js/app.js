@@ -1266,6 +1266,17 @@ function bindContentArea() {
     }
     const card = e.target.closest('[data-action="open-edit"]');
     if (card) {
+      if (searchQuery && searchResults.length > 0) {
+        const foundIdx = searchResults.indexOf(card);
+        if (foundIdx !== -1) {
+          searchIndex = foundIdx;
+          highlightSearchResult(searchIndex);
+          const counter = document.getElementById('searchCounter');
+          if (counter) counter.textContent = (searchIndex + 1) + '/' + searchResults.length;
+          const grp = (typeof getNavGroupForCard === 'function') ? getNavGroupForCard(card) : card.dataset.group;
+          if (grp && typeof activateNavItem === 'function') activateNavItem(grp);
+        }
+      }
       openEditModal(card.dataset.entryId, card.dataset.section, card.dataset.group);
     }
   });
