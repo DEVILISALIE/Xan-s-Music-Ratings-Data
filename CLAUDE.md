@@ -6,11 +6,10 @@
 
 ## 工作规则（必须遵守）
 
-1. **仅维护桌面版**：本仓库只包含桌面版 exe（Tauri 应用）。用户说「修改」、提出问题或反馈，排查、改动、验证都以桌面版为准。
-2. **桌面 exe 覆盖**：涉及桌面版改动并完成修改后，必须重新打包，并覆盖本机 exe：
-   `C:\Users\lilxanyy\Desktop\music-ratings-main\src-tauri\target\release\music-ratings.exe`
-   - 构建命令：`npm run tauri build`（或等价流程）
-   - 目标是让上述路径的 exe 始终是当前最新可运行版本
+1. **默认只编译预览页**：日常修改、问题修复与功能调优完成后，默认只构建 HTML 预览页（`npm run build:preview` 或 `node build-preview.js`），便于快速秒级验证。
+2. **打包 exe 权限与直接覆盖桌面**：**只有当用户明确说要打包 exe（如「打包 exe」「构建 exe」「编译 exe」）时，才允许运行 `npm run tauri build`**。打包完成后，exe 程序**直接覆盖桌面路径**：
+   `C:\Users\lilxanyy\Desktop\music-ratings.exe`
+   **牢记：用户日常只直接在桌面运行 exe，打包完成后直接覆盖桌面的 exe，而不是向用户汇报或指向 `C:\Users\lilxanyy\Desktop\music-ratings-main\src-tauri\target\release\music-ratings.exe`。**
 3. **GitHub 发布权限**：只有用户明确说要发布/上传 GitHub（如「发布 github」「上传 github」「更新 release」）时，才允许 `git push`、创建/更新 GitHub Release、上传安装包。未明确要求时，禁止发布到 GitHub。
 
 ## 项目简介
@@ -77,6 +76,20 @@ npm run tauri build              # 构建 MSI 安装包
 | `customFontEn` | 字符串 | 用户选中的全局英文字体（如 `"-apple-system"`、`"Georgia"` 等），默认 `"-apple-system"` |
 | `customFontWeight` | 数字字符串 | 用户自定义全局字重（`100`–`900`），默认 `400` |
 | `customFontWeightEnabled` | `"true"` / `"false"` | 自定义字重开关，默认 `false` |
+
+## v1.6.4 更新（相对 v1.6.3）
+
+- **跑道开关按钮微动效与物理交互革新（Apple Design）**：
+  - **白圈破框悬浮与柔和环境散射微光**：开关按钮仅在光标移入中间白色圆圈（`.toggle-knob`）时触发 `scale(1.22)` 破框微浮与温润克制的环境散射高光，跑道底框与文字区域保持纯净，移除整行误触判定，判定范围随圆圈物理移动实时更新；
+  - **自然按压下潜受压感（Kill Latency）**：圆圈按下时敏捷下沉受压缩小至跑道内（`scale: 0.92`），释放后物理阻尼弹回，极具轻盈触感；
+  - **保持高亮悬浮滑向对侧并在终点悬浮短暂停留**：圆圈滑向对侧的全程（320ms）保持破框高亮微浮姿态，滑到位后在终点稳定悬浮保持一小段时间（约 80ms）；
+  - **光标未移动更新时自主脱离判定**：若滑到位后光标停留在原地未移动跟来，400ms 定时器触发自主脱离（`.disengaged`），在 320ms 阻尼过渡内优雅平缓降落变回原样（`scale: 1`）并自然熄灭环境微光；光标重新移入新圆圈时无缝唤醒高亮悬浮态；
+- **搜索卡片与侧边栏年份高光双向联动修复**：
+  - **根治 1.5 秒后错误回跳**：彻底修复在搜索模式下卡片居中滚动后，1.5 秒定时器超时错误调用普通视口顶部滚动算法导致侧边栏高光跳到上方错误年份的顽固问题，精准锁定搜索卡片所属真实年份；
+  - **双向高光实时响应**：侧边栏与当前视口搜索卡片始终保持 1:1 双向高亮同步，滚动或翻页时绝无闪烁跳动；
+- **文字高浮抗模糊体系扩展与界面渲染调优**：
+  - **字体清晰度抗锯齿体系扩展**：统一全站标签与悬浮组件在 GPU 合成加速下的字体清晰度渲染（`subpixel-antialiased` 与 `optimizeLegibility`），杜绝直接放大造成的模糊与锯齿；
+  - **portal 下拉菜单与交互体验加固**：优化了设置下拉菜单及各类 portal 的定位稳定性，避免快速触发时的瞬态几何偏差与无限 rAF 递归开销。
 
 ## v1.6.3 更新（相对 v1.6.2）
 
@@ -190,7 +203,12 @@ GitHub 上一次正式 Release 为 `v1.4.0`（commit `ede5a58`，2026-07-14）�
 - 桌面版固定使用 `musicData_desktop` 作为 WebView2 本地镜像
 - `build-frontend.js` 构建时将 `desktop-ui/index.html`、`desktop-ui/css`、`desktop-ui/js` 和可选 `desktop-ui/data.json` 复制到 `dist/`，再由 Tauri 打包进二进制
 - Tauri 插件：dialog、fs、global-shortcut、shell、single-instance；Rust 依赖 `base64` 与 `image`
-- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.6.3`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.6.3`
+- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.6.4`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.6.4`
+
+**v1.6.4 更新日志**：
+- **跑道开关按钮微动效与物理交互革新（Apple Design）**：开关仅在光标移入白色圆圈时触发破框微浮与环境散射微光；按下敏捷下潜（`scale: 0.92`）；滑行全程保持高亮悬浮并在对侧悬浮短暂停留（80ms）；光标未移动更新时自主脱离判定（400ms），优雅平滑降落变回原样（`scale: 1`）并熄灭高光；移入新圆圈无缝恢复；
+- **搜索卡片与侧边栏年份高光双向联动修复**：根治居中滚动 1.5 秒后错误回跳上方年份的问题，双向高光实时精准锁定搜索卡片所属真实年份；
+- **文字高浮抗模糊体系扩展与界面调优**：全站悬浮放大按钮与标签接入 GPU subpixel-antialiased 与 optimizeLegibility 抗锯齿渲染，彻底消除文字位图模糊；加固 portal 下拉菜单定位与开销。
 
 **v1.6.3 更新日志**：
 - **大图/高分辨率封面上传彻底根治闪退**：移除后台 1.5 秒死循环 `EmptyWorkingSet` 内存回收线程，杜绝大图解码时的物理页频繁置换卡死闪退；Rust 端增加 `image::Limits` 解码配额安全边界与 `catch_unwind` 异常熔断；

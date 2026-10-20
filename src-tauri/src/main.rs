@@ -959,6 +959,10 @@ fn main() {
 
             // 确保主窗口在任务栏显示，并注入 WS_MINIMIZEBOX / WS_SYSMENU 样式以支持任务栏点击切换最小化/还原
             if let Some(win) = app.get_webview_window("main") {
+                // 确保主窗口显式绑定高分辨率图标，彻底杜绝任务栏拿低清尺寸拉伸
+                if let Some(icon) = app.default_window_icon() {
+                    let _ = win.set_icon(icon.clone());
+                }
                 #[cfg(target_os = "windows")]
                 {
                     if let Ok(hwnd) = win.hwnd() {

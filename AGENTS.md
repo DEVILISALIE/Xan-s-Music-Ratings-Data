@@ -7,8 +7,9 @@
 ## 工作规则（必须遵守）
 
 1. **默认只编译预览页**：日常修改、问题修复与功能调优完成后，默认只构建 HTML 预览页（`npm run build:preview` 或 `node build-preview.js`），便于快速秒级验证。
-2. **打包 exe 权限**：**只有当用户明确说要打包 exe（如「打包 exe」「构建 exe」「编译 exe」）时，才允许运行 `npm run tauri build`** 重新打包并覆盖本机 exe：
-   `C:\Users\lilxanyy\Desktop\music-ratings-main\src-tauri\target\release\music-ratings.exe`
+2. **打包 exe 权限与直接覆盖桌面**：**只有当用户明确说要打包 exe（如「打包 exe」「构建 exe」「编译 exe」）时，才允许运行 `npm run tauri build`**。打包完成后，exe 程序**直接覆盖桌面路径**：
+   `C:\Users\lilxanyy\Desktop\music-ratings.exe`
+   **牢记：用户日常只直接在桌面运行 exe，打包完成后直接覆盖桌面的 exe，而不是向用户汇报或指向 `C:\Users\lilxanyy\Desktop\music-ratings-main\src-tauri\target\release\music-ratings.exe`。**
 3. **GitHub 发布权限**：只有用户明确说要发布/上传 GitHub（如「发布 github」「上传 github」「更新 release」）时，才允许 `git push`、创建/更新 GitHub Release、上传安装包。未明确要求时，禁止发布到 GitHub。
 
 ## 项目简介
@@ -117,7 +118,7 @@ npm run tauri build              # 构建 MSI 安装包并覆盖 release\music-r
 - 桌面版 localStorage 域名与网页版隔离，需单独导入一次数据
 - `build-frontend.js` 构建时将 index.html/css/js/data.json 复制到 dist/，Tauri 打包进二进制
 - Tauri 插件：dialog、fs、global-shortcut、shell、single-instance
-- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.6.3`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.6.3`
+- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.6.4`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.6.4`
 
 **macOS 原生鼠标光标体系（v1.5.0）**：应用内统一使用纯矢量 macOS 原生风格光标：
 - `--cursor-default`：macOS 经典白边黑底箭头（带柔和投影）

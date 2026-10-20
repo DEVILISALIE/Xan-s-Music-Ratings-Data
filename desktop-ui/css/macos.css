@@ -692,22 +692,27 @@
   border-radius: 10px;
 }
 
-[data-desktop="true"] .settings-item .toggle-switch {
+[data-desktop="true"] .toggle-switch {
   width: 47px;
   height: 28px;
 }
 
-[data-desktop="true"] .settings-item .toggle-slider {
+[data-desktop="true"] .toggle-slider {
   border-radius: 28px;
 }
 
-[data-desktop="true"] .settings-item .toggle-slider::before {
+[data-desktop="true"] .toggle-slider::before {
+  content: none;
+  display: none;
+}
+
+[data-desktop="true"] .toggle-knob {
   width: 24px;
   height: 24px;
 }
 
-[data-desktop="true"] .settings-item .toggle-switch input:checked + .toggle-slider::before {
-  transform: translateX(19px);
+[data-desktop="true"] .toggle-switch input:checked ~ .toggle-knob {
+  transform: translate3d(19px, 0, 0) scale(var(--knob-scale));
 }
 
 .desktop-only-setting,
@@ -1381,6 +1386,25 @@
 [data-desktop="true"] .dialog-btn {
   font-size: 20px;
   min-height: 53px;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: optimizeLegibility;
+  transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out), opacity var(--duration-fast) var(--ease-out);
+}
+
+[data-desktop="true"] .dialog-btn:hover {
+  background: var(--hover-bg);
+  transform: scale(1.02);
+}
+
+[data-desktop="true"] .dialog-btn:active {
+  background: var(--hover-bg);
+  transform: scale(0.97) !important;
+  opacity: 0.8;
+  transition: transform 80ms var(--ease-out);
 }
 
 /* ===== macOS Scrollbar ===== */
@@ -1775,10 +1799,8 @@
 [data-desktop="true"] .custom-select-trigger,
 [data-desktop="true"] .custom-select-option,
 [data-desktop="true"] .form-tag,
-[data-desktop="true"] .toggle-switch,
-[data-desktop="true"] .toggle-switch *,
+[data-desktop="true"] .toggle-knob,
 [data-desktop="true"] .modal-btn,
-[data-desktop="true"] .dialog-btn,
 [data-desktop="true"] .cover-btn,
 [data-desktop="true"] .fab,
 [data-desktop="true"] .fab-search-next,
@@ -1795,7 +1817,6 @@
 [data-desktop="true"] .sidebar-footer button,
 [data-desktop="true"] .theme-toggle,
 [data-desktop="true"] .settings-btn,
-[data-desktop="true"] .settings-item,
 [data-desktop="true"] .settings-item-click,
 [data-desktop="true"] .modal-handle,
 [data-desktop="true"] .must-hear-save,

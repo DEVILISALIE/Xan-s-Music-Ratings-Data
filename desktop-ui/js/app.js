@@ -180,11 +180,13 @@ function portalOpen(menu, anchor, opts = {}) {
   menu.style.maxWidth = '';
 
   let rect = anchor.getBoundingClientRect();
-  // matchAnchor: 与触发器同宽（标签/分数/编辑分组）
-  // 若 anchor 父级是 custom-select 容器，以容器真实常态边界为准，防止悬浮/按压 scale 瞬态动画导致菜单宽度偏窄
-  if (opts.matchAnchor && anchor.parentElement && anchor.parentElement.classList.contains('custom-select')) {
-    const pRect = anchor.parentElement.getBoundingClientRect();
-    if (pRect.width > 0) {
+  // 若 anchor 父级是 custom-select 容器，以容器真实常态边界为准，防止悬浮/按压 scale(1.08) 瞬态动画导致菜单走位或抖动
+  const customSelectParent = (anchor.parentElement && anchor.parentElement.classList.contains('custom-select'))
+    ? anchor.parentElement
+    : (anchor.closest ? anchor.closest('.custom-select') : null);
+  if (customSelectParent) {
+    const pRect = customSelectParent.getBoundingClientRect();
+    if (pRect.width > 0 && pRect.height > 0) {
       rect = pRect;
     }
   }
@@ -241,8 +243,10 @@ function portalOpen(menu, anchor, opts = {}) {
   menu.style.left = left + 'px';
   menu.style.visibility = '';
 
-  // 在下一渲染帧自动重校准一次，彻底消除弹窗打开时的瞬态几何偏差
-  schedulePortalReposition();
+  // 仅在首次打开（非 reposition 调用）时在下一渲染帧自动重校准一次，彻底消除无限 rAF 递归与不必要的开销
+  if (!opts.isReposition) {
+    schedulePortalReposition();
+  }
 
   // 为可滚动的二级下拉菜单挂载专属 macOS 平滑滚动条
   setTimeout(() => {
@@ -319,6 +323,82 @@ function closeSettingsMenu() {
   portalClose(menu, { openClass: 'open' });
 }
 
+// ===== 开关圆圈自主脱离判定（Apple 级物理交互：保持高亮悬浮滑过去后再变回原样） =====
+function initToggleDisengage() {
+  document.addEventListener('change', (e) => {
+    const input = e.target;
+    if (!input || input.type !== 'checkbox') return;
+    const wrap = input.closest('.toggle-switch');
+    if (!wrap) return;
+    const knob = wrap.querySelector('.toggle-knob');
+    if (!knob) return;
+
+    // 清理该 knob 上已存在的旧脱离监听与定时器（防止快速连击冲突）
+    if (knob._disengageCleanup) {
+      knob._disengageCleanup();
+      knob._disengageCleanup = null;
+    }
+    if (knob._disengageTimer) {
+      clearTimeout(knob._disengageTimer);
+      knob._disengageTimer = null;
+    }
+
+    // 确保在滑动开始与滑行全程保持高亮破框悬浮（scale: 1.22 + 环境散射高光）
+    knob.classList.remove('disengaged');
+    let hasMovedToNewKnob = false;
+
+    // 滑动期间若用户有真实鼠标移动，检测是否主动追随触碰了新圆圈
+    const onInterimMove = (ev) => {
+      const hit = document.elementFromPoint(ev.clientX, ev.clientY);
+      if (hit === knob) {
+        hasMovedToNewKnob = true;
+      }
+    };
+    window.addEventListener('pointermove', onInterimMove, { passive: true });
+
+    // 核心物理交互：保持高亮悬浮滑向对侧（0.32s），到位后保持一小段时间（约 80ms），总计 400ms 后检查
+    knob._disengageTimer = setTimeout(() => {
+      knob._disengageTimer = null;
+      window.removeEventListener('pointermove', onInterimMove);
+      if (!wrap.isConnected) return;
+
+      // 若滑到位后光标未移动更新去触碰新圆圈，自主脱离判定，自然平滑缩回常态并熄灭光晕
+      if (!hasMovedToNewKnob) {
+        knob.classList.add('disengaged');
+
+        const onMove = (ev) => {
+          if (!wrap.isConnected) {
+            cleanup();
+            return;
+          }
+          const hit = document.elementFromPoint(ev.clientX, ev.clientY);
+          if (hit === knob) {
+            // 光标物理移动并重新触碰新圆圈，恢复悬浮能力
+            cleanup();
+          } else {
+            // 光标移出当前开关，交还浏览器默认 hover 机制
+            const hitWrap = hit ? hit.closest('.toggle-switch') : null;
+            if (hitWrap !== wrap) {
+              cleanup();
+            }
+          }
+        };
+
+        const cleanup = () => {
+          knob.classList.remove('disengaged');
+          window.removeEventListener('pointermove', onMove);
+          window.removeEventListener('pointerleave', cleanup);
+          knob._disengageCleanup = null;
+        };
+
+        knob._disengageCleanup = cleanup;
+        window.addEventListener('pointermove', onMove, { passive: true });
+        window.addEventListener('pointerleave', cleanup, { passive: true });
+      }
+    }, 400);
+  });
+}
+
 function openAnchoredMenu(selectId, menuId, triggerId, opts = {}) {
   const select = document.getElementById(selectId);
   const menu = document.getElementById(menuId);
@@ -332,16 +412,16 @@ function repositionOpenPortals() {
   if (document.getElementById('settingsSelect')?.classList.contains('open')) {
     const menu = document.getElementById('settingsMenu');
     const btn = document.getElementById('settingsBtn');
-    if (menu && btn) portalOpen(menu, btn, { openClass: 'open', align: 'right', prefer: 'below' });
+    if (menu && btn) portalOpen(menu, btn, { openClass: 'open', align: 'right', prefer: 'below', isReposition: true });
   }
   if (document.getElementById('scoreFilter')?.classList.contains('open')) {
     portalOpen(document.getElementById('scoreFilterMenu'), document.getElementById('scoreFilterTrigger'), {
-      align: 'left', prefer: 'below', matchAnchor: true
+      align: 'left', prefer: 'below', matchAnchor: true, isReposition: true
     });
   }
   if (document.getElementById('tagFilter')?.classList.contains('open')) {
     portalOpen(document.getElementById('tagFilterMenu'), document.getElementById('tagFilterTrigger'), {
-      align: 'left', prefer: 'below', matchAnchor: true
+      align: 'left', prefer: 'below', matchAnchor: true, isReposition: true
     });
   }
   if (document.getElementById('editSectionSelect')?.classList.contains('open')) {
@@ -361,12 +441,12 @@ function repositionOpenPortals() {
         document.getElementById('editSectionSelect').classList.remove('open');
         portalClose(menu);
       } else {
-        portalOpen(menu, trigger, { align: 'left', prefer: 'below', matchAnchor: true });
+        portalOpen(menu, trigger, { align: 'left', prefer: 'below', matchAnchor: true, isReposition: true });
       }
     }
   }
   if (document.getElementById('mustHearPopover')?.classList.contains('portal-open')) {
-    openMustHearPopover();
+    openMustHearPopover({ isReposition: true });
   }
   // 封面移除确认
   const coverDd = document.getElementById('coverRemoveDropdown');
@@ -382,7 +462,7 @@ function repositionOpenPortals() {
       if (outOfView) {
         portalClose(coverDd, { openClass: 'active' });
       } else {
-        portalOpen(coverDd, btn, { openClass: 'active', align: 'center', prefer: 'above', gap: 6 });
+        portalOpen(coverDd, btn, { openClass: 'active', align: 'center', prefer: 'above', gap: 6, isReposition: true });
       }
     }
   }
@@ -398,7 +478,7 @@ function schedulePortalReposition() {
   });
 }
 
-function openMustHearPopover() {
+function openMustHearPopover(opts = {}) {
   const select = document.getElementById('mustHearSelect');
   const popover = document.getElementById('mustHearPopover');
   const trigger = document.getElementById('mustHearTrigger');
@@ -409,7 +489,8 @@ function openMustHearPopover() {
     openClass: 'open',
     align: 'left',
     matchAnchor: true,
-    prefer: 'below'
+    prefer: 'below',
+    ...opts
   });
 }
 
@@ -693,6 +774,11 @@ function bindStaticButtons() {
   document.getElementById('settingsFpsToggle')?.addEventListener('change', (e) => {
     setFpsMonitorEnabled(e.target.checked);
   });
+
+  // 全局开关圆圈自主脱离判定（滑走即脱离 hover 判定，光标重回新圆圈时恢复）
+  initToggleDisengage();
+
+  // 点击判定严格绑定在开关白色圆圈（.toggle-knob）本身，移除整行与文字点击绑定
   document.querySelector('[data-action="settings-lang"]').addEventListener('click', () => { toggleLang(); });
   document.querySelector('[data-action="settings-font"]')?.addEventListener('click', () => { openFontSettingsModal(); });
   document.querySelector('[data-action="font-save"]')?.addEventListener('click', saveFontSettings);
@@ -2621,7 +2707,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.6.3");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.6.4");
         break;
     }
   });

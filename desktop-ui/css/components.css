@@ -630,7 +630,7 @@ textarea.form-input::-webkit-scrollbar-corner {
   display: grid;
   grid-template-rows: 1fr;
   opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: none;
   transform-origin: top center;
   margin-bottom: 16px;
   transition: 
@@ -638,7 +638,6 @@ textarea.form-input::-webkit-scrollbar-corner {
     opacity 260ms cubic-bezier(0.32, 0.72, 0, 1),
     transform 360ms cubic-bezier(0.32, 0.72, 0, 1),
     margin-bottom 360ms cubic-bezier(0.32, 0.72, 0, 1);
-  will-change: grid-template-rows, opacity, transform;
 }
 
 .form-tags-collapsible .tags-collapsible-inner {
@@ -722,15 +721,27 @@ textarea.form-input::-webkit-scrollbar-corner {
 
 .toggle-switch {
   position: relative;
+  display: inline-block;
   width: 51px;
   height: 31px;
   flex-shrink: 0;
+  cursor: var(--cursor-default) !important;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  pointer-events: none;
 }
 
 .toggle-switch input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
   opacity: 0;
-  width: 0;
-  height: 0;
+  z-index: 0;
+  pointer-events: none;
 }
 
 .toggle-slider {
@@ -738,29 +749,91 @@ textarea.form-input::-webkit-scrollbar-corner {
   inset: 0;
   background: var(--text-tertiary);
   border-radius: 31px;
-  cursor: var(--cursor-pointer);
-  transition: background 0.25s;
+  cursor: var(--cursor-default) !important;
+  transition: background-color 0.25s cubic-bezier(0.2, 0, 0, 1);
+  pointer-events: none;
 }
 
 .toggle-slider::before {
-  content: '';
+  content: none;
+  display: none;
+}
+
+.toggle-knob {
   position: absolute;
+  display: block;
   width: 27px;
   height: 27px;
   left: 2px;
   top: 2px;
-  background: #fff;
+  background: #ffffff;
   border-radius: 50%;
-  transition: transform 0.25s;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.18),
+    0 0.5px 1px rgba(0, 0, 0, 0.12),
+    0 0 0 0.5px rgba(255, 255, 255, 0.6) inset;
+  cursor: var(--cursor-pointer) !important;
+  z-index: 2;
+  pointer-events: auto;
+  --knob-scale: 1;
+  transform: translate3d(0, 0, 0) scale(var(--knob-scale));
+  transition: 
+    transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.36s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+  contain: layout paint style;
+  backface-visibility: hidden;
 }
 
+/* 仅在鼠标悬停在白色圆圈上时触发破框微浮与淡雅柔和环境散射光（温润不刺眼） */
+.toggle-knob:not(.disengaged):hover {
+  --knob-scale: 1.22;
+  z-index: 3;
+  box-shadow: 
+    0 0 5px rgba(255, 255, 255, 0.45),
+    0 0 12px rgba(255, 255, 255, 0.2),
+    0 3px 8px rgba(0, 0, 0, 0.12),
+    0 1px 2px rgba(0, 0, 0, 0.08),
+    0 0 0 0.5px rgba(255, 255, 255, 0.6) inset;
+}
+
+/* 深色模式下白色圆圈环境散射光克制温润 */
+[data-theme="dark"] .toggle-knob:not(.disengaged):hover {
+  box-shadow: 
+    0 0 6px rgba(255, 255, 255, 0.35),
+    0 0 14px rgba(255, 255, 255, 0.12),
+    0 4px 10px rgba(0, 0, 0, 0.35),
+    0 1px 3px rgba(0, 0, 0, 0.2),
+    0 0 0 0.5px rgba(255, 255, 255, 0.5) inset;
+}
+
+/* 按下圆圈时下沉受压缩小至跑道内，光晕敏捷收敛 (kill latency 100ms) */
+.toggle-knob:active {
+  --knob-scale: 0.92;
+  box-shadow: 
+    0 0 3px rgba(255, 255, 255, 0.3),
+    0 1px 3px rgba(0, 0, 0, 0.2),
+    0 0 0 0.5px rgba(255, 255, 255, 0.6) inset;
+  transition: transform 0.1s cubic-bezier(0, 0, 0.2, 1), box-shadow 0.1s cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* 自主脱离判定：当圆圈滑向对侧离开光标位置时，即使光标未物理移动，也自主脱离 hover 恢复常态静止 */
+.toggle-knob.disengaged {
+  --knob-scale: 1 !important;
+  z-index: 2 !important;
+  box-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.18),
+    0 0.5px 1px rgba(0, 0, 0, 0.12),
+    0 0 0 0.5px rgba(255, 255, 255, 0.6) inset !important;
+}
+
+/* 激活状态：纯 GPU 硬件合成位移 */
 .toggle-switch input:checked + .toggle-slider {
   background: var(--accent);
 }
 
-.toggle-switch input:checked + .toggle-slider::before {
-  transform: translateX(20px);
+.toggle-switch input:checked ~ .toggle-knob {
+  transform: translate3d(20px, 0, 0) scale(var(--knob-scale));
 }
 
 /* Modal section selector */
@@ -778,6 +851,12 @@ textarea.form-input::-webkit-scrollbar-corner {
   background: var(--input-bg);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: optimizeLegibility;
   transition: transform var(--duration-fast) var(--ease-out), box-shadow 0.2s, background-color 0.15s, border-color 0.15s;
 }
 
@@ -1242,7 +1321,13 @@ textarea.form-input::-webkit-scrollbar-corner {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: optimizeLegibility;
 }
 
 .fab:hover {
@@ -1270,7 +1355,13 @@ textarea.form-input::-webkit-scrollbar-corner {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: optimizeLegibility;
+  transition: transform var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out), opacity var(--duration-fast) var(--ease-out);
 }
 
 .fab-search-next:hover {
@@ -1904,12 +1995,27 @@ textarea.form-input::-webkit-scrollbar-corner {
   font-size: 17px;
   font-family: inherit;
   cursor: var(--cursor-pointer);
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  -webkit-font-smoothing: subpixel-antialiased;
+  -moz-osx-font-smoothing: auto;
+  text-rendering: optimizeLegibility;
   transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out), opacity var(--duration-fast) var(--ease-out);
   min-height: 44px;
 }
 
-.dialog-btn:hover { background: var(--hover-bg); }
-.dialog-btn:active { background: var(--hover-bg); transform: scale(0.97); opacity: 0.8; }
+.dialog-btn:hover {
+  background: var(--hover-bg);
+  transform: scale(1.02);
+}
+
+.dialog-btn:active {
+  background: var(--hover-bg);
+  transform: scale(0.97) !important;
+  opacity: 0.8;
+  transition: transform 80ms var(--ease-out);
+}
 
 .dialog-btn + .dialog-btn {
   border-left: 0.5px solid var(--separator);
