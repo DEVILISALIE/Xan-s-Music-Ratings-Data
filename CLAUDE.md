@@ -77,6 +77,14 @@ npm run tauri build              # 构建 MSI 安装包
 | `customFontWeight` | 数字字符串 | 用户自定义全局字重（`100`–`900`），默认 `400` |
 | `customFontWeightEnabled` | `"true"` / `"false"` | 自定义字重开关，默认 `false` |
 
+## v1.6.5 更新（相对 v1.6.4）
+
+- **弹窗分区下拉菜单体验全面革新与几何重构**：
+  - **选项卡片与滚动条间距优化（彻底消除重叠）**：为分区下拉菜单预留专属 16px 呼吸间距（`padding: 4px 16px 4px 4px`），选项卡片右边缘与悬浮展开的自研滚动条滑块（宽 8px）始终保持 6px 安全呼吸间隙，高亮选中的蓝色背景卡片不再穿透压盖在滚动条下方；
+  - **滚动条操作防误关机制**：为悬浮滚动条的轨道与滑块深度集成事件阻断与拖拽保护，修复点击或按住滑块拖拽滚动条时将操作误判为「点击外部」导致小面板被强行关闭的问题；
+  - **零延迟物理焊死跟随（Zero-frame Lag）**：彻底剔除滚动事件中的 `requestAnimationFrame` 异步节流与旧版重定位中的闪烁清空逻辑，当弹窗滚动时在同一微任务内同步计算并写入坐标，下拉菜单与悬浮滚动条以 0 像素误差死死焊在触发框正下方，杜绝漂浮脱节；
+  - **严格避险动态翻转与宽物理死区（彻底根除上下乱跳）**：彻底拔除中心线敏感判定，引入单向视口边缘溢出避险引擎，自带 90px~200px 物理死区；在常规中段滚动时坚决死死焊住不乱跳，仅在视口边缘真实受挤压（如菜单顶部触碰屏幕天花板）且另一侧空间充足时，才敏捷果断地跳向空间充裕一侧，体验极为平稳丝滑。
+
 ## v1.6.4 更新（相对 v1.6.3）
 
 - **跑道开关按钮微动效与物理交互革新（Apple Design）**：
@@ -203,7 +211,10 @@ GitHub 上一次正式 Release 为 `v1.4.0`（commit `ede5a58`，2026-07-14）�
 - 桌面版固定使用 `musicData_desktop` 作为 WebView2 本地镜像
 - `build-frontend.js` 构建时将 `desktop-ui/index.html`、`desktop-ui/css`、`desktop-ui/js` 和可选 `desktop-ui/data.json` 复制到 `dist/`，再由 Tauri 打包进二进制
 - Tauri 插件：dialog、fs、global-shortcut、shell、single-instance；Rust 依赖 `base64` 与 `image`
-- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.6.4`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.6.4`
+- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.6.5`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.6.5`
+
+**v1.6.5 更新日志**：
+- **弹窗分区下拉菜单体验全面重构**：选项卡片预留 16px 呼吸间距，与滚动条滑块保持 6px 安全留白彻底消除重叠；滚动条操作集成全方位冒泡拦截与拖拽保护，杜绝误关面板；弹窗滚动时实行零延迟即时同步，死死焊住触发框；引入严格避险单向边缘翻转引擎与宽物理死区，彻底根除中段滚动上下乱跳。
 
 **v1.6.4 更新日志**：
 - **跑道开关按钮微动效与物理交互革新（Apple Design）**：开关仅在光标移入白色圆圈时触发破框微浮与环境散射微光；按下敏捷下潜（`scale: 0.92`）；滑行全程保持高亮悬浮并在对侧悬浮短暂停留（80ms）；光标未移动更新时自主脱离判定（400ms），优雅平滑降落变回原样（`scale: 1`）并熄灭高光；移入新圆圈无缝恢复；

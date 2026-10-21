@@ -905,7 +905,7 @@ textarea.form-input::-webkit-scrollbar-corner {
   border-radius: 12px;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.35);
-  padding: 4px;
+  padding: 4px 16px 4px 4px;
   z-index: 10;
   transform: translateZ(0);
   will-change: backdrop-filter;
@@ -939,6 +939,10 @@ textarea.form-input::-webkit-scrollbar-corner {
 [data-style="glass"][data-theme="dark"] #editSectionMenu {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.custom-select-menu.has-mac-scrollbar {
+  padding-right: 16px;
 }
 
 #editSectionMenu .custom-select-option {

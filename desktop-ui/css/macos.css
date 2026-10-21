@@ -502,6 +502,11 @@
   background: rgba(255, 255, 255, 0.08);
 }
 
+[data-desktop="true"] #editSectionMenu,
+[data-desktop="true"] .custom-select-menu.has-mac-scrollbar {
+  padding: 4px 16px 4px 4px;
+}
+
 [data-desktop="true"] .custom-select-option {
   padding: 8px 14px;
   font-size: 16px;

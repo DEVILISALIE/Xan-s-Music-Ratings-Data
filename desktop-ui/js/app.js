@@ -169,8 +169,72 @@ function portalOpen(menu, anchor, opts = {}) {
   _openPortals.add(menu);
   if (opts.openClass) menu.classList.add(opts.openClass);
 
+  const customSelectParent = (anchor.parentElement && anchor.parentElement.classList.contains('custom-select'))
+    ? anchor.parentElement
+    : (anchor.closest ? anchor.closest('.custom-select') : null);
+  const rect = (customSelectParent ? customSelectParent.getBoundingClientRect() : null) || anchor.getBoundingClientRect();
+
+  // 若处于 isReposition 高速同步模式，直接基于 anchor 视口几何单次精准赋值，绝不隐藏、不重设 0px、不清除宽度，做到真正的零延迟死死焊住
+  if (opts.isReposition) {
+    const gap = opts.gap ?? 6;
+    const mh = menu.offsetHeight || 0;
+    const mw = opts.matchAnchor ? Math.max(rect.width, opts.minWidth || 0) : (menu.offsetWidth || rect.width);
+    let currentDir = menu.dataset.portalDir || opts.prefer || 'below';
+    const spaceAbove = rect.top - gap;
+    const spaceBelow = window.innerHeight - (rect.bottom + gap);
+
+    // 严格避险动态翻转（单向视口边缘溢出触发，宽物理死区，彻底根除来回乱跳）：
+    // 1. 若当前在上方 (above)：
+    //    仅当顶部真正被顶出视口（距离顶部不足 12px），且下方空间能够接纳时，才跳到下方去
+    if (currentDir === 'above') {
+      const topOverflow = rect.top - mh - gap < 12;
+      if (topOverflow && (spaceBelow >= Math.min(mh, 160) || spaceBelow > spaceAbove)) {
+        currentDir = 'below';
+      }
+    }
+    // 2. 若当前在下方 (below)：
+    //    仅当底部真正被挤出视口（距离底部不足 12px），且上方空间能够接纳时，才跳到上方去
+    else if (currentDir === 'below') {
+      const bottomOverflow = rect.bottom + gap + mh > window.innerHeight - 12;
+      if (bottomOverflow && (spaceAbove >= Math.min(mh, 160) || spaceAbove > spaceBelow)) {
+        currentDir = 'above';
+      }
+    }
+    menu.dataset.portalDir = currentDir;
+
+    let top;
+    if (currentDir === 'above') {
+      top = rect.top - mh - gap;
+    } else {
+      top = rect.bottom + gap;
+    }
+
+    let left;
+    if (opts.align === 'right') {
+      left = rect.right - mw;
+    } else if (opts.align === 'center') {
+      left = rect.left + rect.width / 2 - mw / 2;
+    } else {
+      left = rect.left;
+    }
+
+    menu.style.top = top + 'px';
+    menu.style.left = left + 'px';
+    if (opts.matchAnchor) {
+      menu.style.width = mw + 'px';
+      menu.style.minWidth = mw + 'px';
+      menu.style.maxWidth = mw + 'px';
+    }
+
+    // 同步立即更新滚动条，杜绝延迟脱节
+    if (menu.__macScrollbar) {
+      menu.__macScrollbar.update();
+    }
+    return;
+  }
+
+  // ===== 首次打开模式 =====
   menu.style.visibility = 'hidden';
-  // 先清掉旧定位/宽度，便于测量
   menu.style.top = '0px';
   menu.style.left = '0px';
   menu.style.right = 'auto';
@@ -178,18 +242,6 @@ function portalOpen(menu, anchor, opts = {}) {
   menu.style.width = '';
   menu.style.minWidth = '';
   menu.style.maxWidth = '';
-
-  let rect = anchor.getBoundingClientRect();
-  // 若 anchor 父级是 custom-select 容器，以容器真实常态边界为准，防止悬浮/按压 scale(1.08) 瞬态动画导致菜单走位或抖动
-  const customSelectParent = (anchor.parentElement && anchor.parentElement.classList.contains('custom-select'))
-    ? anchor.parentElement
-    : (anchor.closest ? anchor.closest('.custom-select') : null);
-  if (customSelectParent) {
-    const pRect = customSelectParent.getBoundingClientRect();
-    if (pRect.width > 0 && pRect.height > 0) {
-      rect = pRect;
-    }
-  }
 
   let mw;
   if (opts.matchAnchor) {
@@ -213,20 +265,37 @@ function portalOpen(menu, anchor, opts = {}) {
   const gap = opts.gap ?? 6;
   const prefer = opts.prefer || 'below'; // below | above | auto
 
+  let chosenDir = prefer;
   let top;
   if (prefer === 'above') {
     top = rect.top - mh - gap;
-    if (top < 8) top = rect.bottom + gap;
+    if (top < 8) {
+      top = rect.bottom + gap;
+      chosenDir = 'below';
+    } else {
+      chosenDir = 'above';
+    }
   } else if (prefer === 'auto') {
     const below = rect.bottom + gap;
     const above = rect.top - mh - gap;
-    top = (below + mh <= window.innerHeight - 8 || above < 8) ? below : above;
+    if (below + mh <= window.innerHeight - 8 || above < 8) {
+      top = below;
+      chosenDir = 'below';
+    } else {
+      top = above;
+      chosenDir = 'above';
+    }
   } else {
     top = rect.bottom + gap;
-    if (top + mh > window.innerHeight - 8) {
-      top = Math.max(8, rect.top - mh - gap);
+    if (top + mh > window.innerHeight - 8 && rect.top - mh - gap >= 8) {
+      top = rect.top - mh - gap;
+      chosenDir = 'above';
+    } else {
+      chosenDir = 'below';
     }
   }
+
+  menu.dataset.portalDir = chosenDir;
 
   let left;
   if (opts.align === 'right') {
@@ -237,30 +306,23 @@ function portalOpen(menu, anchor, opts = {}) {
     left = rect.left;
   }
   left = Math.max(8, Math.min(left, window.innerWidth - mw - 8));
-  top = Math.max(8, Math.min(top, window.innerHeight - Math.min(mh, window.innerHeight - 16) - 8));
 
   menu.style.top = top + 'px';
   menu.style.left = left + 'px';
   menu.style.visibility = '';
 
-  // 仅在首次打开（非 reposition 调用）时在下一渲染帧自动重校准一次，彻底消除无限 rAF 递归与不必要的开销
-  if (!opts.isReposition) {
-    schedulePortalReposition();
+  // 挂载专属 macOS 滚动条并立即同步定位
+  if (menu.scrollHeight > menu.clientHeight + 4) {
+    attachMacScrollbar(menu, { follow: true, id: 'portalTrack_' + (menu.id || 'menu') });
+    menu.__macScrollbar?.update();
   }
-
-  // 为可滚动的二级下拉菜单挂载专属 macOS 平滑滚动条
-  setTimeout(() => {
-    if (menu.scrollHeight > menu.clientHeight + 4) {
-      attachMacScrollbar(menu, { follow: true, id: 'portalTrack_' + (menu.id || 'menu') });
-      menu.__macScrollbar?.update();
-    }
-  }, 10);
 }
 
 function portalClose(menu, opts = {}) {
   if (!menu) return;
   menu.classList.remove('portal-open');
   _openPortals.delete(menu);
+  menu.dataset.portalDir = '';
   if (opts.openClass) menu.classList.remove(opts.openClass);
 
   const pTrack = document.getElementById('portalTrack_' + (menu.id || 'menu'));
@@ -467,6 +529,19 @@ function repositionOpenPortals() {
     }
   }
 }
+
+function syncPortalsImmediate(e) {
+  if (_openPortals.size === 0) return;
+  // 若事件来源于打开的 portal 自身内部滚动（如在分区选项列表内滚动），不重新定位外框
+  if (e && e.target) {
+    const t = e.target;
+    if (t.classList?.contains('portal-open') || t.closest?.('.portal-open') || t.closest?.('.mac-scrollbar-track')) {
+      return;
+    }
+  }
+  repositionOpenPortals();
+}
+window.__syncPortalsImmediate = syncPortalsImmediate;
 
 let _portalRepositionRaf = 0;
 function schedulePortalReposition() {
@@ -753,22 +828,21 @@ function bindStaticButtons() {
     settingsMenuEl.addEventListener('click', (e) => e.stopPropagation());
   }
   window.addEventListener('resize', schedulePortalReposition);
-  // 编辑弹窗内滚动时，portal 下拉跟随触发框
+  // 编辑弹窗内滚动时，portal 下拉死死焊住触发框（零延迟即时同步）
   const editModalEl = document.getElementById('editModal');
-  const editModalSheet = editModalEl?.querySelector('.modal');
-  if (editModalSheet) {
-    editModalSheet.addEventListener('scroll', schedulePortalReposition, { passive: true });
+  const editModalBody = document.getElementById('editModalBody');
+  if (editModalBody) {
+    editModalBody.addEventListener('scroll', syncPortalsImmediate, { passive: true });
   }
-  // 捕获阶段：覆盖弹窗内嵌套滚动容器（如曲目列表）
   if (editModalEl) {
-    editModalEl.addEventListener('scroll', schedulePortalReposition, { passive: true, capture: true });
+    editModalEl.addEventListener('scroll', syncPortalsImmediate, { passive: true, capture: true });
   }
   // 主内容区滚动时也同步工具栏下拉
   const mainContent = document.getElementById('mainContent');
   if (mainContent) {
-    mainContent.addEventListener('scroll', schedulePortalReposition, { passive: true });
+    mainContent.addEventListener('scroll', syncPortalsImmediate, { passive: true });
   }
-  window.addEventListener('scroll', schedulePortalReposition, { passive: true, capture: true });
+  window.addEventListener('scroll', syncPortalsImmediate, { passive: true, capture: true });
   document.getElementById('settingsThemeToggle').addEventListener('change', () => { toggleTheme(); });
   document.getElementById('settingsStyleToggle').addEventListener('change', () => { toggleStyle(); });
   document.getElementById('settingsFpsToggle')?.addEventListener('change', (e) => {
@@ -905,6 +979,15 @@ function bindStaticButtons() {
 
   // 点击外部关闭下拉菜单
   document.addEventListener('click', (e) => {
+    // 若点击发生在任何自定义滚动条（轨道、滑块、portal 关联滚动条）上，直接跳过，绝不关闭任何下拉浮层
+    if (
+      e.target.closest('.mac-scrollbar-track') ||
+      e.target.closest('.mac-scrollbar-thumb') ||
+      e.target.closest('[id^="portalTrack_"]') ||
+      e.target.closest('[id^="track_"]')
+    ) {
+      return;
+    }
     if (
       !e.target.closest('.batch-dropdown') &&
       !e.target.closest('.batch-dropdown-menu')
@@ -934,9 +1017,11 @@ function bindStaticButtons() {
       document.getElementById('tagFilter').classList.remove('open');
       portalClose(document.getElementById('tagFilterMenu'));
     }
+    const secTrack = document.getElementById('portalTrack_editSectionMenu');
     if (
       !e.target.closest('#editSectionSelect') &&
       !e.target.closest('#editSectionMenu') &&
+      (!secTrack || !secTrack.contains(e.target)) &&
       document.getElementById('editSectionSelect')?.classList.contains('open')
     ) {
       document.getElementById('editSectionSelect').classList.remove('open');
@@ -2707,7 +2792,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.6.4");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.6.5");
         break;
     }
   });

@@ -225,6 +225,9 @@ function attachMacScrollbar(container, options = {}) {
     track.appendChild(thumb);
     parent.appendChild(track);
   }
+  track.dataset.targetId = container.id || '';
+  track.dataset.scrollbar = 'mac';
+  container.classList.add('has-mac-scrollbar');
 
   if (options.top != null && !isFollow) track.style.top = typeof options.top === 'number' ? options.top + 'px' : options.top;
   if (options.bottom != null && !isFollow) track.style.bottom = typeof options.bottom === 'number' ? options.bottom + 'px' : options.bottom;
@@ -362,12 +365,26 @@ function attachMacScrollbar(container, options = {}) {
     if (maxTop > 0 && maxScroll > 0) {
       const deltaY = e.clientY - startY;
       container.scrollTop = startScrollTop + (deltaY / maxTop) * maxScroll;
+      if (typeof syncPortalsImmediate === 'function') {
+        syncPortalsImmediate();
+      } else if (typeof window.__syncPortalsImmediate === 'function') {
+        window.__syncPortalsImmediate();
+      }
     }
   });
+
+  let lastDragEndTime = 0;
+  window.addEventListener('click', (e) => {
+    if (Date.now() - lastDragEndTime < 250 && (e.target === thumb || e.target === track || track.contains(e.target))) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+  }, true);
 
   function stopDrag(e) {
     if (!isDragging) return;
     isDragging = false;
+    lastDragEndTime = Date.now();
     try { if (e && e.pointerId != null) thumb.releasePointerCapture(e.pointerId); } catch (_) {}
     track.classList.remove('dragging');
     thumb.classList.remove('dragging');
@@ -382,8 +399,15 @@ function attachMacScrollbar(container, options = {}) {
   thumb.addEventListener('pointercancel', stopDrag);
   window.addEventListener('pointerup', stopDrag);
 
+  // 阻止滚动条上的 mousedown、click 事件冒泡到 document，彻底避免误触发全局关闭
+  track.addEventListener('mousedown', (e) => e.stopPropagation());
+  track.addEventListener('click', (e) => e.stopPropagation());
+  thumb.addEventListener('mousedown', (e) => e.stopPropagation());
+  thumb.addEventListener('click', (e) => e.stopPropagation());
+
   // 点击轨道快速跳转
   track.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
     if (e.target === thumb) return;
     e.preventDefault();
     const rect = track.getBoundingClientRect();
