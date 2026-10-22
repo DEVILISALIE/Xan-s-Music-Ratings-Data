@@ -100,10 +100,57 @@ async function refreshAll() {
   renderSidebar();
   renderContent();
   updateGlobalStatsSidebar();
+  updateToolbarStats();
   await saveData();
 }
 
+// ===== 标准年代分区配置与校验引擎 =====
+const VALID_HISTORIC_ERAS = ['1980s', '1979-1975', '1974-1970', '1960s', '1950s'];
+const MIN_SINGLE_YEAR = 1990;
+const MAX_SINGLE_YEAR = 2028;
+
+function isValidSectionId(sectionId) {
+  if (!sectionId) return false;
+  if (VALID_HISTORIC_ERAS.includes(sectionId)) return true;
+  const num = parseInt(sectionId, 10);
+  if (!isNaN(num) && String(num) === String(sectionId)) {
+    return num >= MIN_SINGLE_YEAR && num <= MAX_SINGLE_YEAR;
+  }
+  if (/^vol\d+-\d{4}$/.test(sectionId)) return true;
+  return false;
+}
+
+function getTargetSectionForYear(year) {
+  const y = Number(year);
+  if (!y || isNaN(y)) return '1950s';
+  if (y >= MIN_SINGLE_YEAR && y <= MAX_SINGLE_YEAR) return String(y);
+  if (y > MAX_SINGLE_YEAR) {
+    // 容错恢复：若为早期代码错误乘以 1000 的时间戳年份（如 3973 -> 1972，3439 -> 1971）
+    // 自动通过 Date 逆算换算回真实物理年份
+    const recovered = new Date(new Date(y, 0, 1).getTime() / 1000).getFullYear();
+    if (recovered >= 1900 && recovered <= MAX_SINGLE_YEAR) {
+      return getTargetSectionForYear(recovered);
+    }
+    return String(new Date().getFullYear());
+  }
+  if (y >= 1980) return '1980s';
+  if (y >= 1975) return '1979-1975';
+  if (y >= 1970) return '1974-1970';
+  if (y >= 1960) return '1960s';
+  return '1950s';
+}
+
 function findOrCreateSection(sectionId) {
+  // 安全校验拦截：严禁创建类似 3973、3439、1900 等非法分区
+  if (!isValidSectionId(sectionId)) {
+    const num = parseInt(sectionId, 10);
+    if (!isNaN(num)) {
+      sectionId = getTargetSectionForYear(num);
+    } else {
+      sectionId = '1950s';
+    }
+  }
+
   let section = appData.sections.find(s => s.id === sectionId);
   if (!section) {
     const yearNum = parseInt(sectionId);
@@ -116,6 +163,174 @@ function findOrCreateSection(sectionId) {
     appData.sections.push(section);
   }
   return section;
+}
+
+// ===== 自愈与对齐：清理非法分区、修复错位专辑、校准年代日期 =====
+function sanitizeAndAlignSections(data) {
+  if (!data || !Array.isArray(data.sections)) return false;
+  let modified = false;
+
+  // 1. 查找并隔离非法分区（如 3973、3439、1900 等）
+  const bogusSections = [];
+  const validSections = [];
+
+  for (const section of data.sections) {
+    if (isValidSectionId(section.id)) {
+      validSections.push(section);
+    } else {
+      bogusSections.push(section);
+    }
+  }
+
+  // 若存在非法分区，将其中所有条目安全迁移回真实年代
+  for (const bogus of bogusSections) {
+    modified = true;
+    for (const group of (bogus.groups || [])) {
+      for (const entry of (group.entries || [])) {
+        let trueSectionId = null;
+        let trueDate = entry.date || '';
+
+        const normTitle = (entry.title || '').toLowerCase().replace(/[\s\-_]/g, '');
+
+        if (normTitle.includes('clubedaesquina')) {
+          trueSectionId = '1974-1970';
+          trueDate = '1972';
+        } else if (normTitle === 'blue' && /joni/i.test(entry.artist || '')) {
+          trueSectionId = '1974-1970';
+          trueDate = '1971';
+        } else {
+          const bogusYear = parseInt(bogus.id, 10);
+          if (!isNaN(bogusYear)) {
+            if (bogusYear > 3000) {
+              const recoveredYear = new Date(new Date(bogusYear, 0, 1).getTime() / 1000).getFullYear();
+              trueSectionId = getTargetSectionForYear(recoveredYear);
+              trueDate = String(recoveredYear);
+            } else {
+              trueSectionId = getTargetSectionForYear(bogusYear);
+            }
+          } else {
+            trueSectionId = '1950s';
+          }
+        }
+
+        let targetSection = validSections.find(s => s.id === trueSectionId);
+        if (!targetSection) {
+          targetSection = {
+            id: trueSectionId,
+            title: t('content.sectionTitle', { year: trueSectionId }),
+            groups: [
+              { name: 'Albums', entries: [] },
+              { name: 'Singles', entries: [] }
+            ]
+          };
+          validSections.push(targetSection);
+        }
+
+        let targetGroup = targetSection.groups.find(g => g.name === 'Albums');
+        if (!targetGroup) {
+          targetGroup = { name: 'Albums', entries: [] };
+          targetSection.groups.unshift(targetGroup);
+        }
+
+        // 查重合并，绝对优先保留用户原有的打分、详细曲目打分与长篇乐评
+        const existingIdx = targetGroup.entries.findIndex(e =>
+          (e.title || '').trim().toLowerCase() === (entry.title || '').trim().toLowerCase()
+        );
+
+        if (existingIdx !== -1) {
+          const existing = targetGroup.entries[existingIdx];
+          if (!existing.cover && entry.cover) {
+            existing.cover = entry.cover;
+            modified = true;
+          }
+          if (!existing.date && trueDate) {
+            existing.date = trueDate;
+            modified = true;
+          }
+        } else {
+          entry.date = trueDate;
+          targetGroup.entries.push(entry);
+        }
+      }
+    }
+  }
+
+  data.sections = validSections;
+
+  // 2. 检查 1950s 分区中被错误归入的条目（如《The Legend of 1900》）
+  const sec1950s = data.sections.find(s => s.id === '1950s');
+  if (sec1950s) {
+    for (const group of sec1950s.groups) {
+      for (let i = group.entries.length - 1; i >= 0; i--) {
+        const e = group.entries[i];
+        const isLegendOf1900 = /1900/i.test(e.title || '') && /ennio\s*morricone/i.test(e.artist || '');
+        if (isLegendOf1900 || (e.date === '1900' && /1900/i.test(e.title || ''))) {
+          group.entries.splice(i, 1);
+          modified = true;
+
+          // 重新定位回标准 1999 年分区
+          let sec1999 = data.sections.find(s => s.id === '1999');
+          if (!sec1999) {
+            sec1999 = {
+              id: '1999',
+              title: t('content.sectionTitle', { year: '1999' }),
+              groups: [{ name: 'Albums', entries: [] }, { name: 'Singles', entries: [] }]
+            };
+            data.sections.push(sec1999);
+          }
+          let alb1999 = sec1999.groups.find(g => g.name === 'Albums');
+          if (!alb1999) {
+            alb1999 = { name: 'Albums', entries: [] };
+            sec1999.groups.unshift(alb1999);
+          }
+
+          const hasIn1999 = alb1999.entries.some(item =>
+            (item.title || '').trim().toLowerCase() === (e.title || '').trim().toLowerCase()
+          );
+          if (!hasIn1999) {
+            e.date = '';
+            alb1999.entries.push(e);
+          }
+        }
+      }
+    }
+  }
+
+  // 3. 校准历史年代分区中所有条目的 date 字段（历史年代分组必须显示 4 位发行年份 YYYY）
+  for (const s of data.sections) {
+    if (VALID_HISTORIC_ERAS.includes(s.id)) {
+      for (const g of s.groups) {
+        for (const e of g.entries) {
+          if (e.date && /^\d{2}\.\d{2}$/.test(e.date)) {
+            const normTitle = (e.title || '').toLowerCase().replace(/[\s\-_]/g, '');
+            if (normTitle.includes('clubedaesquina')) {
+              e.date = '1972';
+              modified = true;
+            } else if (normTitle === 'blue') {
+              e.date = '1971';
+              modified = true;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // 4. 标准化分区排序：单年份倒序（2026..1990），随后依序为 1980s, 1979-1975, 1974-1970, 1960s, 1950s
+  data.sections.sort((a, b) => {
+    const isEraA = VALID_HISTORIC_ERAS.includes(a.id);
+    const isEraB = VALID_HISTORIC_ERAS.includes(b.id);
+    if (!isEraA && !isEraB) {
+      const ya = parseInt(a.id, 10);
+      const yb = parseInt(b.id, 10);
+      return yb - ya;
+    }
+    if (!isEraA && isEraB) return -1;
+    if (isEraA && !isEraB) return 1;
+    return VALID_HISTORIC_ERAS.indexOf(a.id) - VALID_HISTORIC_ERAS.indexOf(b.id);
+  });
+
+  return modified;
 }
 
 function getGroupId(sectionId, groupName) {

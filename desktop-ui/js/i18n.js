@@ -19,6 +19,21 @@ const I18N = {
     'toolbar.mustHear': 'Must Hear Album',
     'toolbar.mustHearLabel': 'Threshold',
     'toolbar.mustHearSave': 'Save',
+    'toolbar.cloudImport': '☁ Cloud Import',
+    'cloudImport.title': 'Streaming Album Sync',
+    'cloudImport.subtitle': 'Sync saved albums from streaming platforms',
+    'cloudImport.connected': 'Connected',
+    'cloudImport.disconnected': 'Disconnected',
+    'cloudImport.connect': 'Connect',
+    'cloudImport.sync': 'Sync Now',
+    'cloudImport.disconnect': 'Disconnect',
+    'cloudImport.syncing': 'Fetching album collection...',
+    'cloudImport.success': 'Sync complete! Added {added} new albums, skipped {skipped} existing.',
+    'cloudImport.noNew': 'All albums are already synced! ({total} checked)',
+    'cloudImport.clientIdPrompt': 'Enter your Spotify Client ID (from Spotify Developer Dashboard):',
+    'cloudImport.neteaseQrTitle': 'NetEase QR Code Login',
+    'cloudImport.neteaseQrTip': 'Open NetEase Cloud Music App and scan the QR code to log in',
+    'cloudImport.neteaseQrExpired': 'QR code expired. Click to refresh.',
     'toolbar.albums': 'Albums',
     'toolbar.singles': 'Singles',
     'toolbar.countFiltered': '{visible} / {total}',
@@ -189,6 +204,21 @@ const I18N = {
     'toolbar.mustHear': '必听专辑',
     'toolbar.mustHearLabel': '阈值',
     'toolbar.mustHearSave': '保存',
+    'toolbar.cloudImport': '☁ 云端导入',
+    'cloudImport.title': '流媒体收藏专辑同步',
+    'cloudImport.subtitle': '一键同步云端收藏的唱片到评分库',
+    'cloudImport.connected': '已连接',
+    'cloudImport.disconnected': '未连接',
+    'cloudImport.connect': '连接账号',
+    'cloudImport.sync': '一键同步',
+    'cloudImport.disconnect': '断开',
+    'cloudImport.syncing': '正在获取收藏专辑数据...',
+    'cloudImport.success': '同步成功！新增 {added} 张新专辑，已跳过 {skipped} 张已存在专辑。',
+    'cloudImport.noNew': '专辑库已是最新状态，未发现新专辑。（共检查 {total} 张）',
+    'cloudImport.clientIdPrompt': '请输入你的 Spotify Client ID（可在 Spotify 开发者后台创建）：',
+    'cloudImport.neteaseQrTitle': '冈易音乐 扫码登录',
+    'cloudImport.neteaseQrTip': '请使用 冈易音乐 APP 扫一扫授权登录',
+    'cloudImport.neteaseQrExpired': '二维码已失效，点击刷新',
     'toolbar.albums': '专辑',
     'toolbar.singles': '单曲',
     'toolbar.countFiltered': '{visible} / {total}',
@@ -398,5 +428,5 @@ function toggleLang() {
   if (typeof updateAotyLabel === 'function') updateAotyLabel();
 }
 
-// 读取持久化语言偏好，默认英文
-currentLang = localStorage.getItem('lang') || 'en';
+// 读取持久化语言偏好，默认中文
+currentLang = localStorage.getItem('lang') || 'zh';

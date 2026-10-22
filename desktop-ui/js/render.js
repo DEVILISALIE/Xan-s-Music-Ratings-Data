@@ -767,6 +767,7 @@ let _progressiveRafId = null;
 function renderContent() {
   const area = document.getElementById('contentArea');
   const mergedSections = getMergedSections();
+  const totalEntries = mergedSections.reduce((sum, s) => sum + s.groups.reduce((gs, g) => gs + (g.entries ? g.entries.length : 0), 0), 0);
 
   // 若存在尚未完成的渐进追加任务，先取消它防止多次渲染引发重复追加
   if (_progressiveRafId) {
@@ -774,8 +775,8 @@ function renderContent() {
     _progressiveRafId = null;
   }
 
-  // 关键优化：冷启动首次渲染采用渐进首批直出（前 3 个年份已远超 4K 屏幕可视区），将首屏解析渲染降至毫秒级
-  if (!_initialProgressiveDone && mergedSections.length > 3) {
+  // 关键优化：冷启动首次渲染采用渐进首批直出（仅当有实际条目且年份>3时分批）
+  if (!_initialProgressiveDone && totalEntries > 0 && mergedSections.length > 3) {
     _initialProgressiveDone = true;
     const firstBatch = mergedSections.slice(0, 3);
     const restBatch = mergedSections.slice(3);
@@ -832,6 +833,28 @@ function renderContent() {
   }
 
   let html = '';
+  if (totalEntries === 0) {
+    const isZh = (typeof currentLang !== 'undefined' ? currentLang : 'zh') === 'zh';
+    const welcomeTitle = isZh ? '开启您的专属乐评记录' : 'Start Your Music Rating Journey';
+    const welcomeDesc = isZh
+      ? '当前曲库尚无专辑评测数据。您可以点击下方按钮添加第一张评测，或通过云端服务一键秒级同步您的官方收藏专辑。'
+      : 'No music ratings in your library yet. Create your first album rating, or import from cloud streaming services with one click.';
+    const btnNew = isZh ? '新建第一张评测' : 'Add First Entry';
+    const btnCloud = isZh ? '云端一键同步' : 'Cloud Sync';
+
+    html += '<div class="empty-library-hero" style="max-width: 640px; margin: 36px auto; padding: 44px 32px; text-align: center; background: var(--card-bg); border-radius: 20px; border: 1px solid var(--border-color); box-shadow: var(--shadow-sm); backdrop-filter: blur(20px);">' +
+      '<div style="font-size: 48px; line-height: 1; margin-bottom: 16px;">💿</div>' +
+      '<h2 style="font-size: 22px; font-weight: 700; color: var(--text-primary); margin-bottom: 12px; letter-spacing: -0.02em;">' + escapeHtml(welcomeTitle) + '</h2>' +
+      '<p style="font-size: 13.5px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 24px; max-width: 460px; margin-left: auto; margin-right: auto;">' + escapeHtml(welcomeDesc) + '</p>' +
+      '<div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">' +
+      '<button type="button" class="cloud-btn primary" data-action="open-new-entry-welcome" style="padding: 10px 22px; font-size: 13.5px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px; cursor: var(--cursor-pointer);">' +
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>' +
+      escapeHtml(btnNew) + '</button>' +
+      '<button type="button" class="cloud-btn secondary" data-action="open-cloud-import-welcome" style="padding: 10px 22px; font-size: 13.5px; border-radius: 20px; display: inline-flex; align-items: center; gap: 6px; cursor: var(--cursor-pointer);">' +
+      '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg>' +
+      escapeHtml(btnCloud) + '</button>' +
+      '</div></div>';
+  }
   for (const section of mergedSections) {
     html += renderSectionHtml(section);
   }

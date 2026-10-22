@@ -1,5 +1,5 @@
 // Global state
-let currentLang = 'en';
+let currentLang = 'zh';
 let appData = null;
 let entryIndex = new Map();
 let currentFilter = [];

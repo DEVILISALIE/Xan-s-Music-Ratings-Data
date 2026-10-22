@@ -1157,3 +1157,1047 @@
   .content { padding: 16px 16px 100px; }
   .album-card { padding: 10px 12px; }
 }
+
+
+/* ===== Cloud Import Popover & Components ===== */
+.cloud-import-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  left: auto;
+  transform: none;
+  width: 320px;
+  min-width: 300px;
+  max-width: 90vw;
+  box-sizing: border-box;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(48px) saturate(180%);
+  -webkit-backdrop-filter: blur(48px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: 16px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.14), 0 0 0 0.5px rgba(255, 255, 255, 0.2);
+  padding: 16px;
+  z-index: 60;
+  display: none;
+  will-change: backdrop-filter;
+}
+
+.cloud-import-popover.open,
+.cloud-import-popover.portal-open {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: popoverIn 0.18s cubic-bezier(0.25, 1, 0.5, 1) both;
+}
+
+[data-style="glass"] .cloud-import-popover {
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(56px) saturate(200%);
+  -webkit-backdrop-filter: blur(56px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="dark"] .cloud-import-popover {
+  background: rgba(40, 40, 44, 0.36);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+}
+
+[data-style="glass"][data-theme="dark"] .cloud-import-popover {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.cloud-import-popover.portal-open {
+  position: fixed !important;
+  top: auto;
+  right: auto;
+  left: auto;
+  transform: none !important;
+  z-index: 10050;
+  box-sizing: border-box;
+}
+
+.cloud-import-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.cloud-import-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.cloud-import-subtitle {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.cloud-platform-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cloud-platform-card {
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+[data-theme="dark"] .cloud-platform-card {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.cloud-platform-card:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.cloud-platform-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.cloud-platform-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cloud-platform-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.cloud-platform-icon.spotify-icon {
+  color: #1DB954;
+}
+
+.cloud-platform-icon.netease-icon {
+  color: #EC4141;
+}
+
+.cloud-platform-icon.qq-icon {
+  color: #31c27c;
+}
+
+.cloud-btn.qq-btn,
+.cloud-btn.qq-sync-btn {
+  background: #31c27c;
+  color: #ffffff;
+}
+
+.cloud-btn.qq-btn:hover,
+.cloud-btn.qq-sync-btn:hover {
+  background: #28a768;
+}
+
+.modal-btn.qq-submit-btn {
+  background: #31c27c !important;
+  color: #ffffff !important;
+  border-color: #31c27c !important;
+}
+
+.modal-btn.qq-submit-btn:hover {
+  background: #28a768 !important;
+  border-color: #28a768 !important;
+}
+
+.cloud-platform-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.cloud-platform-badge {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.cloud-platform-badge.connected {
+  background: rgba(34, 197, 94, 0.16);
+  color: #22c55e;
+  border: 0.5px solid rgba(34, 197, 94, 0.3);
+}
+
+.cloud-platform-badge.disconnected {
+  background: rgba(148, 163, 184, 0.14);
+  color: var(--text-secondary);
+}
+
+.cloud-platform-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.cloud-sync-mode-bar {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(0, 122, 255, 0.08);
+  border: 0.5px solid rgba(0, 122, 255, 0.22);
+  border-radius: 8px;
+  margin-top: 4px;
+}
+
+.cloud-sync-mode-shield {
+  font-size: 11px;
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #007aff;
+}
+
+.cloud-sync-mode-text {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: #007aff;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+}
+
+.cloud-sync-mode-line {
+  display: block;
+}
+
+[data-theme="dark"] .cloud-sync-mode-bar {
+  background: rgba(0, 122, 255, 0.12);
+  border: 0.5px solid rgba(0, 122, 255, 0.28);
+}
+
+[data-theme="dark"] .cloud-sync-mode-shield {
+  color: #60a5fa;
+}
+
+[data-theme="dark"] .cloud-sync-mode-text {
+  color: #60a5fa;
+}
+
+.cloud-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  outline: none;
+  transition: all 0.18s ease;
+  user-select: none;
+  font-family: inherit;
+}
+
+.cloud-btn:active {
+  transform: scale(0.95);
+}
+
+.cloud-btn.primary {
+  background: var(--text-primary);
+  color: var(--bg-primary);
+}
+
+.cloud-btn.primary:hover {
+  opacity: 0.9;
+}
+
+.cloud-btn.add-only-btn {
+  background: rgba(34, 197, 94, 0.16);
+  color: #16a34a;
+  border-color: rgba(34, 197, 94, 0.35);
+  font-weight: 600;
+}
+
+.cloud-btn.add-only-btn:hover {
+  background: rgba(34, 197, 94, 0.28);
+}
+
+[data-theme="dark"] .cloud-btn.add-only-btn {
+  color: #4ade80;
+  background: rgba(34, 197, 94, 0.14);
+  border-color: rgba(34, 197, 94, 0.3);
+}
+
+[data-theme="dark"] .cloud-btn.add-only-btn:hover {
+  background: rgba(34, 197, 94, 0.24);
+}
+
+.cloud-btn.sync-btn {
+  background: rgba(139, 92, 246, 0.18);
+  color: #8b5cf6;
+  border-color: rgba(139, 92, 246, 0.35);
+  font-weight: 600;
+}
+
+.cloud-btn.sync-btn:hover {
+  background: rgba(139, 92, 246, 0.3);
+}
+
+.cloud-btn.text-btn {
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.cloud-btn.text-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.cloud-btn.sm {
+  padding: 3px 8px;
+  font-size: 10px;
+}
+
+/* ===== 二级菜单实时同步进度监控面板 ===== */
+.cloud-import-footer {
+  margin-top: 4px;
+}
+
+.cloud-sync-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  transition: all 0.25s ease;
+}
+
+[data-theme="dark"] .cloud-sync-info {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.cloud-sync-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cloud-sync-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.cloud-sync-spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid rgba(236, 65, 65, 0.25);
+  border-top-color: #ec4141;
+  animation: cloudSpin 0.75s linear infinite;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cloud-sync-spinner.done {
+  border: none;
+  animation: none;
+  color: #22c55e;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+@keyframes cloudSpin {
+  to { transform: rotate(360deg); }
+}
+
+.cloud-sync-main-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.cloud-sync-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.cloud-sync-count {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.cloud-sync-pct {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ec4141;
+  font-variant-numeric: tabular-nums;
+  background: rgba(236, 65, 65, 0.12);
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+
+.cloud-sync-cancel-btn {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 6px;
+  padding: 1px 7px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.cloud-sync-cancel-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.6);
+  transform: scale(1.03);
+}
+
+.cloud-sync-bar-wrap {
+  width: 100%;
+}
+
+.cloud-sync-bar {
+  width: 100%;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+.cloud-sync-bar-inner {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #ec4141, #f97316, #a855f7);
+  background-size: 200% 100%;
+  border-radius: 999px;
+  transition: width 0.15s cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: shimmerSync 2s linear infinite;
+  box-shadow: 0 0 10px rgba(236, 65, 65, 0.4);
+}
+
+.cloud-sync-bar-inner.done {
+  background: linear-gradient(90deg, #22c55e, #10b981);
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+  animation: none;
+}
+
+@keyframes shimmerSync {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+.cloud-sync-detail-wrap {
+  overflow: hidden;
+}
+
+.cloud-sync-status {
+  font-size: 11px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+/* ===== 网易云授权弹窗与分段控件 ===== */
+.netease-auth-modal {
+  width: 90%;
+  max-width: 380px;
+  background: var(--bg-modal, rgba(30, 30, 30, 0.85));
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+}
+
+.netease-auth-tabs {
+  display: flex;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 9px;
+  padding: 3px;
+  margin-bottom: 16px;
+  gap: 3px;
+}
+
+[data-theme="dark"] .netease-auth-tabs {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.netease-tab-btn {
+  flex: 1 1 0;
+  min-width: 0;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.netease-tab-btn.active {
+  background: var(--bg-primary, #ffffff);
+  color: var(--text-primary, #000000);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .netease-tab-btn.active {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+.netease-tab-tag {
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(34, 197, 94, 0.2);
+  color: #22c55e;
+  margin-left: 5px;
+  font-weight: 600;
+}
+
+
+/* ===== 扫码状态提示胶囊（高对比度，确保亮色/暗色均清晰可辨） ===== */
+.qr-status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  margin-bottom: 14px;
+  transition: all 0.22s ease;
+  max-width: 90%;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.qr-status-badge.normal {
+  background: rgba(0, 0, 0, 0.07);
+  color: #1e293b;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+[data-theme="dark"] .qr-status-badge.normal {
+  background: rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+/* 手机已扫描（醒目深海蓝，高对比度，告别亮色底浅绿泛白看不清） */
+.qr-status-badge.scanned {
+  background: rgba(2, 132, 199, 0.12);
+  color: #0369a1;
+  border: 1px solid rgba(2, 132, 199, 0.35);
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.12);
+}
+[data-theme="dark"] .qr-status-badge.scanned {
+  background: rgba(56, 189, 248, 0.18);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  box-shadow: 0 2px 10px rgba(56, 189, 248, 0.2);
+}
+
+.qr-status-badge.success {
+  background: rgba(22, 163, 74, 0.12);
+  color: #15803d;
+  border: 1px solid rgba(22, 163, 74, 0.35);
+}
+[data-theme="dark"] .qr-status-badge.success {
+  background: rgba(34, 197, 94, 0.18);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.qr-status-badge.error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #b91c1c;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+[data-theme="dark"] .qr-status-badge.error {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.netease-risk-alert {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  text-align: left;
+}
+
+.netease-risk-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ef4444;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.netease-risk-desc {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin-bottom: 8px;
+}
+
+.netease-switch-cookie-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: none;
+  background: #ef4444;
+  color: #ffffff;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  font-family: inherit;
+}
+
+.netease-switch-cookie-btn:hover {
+  opacity: 0.9;
+}
+
+.netease-cookie-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-family: monospace;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  resize: vertical;
+  min-height: 64px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.netease-cookie-textarea:focus {
+  border-color: #8b5cf6;
+}
+
+.netease-cookie-guide {
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.netease-guide-summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--text-primary);
+  user-select: none;
+  outline: none;
+}
+
+.netease-guide-content {
+  margin-top: 8px;
+  padding-left: 18px;
+  line-height: 1.6;
+}
+
+.netease-guide-content a {
+  color: #38bdf8;
+  text-decoration: none;
+}
+
+.netease-guide-content a:hover {
+  text-decoration: underline;
+}
+
+.netease-guide-content kbd {
+  display: inline-block;
+  padding: 1px 4px;
+  font-size: 10px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* ===== 官方网站一键登录与直接扒数据样式体系 ===== */
+.cloud-official-banner {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(56, 189, 248, 0.12) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.cloud-official-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.cloud-official-badge {
+  font-size: 10px;
+  background: #10b981;
+  color: #fff;
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.cloud-official-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.cloud-official-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: none;
+  background: #10b981;
+  color: #ffffff;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+}
+
+.cloud-official-btn:hover {
+  background: #059669;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+}
+
+.cloud-official-btn.qq-theme {
+  background: #31c27c;
+  box-shadow: 0 4px 14px rgba(49, 194, 124, 0.35);
+}
+
+.cloud-official-btn.qq-theme:hover {
+  background: #28a768;
+  box-shadow: 0 6px 18px rgba(49, 194, 124, 0.45);
+}
+
+.cloud-official-btn.netease-theme {
+  background: #e60026;
+  box-shadow: 0 4px 14px rgba(230, 0, 38, 0.35);
+}
+
+.cloud-official-btn.netease-theme:hover {
+  background: #cc0022;
+  box-shadow: 0 6px 18px rgba(230, 0, 38, 0.45);
+}
+
+/* 官方真实网址直接展示卡片 */
+.cloud-url-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  margin-top: 10px;
+  transition: all 0.2s ease;
+}
+
+.cloud-url-card:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(56, 189, 248, 0.45);
+}
+
+.cloud-url-main {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  text-decoration: none;
+  color: #38bdf8;
+  font-size: 13.5px;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cloud-url-main:hover {
+  color: #0284c7;
+  text-decoration: underline;
+}
+
+.cloud-url-copy-pill {
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.cloud-url-copy-pill:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+/* 快捷粘贴官方数据卡片 */
+.cloud-paste-box {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px dashed var(--border-color);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.cloud-paste-desc {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.cloud-paste-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.cloud-paste-btn:hover {
+  background: rgba(16, 185, 129, 0.28);
+  border-color: #10b981;
+  transform: translateY(-1px);
+}
+
+/* 监听中状态卡片 */
+.cloud-sync-listening {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+  margin-top: 12px;
+  gap: 10px;
+}
+
+.cloud-pulse-ring {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: pulse-ring 1.8s infinite cubic-bezier(0.66, 0, 0, 1);
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.cloud-sync-tip {
+  font-size: 12px;
+  color: var(--text-primary);
+  font-weight: 500;
+  text-align: center;
+}
+
+.cloud-sync-subtip {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* 官方网页直扒辅助工具区 */
+.cloud-direct-tools {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-top: 14px;
+  text-align: left;
+}
+
+.cloud-direct-tools-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cloud-tools-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cloud-tool-pill {
+  flex: 1;
+  min-width: 130px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 7px 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  cursor: grab;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.cloud-tool-pill:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.cloud-tool-pill.btn-style {
+  cursor: pointer;
+}
+
+/* 官方手机短信验证码直登 */
+.cloud-sms-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+}
+
+.cloud-sms-row {
+  display: flex;
+  gap: 8px;
+}
+
+.cloud-sms-input {
+  flex: 1;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  font-size: 13px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.cloud-sms-input:focus {
+  border-color: #10b981;
+}
+
+.cloud-sms-btn {
+  padding: 9px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.cloud-sms-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.cloud-sms-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

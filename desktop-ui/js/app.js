@@ -68,6 +68,18 @@ async function saveData() {
           console.error('[Disk] 写入失败:', e);
         }
       }
+
+      // 浏览器 / 开发环境：通过本地 dev-server 实时写盘与自愈同步
+      if (hasRealData(appData)) {
+        try {
+          const apiBase = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '3000')) ? 'http://127.0.0.1:3000' : '';
+          fetch(`${apiBase}/api/data/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: json }),
+          }).catch(() => {});
+        } catch (_) {}
+      }
     } catch (e) {
       if (e.name === 'QuotaExceededError' || e.code === 22) {
         showAlert(t('dialog.storageFull'));
@@ -364,6 +376,10 @@ function closeAllDropdowns() {
   portalClose(document.getElementById('tagFilterMenu'));
   portalClose(document.getElementById('editSectionMenu'));
   portalClose(mustHear, { openClass: 'open' });
+  const cloudImport = document.getElementById('cloudImportPopover');
+  const cloudImportSelect = document.getElementById('cloudImportSelect');
+  if (cloudImportSelect) cloudImportSelect.classList.remove('open');
+  if (cloudImport) portalClose(cloudImport, { openClass: 'open' });
   closeSettingsMenu();
 }
 
@@ -644,11 +660,10 @@ async function init() {
               '</div>';
             return;
           }
-          // 使用内置数据
-          if (__MUSIC_DATA__ && __MUSIC_DATA__.sections && __MUSIC_DATA__.sections.length > 0 &&
-              __MUSIC_DATA__.sections.some(s => s.groups && s.groups.some(g => g.entries && g.entries.length > 0))) {
+          // 使用内置数据（纯净年份结构，0张预置卡片）
+          if (__MUSIC_DATA__ && __MUSIC_DATA__.sections && __MUSIC_DATA__.sections.length > 0) {
             appData = JSON.parse(JSON.stringify(__MUSIC_DATA__));
-            if (isDev()) logMsg('[Init] 使用内置数据');
+            if (isDev()) logMsg('[Init] 使用内置纯净年份结构');
             if (!appData.sections.some(s => s.id === '1950s')) {
               appData.sections.push({ id: '1950s', title: '1950s', groups: [{ name: 'Albums', entries: [] }, { name: 'Singles', entries: [] }] });
             }
@@ -681,6 +696,7 @@ async function init() {
     }
     if (migrateVolSections()) needsInitialSave = true;
     if (ensureDefaultGroups()) needsInitialSave = true;
+    if (typeof sanitizeAndAlignSections === 'function' && sanitizeAndAlignSections(appData)) needsInitialSave = true;
     // 关键优化：仅当数据首次生成或结构迁移时才在启动时保存，避免每次正常冷启动多余的写盘阻塞
     if (needsInitialSave && hasRealData(appData)) {
       await saveData();
@@ -711,6 +727,7 @@ async function init() {
   bindSectionSelector();
   bindSearch();
   bindMustHear();
+  if (window.CloudImport) window.CloudImport.init();
   bindSidebar();
   bindTrackList();
   bindModalTrackButtons();
@@ -1041,6 +1058,17 @@ function bindStaticButtons() {
       const select = document.getElementById('mustHearSelect');
       if (select) select.classList.remove('open');
       portalClose(document.getElementById('mustHearPopover'), { openClass: 'open' });
+    }
+    if (
+      !e.target.closest('#cloudImportSelect') &&
+      !e.target.closest('#cloudImportPopover') &&
+      (document.getElementById('cloudImportPopover')?.classList.contains('open') ||
+        document.getElementById('cloudImportPopover')?.classList.contains('portal-open') ||
+        document.getElementById('cloudImportSelect')?.classList.contains('open'))
+    ) {
+      const select = document.getElementById('cloudImportSelect');
+      if (select) select.classList.remove('open');
+      portalClose(document.getElementById('cloudImportPopover'), { openClass: 'open' });
     }
   });
 }
@@ -1374,6 +1402,19 @@ function bindContentArea() {
   });
 
   contentArea.addEventListener('click', (e) => {
+    const welcomeNew = e.target.closest('[data-action="open-new-entry-welcome"]');
+    if (welcomeNew) {
+      e.stopPropagation();
+      openNewEntryModal();
+      return;
+    }
+    const welcomeCloud = e.target.closest('[data-action="open-cloud-import-welcome"]');
+    if (welcomeCloud) {
+      e.stopPropagation();
+      document.getElementById('cloudSyncBtn')?.click();
+      return;
+    }
+
     // 复制按钮优先响应并阻断卡片打开
     const copyBtn = e.target.closest('[data-action="copy-entry"]');
     if (copyBtn) {
@@ -2792,7 +2833,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.6.5");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.7.0");
         break;
     }
   });

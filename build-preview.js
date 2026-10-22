@@ -41,6 +41,8 @@ const jsFiles = [
   'modal.js',
   'render.js',
   'drag.js',
+  'qrcode.min.js',
+  'cloudImport.js',
   'app.js'
 ];
 let combinedJs = '';
@@ -293,6 +295,13 @@ window.__MUSIC_DATA__ = ${dataContent};
           case 'save_data_to_disk': {
             if (args && args.data) {
               localStorage.setItem('preview_musicData', args.data);
+              try {
+                fetch('http://127.0.0.1:3000/api/data/save', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ data: args.data })
+                }).catch(() => {});
+              } catch (_) {}
             }
             return true;
           }

@@ -1597,25 +1597,53 @@ textarea.form-input::-webkit-scrollbar-corner {
 
 /* Card checkbox in batch mode */
 .batch-checkbox {
+  position: relative;
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  border: 2px solid var(--separator);
-  background: transparent;
+  border: 1.8px solid var(--separator);
+  background: rgba(255, 255, 255, 0.14);
   display: none;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  cursor: var(--cursor-pointer);
+  cursor: var(--cursor-pointer) !important;
+  user-select: none;
+  -webkit-user-select: none;
+  box-sizing: border-box;
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
 }
 
+/* 扩展无死角点击热区 (Hit Target Area: 34x34px) */
+.batch-checkbox::before {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: transparent;
+  cursor: var(--cursor-pointer) !important;
+  pointer-events: auto;
+  z-index: 1;
+}
+
+.batch-checkbox,
+.batch-checkbox *,
+.batch-checkbox::before,
+.batch-checkbox::after {
+  cursor: var(--cursor-pointer) !important;
+}
+
 .batch-checkbox:hover {
-  transform: scale(1.12);
-  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.2);
+  transform: scale(1.1);
+  border-color: var(--accent);
+}
+
+.batch-checkbox.checked:hover {
+  transform: scale(1.1);
+  box-shadow: 0 3px 10px rgba(0, 122, 255, 0.4);
 }
 
 .batch-checkbox:active {
@@ -1630,14 +1658,27 @@ textarea.form-input::-webkit-scrollbar-corner {
 .batch-checkbox.checked {
   background: var(--accent);
   border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.35);
 }
 
+/* Apple 现代矢量勾：平滑圆角端点 + 严格居中 + 微弹入动效 */
 .batch-checkbox.checked::after {
-  content: '✓';
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1;
+  content: '';
+  width: 13px;
+  height: 13px;
+  display: block;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M3.4 8.2L6.6 11.4L12.6 4.6' stroke='white' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  pointer-events: none;
+  cursor: var(--cursor-pointer) !important;
+  animation: checkPop 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+}
+
+@keyframes checkPop {
+  0% { transform: scale(0.4); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .batch-mode .album-card,
@@ -1814,26 +1855,7 @@ textarea.form-input::-webkit-scrollbar-corner {
 [data-style="glass"] .dialog-btn + .dialog-btn {
   border-left-color: rgba(255, 255, 255, 0.25);
 }
-.batch-checkbox:active {
-  transform: scale(0.92);
-}
-
-.batch-mode .batch-checkbox {
-  display: flex;
-}
-
-.batch-checkbox.checked {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.batch-checkbox.checked::after {
-  content: '✓';
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1;
-}
+/* batch-checkbox unified above */
 
 .batch-mode .album-card,
 .batch-mode .aoty-card {

@@ -1349,15 +1349,18 @@
 }
 
 [data-desktop="true"] .batch-checkbox {
+  width: 24px;
+  height: 24px;
+  cursor: var(--cursor-pointer) !important;
   transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
   transition: transform var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
 }
 
-[data-desktop="true"] .batch-checkbox:hover {
-  transform: scale(1.12);
-  box-shadow: 0 2px 8px rgba(0, 122, 255, 0.2);
+[data-desktop="true"] .batch-checkbox.checked::after {
+  width: 14px;
+  height: 14px;
 }
 
 [data-desktop="true"] .batch-checkbox:active {
@@ -1816,6 +1819,9 @@
 [data-desktop="true"] .track-batch-add,
 [data-desktop="true"] .batch-bar-btn,
 [data-desktop="true"] .batch-checkbox,
+[data-desktop="true"] .batch-checkbox *,
+[data-desktop="true"] .batch-checkbox::before,
+[data-desktop="true"] .batch-checkbox::after,
 [data-desktop="true"] .batch-dropdown-item,
 [data-desktop="true"] .card-copy-btn,
 [data-desktop="true"] .search-clear,

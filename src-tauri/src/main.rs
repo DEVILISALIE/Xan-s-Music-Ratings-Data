@@ -14,6 +14,231 @@ const MAX_COVER_BYTES: u64 = 20 * 1024 * 1024;
 const COVER_THUMBNAIL_SIZE: u32 = 256;
 
 static IS_PROCESSING_IMAGE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static SYNC_SERVER_CHILD: std::sync::Mutex<Option<std::process::Child>> = std::sync::Mutex::new(None);
+
+fn is_port_listening(port: u16) -> bool {
+    std::net::TcpStream::connect_timeout(
+        &std::net::SocketAddr::from(([127, 0, 0, 1], port)),
+        std::time::Duration::from_millis(150),
+    ).is_ok()
+}
+
+fn kill_sync_server() {
+    if let Ok(mut guard) = SYNC_SERVER_CHILD.lock() {
+        if let Some(mut child) = guard.take() {
+            let _ = child.kill();
+            let _ = child.wait();
+        }
+    }
+}
+
+fn start_sync_server_if_needed(app: &AppHandle) {
+    if is_port_listening(3000) {
+        return;
+    }
+
+    if let Ok(app_data) = app.path().app_data_dir() {
+        let _ = fs::create_dir_all(&app_data);
+        let server_js_path = app_data.join("dev-server.js");
+        const EMBEDDED_SERVER_JS: &str = include_str!("../../dev-server.js");
+
+        let needs_write = match fs::read_to_string(&server_js_path) {
+            Ok(content) => content != EMBEDDED_SERVER_JS,
+            Err(_) => true,
+        };
+        if needs_write {
+            let _ = fs::write(&server_js_path, EMBEDDED_SERVER_JS);
+        }
+
+        // 种子缓存：如果 app_data 下无 album-cache.json，自动尝试初始化
+        let cache_path = app_data.join("album-cache.json");
+        if !cache_path.exists() {
+            const EMBEDDED_ALBUM_CACHE: &str = include_str!("../../album-cache.json");
+            let _ = fs::write(&cache_path, EMBEDDED_ALBUM_CACHE);
+        }
+
+        let mut cmd = std::process::Command::new("node");
+        cmd.arg(&server_js_path);
+        cmd.current_dir(&app_data);
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW：后台静默运行，完全不弹黑框
+        }
+
+        match cmd.spawn() {
+            Ok(child) => {
+                if let Ok(mut guard) = SYNC_SERVER_CHILD.lock() {
+                    *guard = Some(child);
+                }
+            }
+            Err(e) => {
+                eprintln!("[SyncServer] 启动云端同步 Node 代理服务失败: {}", e);
+            }
+        }
+    }
+}
+
+#[tauri::command]
+fn ensure_sync_server_running(app: AppHandle) -> bool {
+    start_sync_server_if_needed(&app);
+    for _ in 0..25 {
+        if is_port_listening(3000) {
+            return true;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+    false
+}
+
+#[tauri::command]
+async fn open_official_login_window(app: AppHandle, platform: String) -> Result<(), String> {
+    if let Some(win) = app.get_webview_window("official_login") {
+        let _ = win.show();
+        let _ = win.set_focus();
+        return Ok(());
+    }
+
+    let (url_str, title) = match platform.as_str() {
+        "netease" => ("https://music.163.com", "网易云音乐 - 官方网页登录与同步"),
+        "qq" => ("https://y.qq.com/", "QQ 音乐 - 官方网页登录与同步"),
+        _ => return Err("未知的流媒体平台".into()),
+    };
+
+    let target_url: tauri::Url = url_str.parse().map_err(|e: <tauri::Url as std::str::FromStr>::Err| e.to_string())?;
+
+    let script = format!(r#"
+        (function() {{
+            console.log('[OfficialSync] 官方登录探针已就绪: {0}');
+            function injectSyncButton() {{
+                if (document.getElementById('m-ratings-sync-btn')) return;
+                var btn = document.createElement('div');
+                btn.id = 'm-ratings-sync-btn';
+                btn.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:2147483647;background:#10b981;color:#fff;padding:12px 20px;border-radius:30px;box-shadow:0 10px 25px rgba(0,0,0,0.3);font-family:system-ui,-apple-system,sans-serif;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:8px;transition:all 0.2s cubic-bezier(0.16,1,0.3,1);user-select:none;border:1px solid rgba(255,255,255,0.2);';
+                btn.innerHTML = '<span>⚡ 登录完成，点击直接扒取数据</span>';
+                btn.onmouseenter = function() {{ btn.style.transform = 'scale(1.05)'; btn.style.boxShadow = '0 14px 30px rgba(16,185,129,0.4)'; }};
+                btn.onmouseleave = function() {{ btn.style.transform = 'scale(1)'; btn.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)'; }};
+                btn.onclick = function() {{
+                    btn.style.background = '#059669';
+                    btn.innerHTML = '<span>⏳ 正在提取数据并同步中...</span>';
+                    triggerSync();
+                }};
+                document.body.appendChild(btn);
+            }}
+
+            function triggerSync() {{
+                var plat = '{0}';
+                if (plat === 'netease') {{
+                    var offset = 0;
+                    var limit = 100;
+                    var allAlbums = [];
+                    function fetchBatch() {{
+                        fetch('/api/album/sublist?limit=' + limit + '&offset=' + offset, {{ credentials: 'include' }})
+                            .then(function(r) {{ return r.json(); }})
+                            .then(function(j) {{
+                                if (j.code === 200 && j.data && j.data.length > 0) {{
+                                    allAlbums = allAlbums.concat(j.data);
+                                    if (j.hasMore && j.data.length >= limit) {{
+                                        offset += limit;
+                                        fetchBatch();
+                                        return;
+                                    }}
+                                }}
+                                sendPayload({{
+                                    platform: 'netease',
+                                    type: 'albums',
+                                    albums: allAlbums,
+                                    cookie: document.cookie
+                                }});
+                            }})
+                            .catch(function(err) {{
+                                sendPayload({{
+                                    platform: 'netease',
+                                    type: 'credentials',
+                                    cookie: document.cookie
+                                }});
+                            }});
+                    }}
+                    fetchBatch();
+                }} else if (plat === 'qq') {{
+                    var cookies = document.cookie;
+                    var uinMatch = cookies.match(/(?:uin|p_uin)=o?([0-9a-zA-Z_]+)/);
+                    var uin = uinMatch ? uinMatch[1] : '';
+                    sendPayload({{
+                        platform: 'qq',
+                        type: 'credentials',
+                        uin: uin,
+                        cookie: cookies
+                    }});
+                }}
+            }}
+
+            function sendPayload(payload) {{
+                var pStr = JSON.stringify(payload);
+                try {{
+                    if (navigator.clipboard && navigator.clipboard.writeText) {{
+                        navigator.clipboard.writeText(pStr);
+                    }} else {{
+                        var ta = document.createElement('textarea');
+                        ta.value = pStr;
+                        ta.style.cssText = 'position:fixed;left:-9999px;top:0;';
+                        document.body.appendChild(ta);
+                        ta.focus();
+                        ta.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(ta);
+                    }}
+                }} catch (_) {{}}
+
+                fetch('http://127.0.0.1:3000/api/cloud/sync_payload', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: pStr
+                }}).then(function(r) {{ return r.json(); }}).then(function(res) {{
+                    var btn = document.getElementById('m-ratings-sync-btn');
+                    if (btn) {{
+                        btn.style.background = '#10b981';
+                        btn.innerHTML = '<span>✅ 数据直传成功！请切回软件查看</span>';
+                    }}
+                }}).catch(function(_) {{
+                    var btn = document.getElementById('m-ratings-sync-btn');
+                    if (btn) {{
+                        btn.style.background = '#10b981';
+                        btn.innerHTML = '<span>🎉 凭据已复制到剪贴板！切回软件即可同步</span>';
+                    }}
+                }});
+            }}
+
+            if (document.readyState === 'complete' || document.readyState === 'interactive') {{
+                injectSyncButton();
+            }} else {{
+                document.addEventListener('DOMContentLoaded', injectSyncButton);
+            }}
+            setInterval(injectSyncButton, 2000);
+        }})();
+    "#, platform);
+
+    let _win = tauri::WebviewWindowBuilder::new(
+        &app,
+        "official_login",
+        tauri::WebviewUrl::External(target_url)
+    )
+    .title(title)
+    .inner_size(880.0, 740.0)
+    .center()
+    .initialization_script(&script)
+    .build()
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
+fn close_official_login_window(app: AppHandle) {
+    if let Some(win) = app.get_webview_window("official_login") {
+        let _ = win.close();
+    }
+}
 
 // 向前端发送菜单动作事件
 fn emit_menu_action(app: &AppHandle, action: &str) {
@@ -64,6 +289,7 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
             }
             "tray_theme" => emit_menu_action(app, "toggle-theme"),
             "tray_quit" => {
+                kill_sync_server();
                 // 通知前端保存数据后再退出（避免 app.exit(0) 直接终止导致数据丢失）
                 if let Some(win) = app.get_webview_window("main") {
                     let _ = win.emit("request-shutdown", ());
@@ -71,6 +297,7 @@ fn setup_tray(app: &AppHandle) -> Result<(), Box<dyn std::error::Error>> {
                 // 5秒后强制退出（防止前端无响应时卡死）
                 std::thread::spawn(|| {
                     std::thread::sleep(std::time::Duration::from_secs(5));
+                    kill_sync_server();
                     std::process::exit(0);
                 });
             }
@@ -476,6 +703,7 @@ fn write_log(app: AppHandle, msg: String) -> Result<(), String> {
 // 前端保存完成后调用，延迟退出确保 IPC 响应送达
 #[tauri::command]
 fn graceful_exit() {
+    kill_sync_server();
     std::thread::spawn(|| {
         std::thread::sleep(std::time::Duration::from_millis(500));
         std::process::exit(0);
@@ -943,6 +1171,9 @@ fn main() {
             }
         }))
         .setup(|app| {
+            // 确保本地云端同步静默后台服务已就绪
+            start_sync_server_if_needed(app.handle());
+
             // 系统托盘
             setup_tray(app.handle()).expect("无法设置系统托盘");
 
@@ -1022,7 +1253,8 @@ fn main() {
             save_data_to_disk, load_data_from_disk, check_disk_data, get_data_file_size, write_log,
             graceful_exit, trim_memory,
             upload_cover, remove_cover, read_cover_thumbnail, read_cover, clean_orphan_covers,
-            get_system_fonts
+            get_system_fonts, ensure_sync_server_running,
+            open_official_login_window, close_official_login_window
         ])
         .run(tauri::generate_context!())
         .expect("启动 Tauri 应用失败");

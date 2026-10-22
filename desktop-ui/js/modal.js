@@ -1,6 +1,6 @@
 // Modal logic
 
-function showToast(message) {
+function showToast(message, duration) {
   let toast = document.getElementById('copyToast');
   if (!toast) {
     toast = document.createElement('div');
@@ -8,12 +8,16 @@ function showToast(message) {
     toast.className = 'toast';
     document.body.appendChild(toast);
   }
+  toast.style.zIndex = '100000';
   toast.textContent = message;
   toast.classList.remove('show');
+  const displayTime = duration || Math.max(2500, Math.min(6500, ((message || '').length) * 80));
   requestAnimationFrame(() => {
     toast.classList.add('show');
     clearTimeout(toast._timer);
-    toast._timer = setTimeout(() => toast.classList.remove('show'), 1500);
+    toast._timer = setTimeout(() => {
+      toast.classList.remove('show');
+    }, displayTime);
   });
 }
 
