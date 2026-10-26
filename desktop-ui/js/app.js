@@ -2833,7 +2833,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.7.0");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.7.1");
         break;
     }
   });

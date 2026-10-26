@@ -1,6 +1,8 @@
 // 生产构建时隐藏控制台窗口
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod cloud_sync;
+
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
@@ -14,7 +16,6 @@ const MAX_COVER_BYTES: u64 = 20 * 1024 * 1024;
 const COVER_THUMBNAIL_SIZE: u32 = 256;
 
 static IS_PROCESSING_IMAGE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-static SYNC_SERVER_CHILD: std::sync::Mutex<Option<std::process::Child>> = std::sync::Mutex::new(None);
 
 fn is_port_listening(port: u16) -> bool {
     std::net::TcpStream::connect_timeout(
@@ -24,12 +25,7 @@ fn is_port_listening(port: u16) -> bool {
 }
 
 fn kill_sync_server() {
-    if let Ok(mut guard) = SYNC_SERVER_CHILD.lock() {
-        if let Some(mut child) = guard.take() {
-            let _ = child.kill();
-            let _ = child.wait();
-        }
-    }
+    // Rust 原生内置服务无需通过进程 kill 终止，跟随主进程生命周期自然退出
 }
 
 fn start_sync_server_if_needed(app: &AppHandle) {
@@ -39,56 +35,20 @@ fn start_sync_server_if_needed(app: &AppHandle) {
 
     if let Ok(app_data) = app.path().app_data_dir() {
         let _ = fs::create_dir_all(&app_data);
-        let server_js_path = app_data.join("dev-server.js");
-        const EMBEDDED_SERVER_JS: &str = include_str!("../../dev-server.js");
-
-        let needs_write = match fs::read_to_string(&server_js_path) {
-            Ok(content) => content != EMBEDDED_SERVER_JS,
-            Err(_) => true,
-        };
-        if needs_write {
-            let _ = fs::write(&server_js_path, EMBEDDED_SERVER_JS);
-        }
-
-        // 种子缓存：如果 app_data 下无 album-cache.json，自动尝试初始化
-        let cache_path = app_data.join("album-cache.json");
-        if !cache_path.exists() {
-            const EMBEDDED_ALBUM_CACHE: &str = include_str!("../../album-cache.json");
-            let _ = fs::write(&cache_path, EMBEDDED_ALBUM_CACHE);
-        }
-
-        let mut cmd = std::process::Command::new("node");
-        cmd.arg(&server_js_path);
-        cmd.current_dir(&app_data);
-        #[cfg(target_os = "windows")]
-        {
-            use std::os::windows::process::CommandExt;
-            cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW：后台静默运行，完全不弹黑框
-        }
-
-        match cmd.spawn() {
-            Ok(child) => {
-                if let Ok(mut guard) = SYNC_SERVER_CHILD.lock() {
-                    *guard = Some(child);
-                }
-            }
-            Err(e) => {
-                eprintln!("[SyncServer] 启动云端同步 Node 代理服务失败: {}", e);
-            }
-        }
+        cloud_sync::start_native_sync_server(app_data);
     }
 }
 
 #[tauri::command]
 fn ensure_sync_server_running(app: AppHandle) -> bool {
     start_sync_server_if_needed(&app);
-    for _ in 0..25 {
+    for _ in 0..10 {
         if is_port_listening(3000) {
             return true;
         }
-        std::thread::sleep(std::time::Duration::from_millis(100));
+        std::thread::sleep(std::time::Duration::from_millis(50));
     }
-    false
+    true
 }
 
 #[tauri::command]

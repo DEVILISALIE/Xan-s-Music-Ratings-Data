@@ -1,6 +1,6 @@
 [package]
 name = "music-ratings"
-version = "1.7.0"
+version = "1.7.1"
 edition = "2021"
 description = "Xan's Music Ratings - Desktop Edition"
 
@@ -18,6 +18,14 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 base64 = "0.22"
 image = { version = "0.25", default-features = false, features = ["bmp", "gif", "jpeg", "png", "webp"] }
+tiny_http = "0.12"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "cookies", "blocking"] }
+aes = "0.8"
+cbc = "0.1"
+rsa = "0.9"
+rand = "0.8"
+regex = "1"
+url = "2"
 
 [features]
 default = ["custom-protocol"]

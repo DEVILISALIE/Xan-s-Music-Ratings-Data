@@ -491,9 +491,9 @@ const CloudImport = (() => {
     const serverOk = await ensureServerOnline();
     if (!serverOk) {
       if (qrMask) qrMask.style.display = 'flex';
-      setQrTipStatus(qrTip, '本地同步服务未就绪，请确保已安装 Node.js 后重试', 'error');
-      qrBox.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;height:100%;">本地服务连接失败</div>';
-      showNotification('获取二维码失败: 本地同步服务未启动');
+      setQrTipStatus(qrTip, '本地云端同步服务初始化中，请稍候点击重试', 'error');
+      qrBox.innerHTML = '<div style="font-size:12px;color:var(--text-secondary);display:flex;align-items:center;justify-content:center;height:100%;">本地服务连接中...</div>';
+      showNotification('获取二维码失败: 本地同步服务连接超时');
       return;
     }
 
@@ -834,8 +834,8 @@ const CloudImport = (() => {
     if (!serverOk) {
       if (qrLoading) qrLoading.style.display = 'none';
       if (qrMask) qrMask.style.display = 'flex';
-      setQrTipStatus(qrTip, '本地同步服务未就绪，请确认已安装 Node.js 后重试', 'error');
-      showNotification('获取二维码失败: 本地同步服务未启动');
+      setQrTipStatus(qrTip, '本地云端同步服务初始化中，请稍候点击重试', 'error');
+      showNotification('获取二维码失败: 本地同步服务连接超时');
       return;
     }
 
@@ -988,7 +988,7 @@ const CloudImport = (() => {
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
       }
-      showModalError('本地同步服务未就绪，请确认已安装 Node.js 运行环境后重试');
+      showModalError('本地云端同步服务初始化中，请稍候点击重试');
       return;
     }
 
@@ -1719,7 +1719,7 @@ const CloudImport = (() => {
     try {
       const serverOk = await ensureServerOnline();
       if (!serverOk) {
-        throw new Error('本地云端同步服务未启动。若未安装 Node.js，请先安装 Node.js 运行环境后重试');
+        throw new Error('本地云端同步服务初始化中，请稍候重试');
       }
 
       setSyncProgress(10, '正在连接冈易音乐 API...', '准备中', false, '正在同步冈易音乐...');
@@ -1783,7 +1783,7 @@ const CloudImport = (() => {
     try {
       const serverOk = await ensureServerOnline();
       if (!serverOk) {
-        throw new Error('本地云端同步服务未启动。若未安装 Node.js，请先安装 Node.js 运行环境后重试');
+        throw new Error('本地云端同步服务初始化中，请稍候重试');
       }
 
       setSyncProgress(10, '正在连接企鹅音乐 API...', '准备中', false, '正在同步企鹅音乐...');
