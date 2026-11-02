@@ -2530,10 +2530,39 @@ document.addEventListener('keydown', (e) => {
     }
   }
 
+  if (e.key === 'F11') {
+    e.preventDefault();
+    if (window.__TAURI__) {
+      window.__TAURI__.core.invoke('toggle_fullscreen').then(() => {
+        if (typeof window.updateMaximizeIcon === 'function') window.updateMaximizeIcon();
+      });
+    }
+    return;
+  }
+
   if (e.key === 'Escape') {
-    closeModal();
-    document.getElementById('yearlyStatsModal')?.classList.remove('active');
-    closeFontSettingsModal();
+    const editModal = document.getElementById('editModal');
+    const yearlyStatsModal = document.getElementById('yearlyStatsModal');
+    const fontSettingsModal = document.getElementById('fontSettingsModal');
+    const cloudImportModal = document.getElementById('cloudImportModal');
+
+    if (editModal?.classList.contains('active')) {
+      closeModal();
+    } else if (yearlyStatsModal?.classList.contains('active')) {
+      yearlyStatsModal.classList.remove('active');
+    } else if (fontSettingsModal?.classList.contains('active')) {
+      closeFontSettingsModal();
+    } else if (cloudImportModal?.classList.contains('active')) {
+      if (typeof closeCloudImportModal === 'function') closeCloudImportModal();
+    } else if (window.__TAURI__) {
+      window.__TAURI__.core.invoke('is_window_fullscreen').then(isFs => {
+        if (isFs) {
+          window.__TAURI__.core.invoke('toggle_fullscreen').then(() => {
+            if (typeof window.updateMaximizeIcon === 'function') window.updateMaximizeIcon();
+          });
+        }
+      }).catch(() => {});
+    }
   }
   if (e.key === 'Enter' && e.shiftKey && document.getElementById('editModal')?.classList.contains('active')) {
     e.preventDefault();
@@ -2728,11 +2757,14 @@ init();
 
   // 窗口控件
   const maximizeBtn = document.querySelector('[data-action="win-maximize"]');
+  const fullscreenBtn = document.querySelector('[data-action="win-fullscreen"]');
   const pinBtn = document.querySelector('[data-action="win-topmost"]');
   const pinEmpty = '<svg class="pin-icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="3" width="14" height="4.5" rx="2"/><line x1="12" y1="7.5" x2="12" y2="21" stroke-width="2.8"/></svg>';
   const pinFilled = '<svg class="pin-icon" width="11" height="11" viewBox="0 0 24 24" fill="var(--accent)" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"><rect x="5" y="3" width="14" height="4.5" rx="2"/><line x1="12" y1="7.5" x2="12" y2="21" stroke-width="2.8"/></svg>';
   const maximizeSvg = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1"><rect x="0.5" y="0.5" width="9" height="9" rx="1"/></svg>';
   const restoreSvg = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1"><rect x="2" y="0.5" width="7.5" height="7.5" rx="1"/><rect x="0.5" y="2" width="7.5" height="7.5" rx="1" fill="var(--card-bg, #fff)"/></svg>';
+  const enterFullscreenSvg = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M1 4V1H4"/><path d="M8 1H11V4"/><path d="M11 8V11H8"/><path d="M4 11H1V8"/></svg>';
+  const exitFullscreenSvg = '<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M4 1V4H1"/><path d="M8 1V4H11"/><path d="M11 8H8V11"/><path d="M1 8H4V11"/></svg>';
   let isTopmost = false;
 
   function updateTopmostUI(top) {
@@ -2758,30 +2790,34 @@ init();
   pinBtn?.addEventListener('click', toggleTopmostAction);
 
   async function updateMaximizeIcon() {
-    if (!maximizeBtn) return;
     try {
       const [isMax, isFs] = await Promise.all([
         invoke('is_window_maximized'),
         invoke('is_window_fullscreen')
       ]);
-      if (isFs) {
-        maximizeBtn.innerHTML = maximizeSvg;
-        maximizeBtn.disabled = true;
-        maximizeBtn.style.pointerEvents = 'none';
-        maximizeBtn.style.opacity = '0.3';
-      } else {
-        maximizeBtn.innerHTML = isMax ? restoreSvg : maximizeSvg;
+
+      if (fullscreenBtn) {
+        fullscreenBtn.innerHTML = isFs ? exitFullscreenSvg : enterFullscreenSvg;
+        fullscreenBtn.classList.toggle('active', !!isFs);
+        fullscreenBtn.setAttribute('aria-label', isFs ? 'Exit Fullscreen' : 'Fullscreen');
+      }
+
+      if (maximizeBtn) {
+        maximizeBtn.innerHTML = (isMax || isFs) ? restoreSvg : maximizeSvg;
         maximizeBtn.disabled = false;
         maximizeBtn.style.pointerEvents = '';
         maximizeBtn.style.opacity = '';
+        maximizeBtn.setAttribute('aria-label', (isMax || isFs) ? 'Restore' : 'Maximize');
       }
     } catch (_) {}
   }
 
+  window.updateMaximizeIcon = updateMaximizeIcon;
+
   maximizeBtn?.addEventListener('click', () => {
     invoke('toggle_maximize').then(updateMaximizeIcon);
   });
-  document.querySelector('[data-action="win-fullscreen"]')?.addEventListener('click', () => {
+  fullscreenBtn?.addEventListener('click', () => {
     invoke('toggle_fullscreen').then(updateMaximizeIcon);
   });
   document.querySelector('[data-action="win-minimize"]')?.addEventListener('click', () => {

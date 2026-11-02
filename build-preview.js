@@ -309,13 +309,21 @@ window.__MUSIC_DATA__ = ${dataContent};
           case 'get_app_version': return '${appVersion} (Preview)';
           case 'is_window_topmost': return isTopmost;
           case 'is_window_maximized': return isMaximized;
-          case 'is_window_fullscreen': return isFullscreen;
+          case 'is_window_fullscreen': return !!document.fullscreenElement || isFullscreen;
           case 'toggle_topmost': {
             isTopmost = !isTopmost;
             document.querySelector('.titlebar-btn-pin')?.classList.toggle('active', isTopmost);
             return isTopmost;
           }
           case 'toggle_maximize': {
+            if (document.fullscreenElement || isFullscreen) {
+              if (document.fullscreenElement) {
+                document.exitFullscreen().catch(() => {});
+              }
+              isFullscreen = false;
+              isMaximized = true;
+              return isMaximized;
+            }
             isMaximized = !isMaximized;
             return isMaximized;
           }
@@ -393,6 +401,12 @@ window.__MUSIC_DATA__ = ${dataContent};
       }
     }
   };
+
+  // 监听浏览器原生全屏状态变化，自动同步控件
+  document.addEventListener('fullscreenchange', () => {
+    isFullscreen = !!document.fullscreenElement;
+    if (typeof window.updateMaximizeIcon === 'function') window.updateMaximizeIcon();
+  });
 
   // 默认启用桌面版样式（UI 放大 20%、macOS 原生光标、桌面端布局）
   document.documentElement.dataset.desktop = 'true';

@@ -8,7 +8,6 @@ use tauri::{
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
     AppHandle, Emitter, Manager, WebviewWindow,
 };
-use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 use std::fs;
 use base64::Engine;
 
@@ -314,15 +313,33 @@ fn is_window_topmost(app: AppHandle) -> bool {
     false
 }
 
+fn is_really_fullscreen(win: &WebviewWindow) -> bool {
+    let is_fs = win.is_fullscreen().unwrap_or(false);
+    if !is_fs {
+        return false;
+    }
+    // 物理尺寸校验：如果当前窗口物理尺寸明显小于显示器分辨率（例如被拖拽还原），自愈修正失步状态
+    if let (Ok(win_size), Ok(Some(monitor))) = (win.outer_size(), win.current_monitor()) {
+        let mon_size = monitor.size();
+        if win_size.width < mon_size.width || win_size.height < mon_size.height {
+            let _ = win.set_fullscreen(false);
+            return false;
+        }
+    }
+    true
+}
+
 #[tauri::command]
 fn toggle_fullscreen(app: AppHandle) {
     if let Some(win) = get_main_window(&app) {
-        let is_fs = win.is_fullscreen().unwrap_or(false);
+        let is_fs = is_really_fullscreen(&win);
         if !is_fs {
             // 进入全屏前先取消最大化，避免 WebView2 bug
             let _ = win.unmaximize();
+            let _ = win.set_fullscreen(true);
+        } else {
+            let _ = win.set_fullscreen(false);
         }
-        let _ = win.set_fullscreen(!is_fs);
     }
 }
 
@@ -473,6 +490,12 @@ fn minimize_window(app: AppHandle) {
 #[tauri::command]
 fn toggle_maximize(app: AppHandle) {
     if let Some(win) = get_main_window(&app) {
+        // 如果处于全屏状态（或全屏失步状态），点击最大化或双击标题栏时退出全屏并最大化
+        if is_really_fullscreen(&win) {
+            let _ = win.set_fullscreen(false);
+            let _ = win.maximize();
+            return;
+        }
         let is_max = win.is_maximized().unwrap_or(false);
         if is_max {
             let _ = win.unmaximize();
@@ -495,6 +518,10 @@ fn close_window(app: AppHandle) {
 #[tauri::command]
 fn start_window_drag(app: AppHandle) {
     if let Some(win) = get_main_window(&app) {
+        // 拖拽窗口标题栏时，若处于全屏则退出全屏，确保窗口位置和状态同步
+        if win.is_fullscreen().unwrap_or(false) {
+            let _ = win.set_fullscreen(false);
+        }
         let _ = win.start_dragging();
     }
 }
@@ -510,7 +537,7 @@ fn is_window_maximized(app: AppHandle) -> bool {
 #[tauri::command]
 fn is_window_fullscreen(app: AppHandle) -> bool {
     if let Some(win) = get_main_window(&app) {
-        return win.is_fullscreen().unwrap_or(false);
+        return is_really_fullscreen(&win);
     }
     false
 }
@@ -1136,17 +1163,6 @@ fn main() {
 
             // 系统托盘
             setup_tray(app.handle()).expect("无法设置系统托盘");
-
-            // F11 全局快捷键：全屏切换（仅在松开按键时触发，避免按下+松开触发两次）
-            let app_handle = app.handle().clone();
-            let _ = app.global_shortcut().on_shortcut("F11", move |_app, _shortcut, event| {
-                if event.state == ShortcutState::Released {
-                    if let Some(win) = app_handle.get_webview_window("main") {
-                        let is_fs = win.is_fullscreen().unwrap_or(false);
-                        let _ = win.set_fullscreen(!is_fs);
-                    }
-                }
-            });
 
             // 确保主窗口在任务栏显示，并注入 WS_MINIMIZEBOX / WS_SYSMENU 样式以支持任务栏点击切换最小化/还原
             if let Some(win) = app.get_webview_window("main") {

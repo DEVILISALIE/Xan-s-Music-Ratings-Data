@@ -1509,7 +1509,8 @@
   -webkit-app-region: no-drag;
 }
 
-[data-desktop="true"] .titlebar-btn-pin.active {
+[data-desktop="true"] .titlebar-btn-pin.active,
+[data-desktop="true"] .titlebar-btn[data-action="win-fullscreen"].active {
   color: var(--accent);
   background: var(--pill-bg);
 }
