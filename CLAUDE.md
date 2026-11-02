@@ -97,6 +97,17 @@ npm run tauri build              # 构建生产版本（完成后直接覆盖桌
 | `qq_uin` | 字符串 | 企鹅音乐用户账号 / uin |
 | `qq_cookie` | 字符串 | 企鹅音乐会话票据凭证 Cookie（包含 `p_skey`、`skey`、`qm_keyst` 等） |
 
+## v1.7.2 更新（相对 v1.7.1）
+
+- **彻底根治全屏误触与窗口化误判失步 Bug**：
+  - **拔除 F11 全局快捷键**：彻底移除 Windows 系统级全局快捷键注册，杜绝用户在浏览器或其他软件按 F11 全屏时在后台偷偷将本程序置为全屏；改为窗口前台激活时的局部监听；
+  - **底层物理尺寸校验与自愈纠偏**：在 Rust 后端引入窗口物理宽高与显示器工作区对照，若检测到窗口物理尺寸小于显示器分辨率（如被拖拽出全屏），自动校准并重置内部失步状态，根治“实际已窗口化却误判为全屏”；
+  - **最大化按钮永不置灰死锁**：移除全屏模式对最大化按钮的置灰禁用（`opacity: 0.3` / `pointer-events: none`），任何模式下最大化按钮永远可用，点击即可智能还原；
+  - **标题栏拖拽与双击自适应退出全屏**：全屏下拖拽标题栏或双击标题栏，自动平滑脱离全屏并同步窗口物理坐标；
+  - **全屏状态视觉联动与 Esc 一键退出**：标题栏全屏按钮在全屏时切换为向内收拢的高亮「退出全屏」图标；按键盘 `Esc` 键直接秒级退出全屏。
+- **版本号升级**：
+  - 全模块版本全面升级至 `v1.7.2`。
+
 ## v1.7.1 更新（相对 v1.7.0）
 
 - **彻底拔除 Node.js 外部依赖，全套网络代理 Rust 原生化（开箱即用）**：
@@ -300,7 +311,11 @@ GitHub 上一次正式 Release 为 `v1.4.0`（commit `ede5a58`，2026-07-14）�
 - 桌面版固定使用 `musicData_desktop` 作为 WebView2 本地镜像
 - `build-frontend.js` 构建时将 `desktop-ui/index.html`、`desktop-ui/css`、`desktop-ui/js` 和可选 `desktop-ui/data.json` 复制到 `dist/`，再由 Tauri 打包进二进制
 - Tauri 插件：dialog、fs、global-shortcut、shell、single-instance；Rust 依赖 `base64` 与 `image`
-- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.7.1`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.7.1`
+- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.7.2`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.7.2`
+
+**v1.7.2 更新日志**：
+- **彻底根治全屏误触与窗口化误判失步 Bug**：移除 F11 系统全局热键拦截，避免在其他软件按 F11 时后台误触全屏；加入窗口物理尺寸校验与自愈校准机制，杜绝常规窗口误判全屏；最大化按钮彻底解除置灰死锁；标题栏拖拽与双击平滑退出全屏；全屏按钮增加高亮退出图标，支持 Esc 键秒级退出全屏；
+- **版本号升级**：全套版本号升级为 `v1.7.2`。
 
 **v1.7.1 更新日志**：
 - **拔除 Node.js 外部依赖，原生 Rust 云端导入引擎**：全套网络代理原生化（weapi 加密、QQ/微信扫码、短信直登与发行日期补齐引擎内置于 Rust 内核），彻底解决未安装 Node.js 的纯净 Windows 用户无法使用云端导入的痛点，开箱即用；
