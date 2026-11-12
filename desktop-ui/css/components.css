@@ -533,9 +533,13 @@
 }
 
 textarea.form-input {
-  min-height: 120px;
-  resize: both;
+  width: 100%;
+  min-width: 100%;
+  max-width: 100%;
+  min-height: 52px;
+  resize: vertical;
   line-height: 1.6;
+  overflow-y: auto;
 }
 
 textarea.form-input::-webkit-scrollbar { width: 6px; }
@@ -546,11 +550,43 @@ textarea.form-input::-webkit-scrollbar-thumb {
 }
 
 textarea.form-input::-webkit-resizer {
-  display: none;
+  background-color: transparent;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 9 L9 3 M6.5 9.5 L9.5 6.5' stroke='%238E8E93' stroke-width='1.2' stroke-linecap='round' opacity='0.55'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: bottom 3px right 3px;
 }
 
 textarea.form-input::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* 文字乐评标题与实时字数统计 */
+.review-label-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.review-label-row .form-label {
+  margin-bottom: 0;
+}
+
+.review-char-count {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  background: var(--pill-bg);
+  padding: 1px 7px;
+  border-radius: 999px;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  user-select: none;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.review-char-count.has-content {
+  color: var(--text-secondary);
 }
 
 .form-row {
@@ -2849,6 +2885,7 @@ optgroup,
 [data-font-weight-custom="true"] .track-name-input,
 [data-font-weight-custom="true"] .track-score-input,
 [data-font-weight-custom="true"] .track-summary,
+[data-font-weight-custom="true"] .review-char-count,
 [data-font-weight-custom="true"] .track-add,
 [data-font-weight-custom="true"] .cover-btn,
 [data-font-weight-custom="true"] .cover-dropdown-item,

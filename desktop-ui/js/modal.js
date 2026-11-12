@@ -23,6 +23,105 @@ function showToast(message, duration) {
 
 let currentModalCover = null;
 
+const REVIEW_HEIGHTS_STORAGE_KEY = 'reviewBoxHeights';
+let currentReviewEntryId = null;
+let _lastAutoReviewHeight = null;
+let _reviewManualDragStartH = null;
+
+function _loadReviewHeightsMap() {
+  try {
+    const raw = localStorage.getItem(REVIEW_HEIGHTS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+    }
+  } catch (_) {}
+  return {};
+}
+
+function getReviewBoxHeight(entryId) {
+  if (!entryId) return null;
+  const map = _loadReviewHeightsMap();
+  const h = Number(map[entryId]);
+  return (Number.isFinite(h) && h > 0) ? h : null;
+}
+
+function setReviewBoxHeight(entryId, heightPx) {
+  if (!entryId) return;
+  try {
+    const map = _loadReviewHeightsMap();
+    if (heightPx == null) {
+      delete map[entryId];
+    } else {
+      map[entryId] = Math.round(heightPx);
+    }
+    localStorage.setItem(REVIEW_HEIGHTS_STORAGE_KEY, JSON.stringify(map));
+  } catch (_) {}
+}
+
+// 实时统计文字乐评字数与英文单词数（忽略空白字符与换行符，按完整 Unicode 字符计数）
+function updateReviewWordCount() {
+  const textarea = document.getElementById('editReview');
+  const countEl = document.getElementById('editReviewCount');
+  if (!textarea || !countEl) return;
+  const raw = textarea.value || '';
+  const cleaned = raw.replace(/\s+/g, '');
+  const count = Array.from(cleaned).length;
+  const wordMatches = raw.match(/[A-Za-z]+(?:['’\-][A-Za-z]+)*/g);
+  const words = wordMatches ? wordMatches.length : 0;
+
+  const charKey = count === 1 ? 'modal.reviewCountOne' : 'modal.reviewCount';
+  let label = t(charKey, { count });
+  if (words > 0) {
+    const wordKey = words === 1 ? 'modal.reviewWordOne' : 'modal.reviewWordPlural';
+    label += ' · ' + t(wordKey, { words });
+  }
+  countEl.textContent = label;
+  countEl.classList.toggle('has-content', count > 0);
+}
+
+// 根据当前专辑卡片的乐评内容长度或该卡片独立保存的手动高度，自适应调节纵向高度（横向宽度固定不变）
+function syncReviewTextareaHeight(options = {}) {
+  const textarea = document.getElementById('editReview');
+  if (!textarea) return;
+  // 锁定宽度为 CSS 固定比例，彻底清除任何可能残留的内联 width
+  textarea.style.width = '';
+
+  const entryId = currentReviewEntryId || document.getElementById('editId')?.value || null;
+  const computed = window.getComputedStyle(textarea);
+  const minH = parseFloat(computed.minHeight) || 52;
+  const maxAutoH = 360;
+  const borderV = (parseFloat(computed.borderTopWidth) || 0) + (parseFloat(computed.borderBottomWidth) || 0);
+
+  // 重置高度为 auto 以精确测量当前文本行数所需高度
+  textarea.style.height = 'auto';
+  const naturalH = Math.max(minH, textarea.scrollHeight + borderV);
+  const autoH = Math.min(maxAutoH, naturalH);
+
+  let manualH = (!options.forceAuto && entryId) ? getReviewBoxHeight(entryId) : null;
+  if (manualH && textarea.value === '') {
+    setReviewBoxHeight(entryId, null);
+    manualH = null;
+  }
+
+  let targetH = autoH;
+  if (manualH) {
+    const clampedManual = Math.max(minH, manualH);
+    if (options.onInput && naturalH > clampedManual) {
+      targetH = Math.min(Math.max(maxAutoH, clampedManual), naturalH);
+      setReviewBoxHeight(entryId, targetH);
+    } else {
+      targetH = clampedManual;
+    }
+  }
+
+  textarea.style.height = targetH + 'px';
+  _lastAutoReviewHeight = targetH;
+
+  const modalBody = document.getElementById('editModalBody');
+  modalBody?.__macScrollbar?.update();
+}
+
 function openEditModal(entryId, sectionId, groupId) {
   const entry = findEntry(entryId);
   if (!entry) return;
@@ -30,6 +129,7 @@ function openEditModal(entryId, sectionId, groupId) {
   editingEntry = entry;
   editingGroupId = groupId;
   currentModalCover = entry.cover || null;
+  currentReviewEntryId = entry.id;
 
   document.getElementById('modalTitle').textContent = t('modal.editTitle');
   document.getElementById('editId').value = entry.id;
@@ -40,6 +140,7 @@ function openEditModal(entryId, sectionId, groupId) {
   document.getElementById('editDate').value = entry.date || '';
   document.getElementById('editScoreNote').value = entry.scoreNote || '';
   document.getElementById('editReview').value = entry.review || '';
+  updateReviewWordCount();
   document.getElementById('editSectionGroup').style.display = 'block';
   document.getElementById('deleteBtn').style.display = 'inline-block';
   document.getElementById('editAotyToggle').checked = !!entry.isAoty;
@@ -65,6 +166,8 @@ function openEditModal(entryId, sectionId, groupId) {
   const modalBody = document.getElementById('editModalBody');
   const modalCard = document.querySelector('#editModal .modal');
   if (modalBody && modalCard) attachMacScrollbar(modalBody, { parent: modalCard, id: 'editModalScrollTrack' });
+  syncReviewTextareaHeight();
+  requestAnimationFrame(() => syncReviewTextareaHeight());
 }
 
 function openAddModal() {
@@ -73,6 +176,7 @@ function openAddModal() {
   currentModalCover = null;
 
   const newId = generateId();
+  currentReviewEntryId = newId;
   document.getElementById('modalTitle').textContent = t('modal.addTitle');
   document.getElementById('editId').value = newId;
   document.getElementById('editSectionId').value = '';
@@ -82,6 +186,7 @@ function openAddModal() {
   document.getElementById('editDate').value = '';
   document.getElementById('editScoreNote').value = '';
   document.getElementById('editReview').value = '';
+  updateReviewWordCount();
   document.getElementById('editAotyToggle').checked = false;
   document.getElementById('editSotyToggle').checked = false;
   document.getElementById('deleteBtn').style.display = 'none';
@@ -101,6 +206,8 @@ function openAddModal() {
   const modalBody = document.getElementById('editModalBody');
   const modalCard = document.querySelector('#editModal .modal');
   if (modalBody && modalCard) attachMacScrollbar(modalBody, { parent: modalCard, id: 'editModalScrollTrack' });
+  syncReviewTextareaHeight();
+  requestAnimationFrame(() => syncReviewTextareaHeight());
 }
 
 function closeModal() {
@@ -115,6 +222,17 @@ function closeModal() {
     portalClose(coverDd, { openClass: 'active' });
   } else {
     if (coverDd) coverDd.classList.remove('active');
+  }
+  if (currentReviewEntryId && typeof findEntry === 'function' && !findEntry(currentReviewEntryId)) {
+    setReviewBoxHeight(currentReviewEntryId, null);
+  }
+  currentReviewEntryId = null;
+  _lastAutoReviewHeight = null;
+  _reviewManualDragStartH = null;
+  const reviewTextarea = document.getElementById('editReview');
+  if (reviewTextarea) {
+    reviewTextarea.style.width = '';
+    reviewTextarea.style.height = '';
   }
   editingEntry = null;
 }
@@ -444,6 +562,7 @@ async function deleteEntry() {
   if (!confirmed) return;
 
   const deletedId = editingEntry.id;
+  setReviewBoxHeight(deletedId, null);
   if (window.__TAURI__ && deletedId) {
     try {
       await window.__TAURI__.core.invoke('remove_cover', { entryId: deletedId });
@@ -557,6 +676,8 @@ function pasteEntry() {
   document.getElementById('editDate').value = c.date;
   document.getElementById('editScoreNote').value = c.scoreNote;
   document.getElementById('editReview').value = c.review;
+  updateReviewWordCount();
+  syncReviewTextareaHeight({ onInput: true });
 
   document.querySelectorAll('#editTags .form-tag').forEach(tag => {
     tag.classList.toggle('active', c.tags.includes(tag.dataset.tag));

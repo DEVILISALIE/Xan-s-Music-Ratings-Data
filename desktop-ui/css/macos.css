@@ -1029,6 +1029,24 @@
   margin-bottom: 5px;
 }
 
+[data-desktop="true"] .review-label-row {
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+[data-desktop="true"] .review-label-row .form-label {
+  margin-bottom: 0;
+}
+
+[data-desktop="true"] .review-char-count {
+  font-size: 12px;
+  padding: 1px 8px;
+}
+
+[data-desktop="true"] textarea.form-input {
+  min-height: 54px;
+}
+
 [data-desktop="true"] .form-input {
   padding: 10px 14px;
   border-radius: 10px;

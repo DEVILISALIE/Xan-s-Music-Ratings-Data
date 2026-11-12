@@ -96,6 +96,21 @@ npm run tauri build              # 构建生产版本（完成后直接覆盖桌
 | `netease_cookie` | 字符串 | 冈易音乐登录凭证 Cookie |
 | `qq_uin` | 字符串 | 企鹅音乐用户账号 / uin |
 | `qq_cookie` | 字符串 | 企鹅音乐会话票据凭证 Cookie（包含 `p_skey`、`skey`、`qm_keyst` 等） |
+| `reviewBoxHeights` | JSON 字符串 | 各专辑卡片文字乐评输入框的独立纵向手动拉伸高度映射（`{ [entryId]: px }`） |
+
+## v1.7.3 更新（相对 v1.7.2）
+
+- **文字乐评实时字数与英文单词统计**：
+  - 在编辑弹窗「文字乐评」标题右侧新增胶囊式计数标签（`#editReviewCount`），启用 `tabular-nums` 等宽数字实时刷新；
+  - **智能纯字数统计**：自动忽略空格、制表符与换行分段符，按完整 Unicode 字符精确计数（Emoji 记为 1 字），支持打字、`compositionend` 中文输入法上屏、粘贴卡片、打开弹窗及中英文切换全场景即时更新；
+  - **英文单词自动识别追加**：当文本中包含英文单词时，自动识别缩写与连字符单词（如 `It's`、`rock-n-roll`）并追加单词数展示（中文界面显示 `{count} 字 · {words} 单词`，英文界面显示 `{count} chars · {words} words`）。
+- **乐评输入框宽度锁定、纵向随字数自适应与按卡片独立记忆**：
+  - **固定横向宽度**：锁定输入框宽度为 `100%`（`min-width: 100%` / `max-width: 100%`），禁止横向拉伸变形；
+  - **仅限纵向手动拉伸**：`resize` 设为 `vertical` 并定制右下角极简斜线握把；
+  - **高度随文本长度自适应**：收敛初始最小高度至紧凑比例（桌面端 `54px`），随着输入/粘贴/删除实时缩放高度（自动展开上限 `360px`）；
+  - **按卡片独立隔离**：每次切卡彻底重置内联尺寸，若某张卡片曾被手动纵向拉高，将其高度按卡片 `entryId` 独立持久化至 `localStorage.reviewBoxHeights`，各卡片间完全互不干扰；清空文本或删除卡片时自动清理对应高度记忆。
+- **版本号升级**：
+  - 全套版本号升级为 `v1.7.3`。
 
 ## v1.7.2 更新（相对 v1.7.1）
 
@@ -311,7 +326,12 @@ GitHub 上一次正式 Release 为 `v1.4.0`（commit `ede5a58`，2026-07-14）�
 - 桌面版固定使用 `musicData_desktop` 作为 WebView2 本地镜像
 - `build-frontend.js` 构建时将 `desktop-ui/index.html`、`desktop-ui/css`、`desktop-ui/js` 和可选 `desktop-ui/data.json` 复制到 `dist/`，再由 Tauri 打包进二进制
 - Tauri 插件：dialog、fs、global-shortcut、shell、single-instance；Rust 依赖 `base64` 与 `image`
-- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.7.2`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.7.2`
+- **版本号**：`package.json` / `src-tauri/Cargo.toml` / `src-tauri/tauri.conf.json` 当前为 `1.7.3`；标题栏通过 `get_app_version` 读取 package info；About 弹窗文案也写为 `v1.7.3`
+
+**v1.7.3 更新日志**：
+- **文字乐评实时字词计数**：在「文字乐评」标题右侧新增胶囊计数，忽略空白与换行按完整 Unicode 字符计数；若含英文内容自动追加英文单词统计（`{count} 字 · {words} 单词`）；
+- **乐评框横向锁定 + 纵向随字数自适应 + 卡片独立高度记忆**：禁止横向拖拽锁定 100% 宽度，仅允许纵向拉伸；高度随文本内容自动收缩/展开；每张专辑卡片独立保存手动拉伸高度（`reviewBoxHeights`），切换卡片完全互不干扰；
+- **版本号升级**：全套版本号升级为 `v1.7.3`。
 
 **v1.7.2 更新日志**：
 - **彻底根治全屏误触与窗口化误判失步 Bug**：移除 F11 系统全局热键拦截，避免在其他软件按 F11 时后台误触全屏；加入窗口物理尺寸校验与自愈校准机制，杜绝常规窗口误判全屏；最大化按钮彻底解除置灰死锁；标题栏拖拽与双击平滑退出全屏；全屏按钮增加高亮退出图标，支持 Esc 键秒级退出全屏；

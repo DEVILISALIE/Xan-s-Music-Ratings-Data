@@ -765,6 +765,35 @@ function bindStaticButtons() {
   document.querySelector('[data-action="modal-cancel"]').addEventListener('click', closeModal);
   document.getElementById('deleteBtn').addEventListener('click', deleteEntry);
   document.querySelector('[data-action="modal-save"]').addEventListener('click', saveEntry);
+  const editReviewInput = document.getElementById('editReview');
+  if (editReviewInput) {
+    const onReviewChanged = () => {
+      updateReviewWordCount();
+      syncReviewTextareaHeight({ onInput: true });
+    };
+    editReviewInput.addEventListener('input', onReviewChanged);
+    editReviewInput.addEventListener('compositionend', onReviewChanged);
+
+    // 监听用户手动纵向拉伸乐评框，按当前专辑卡片 ID 独立记忆高度，卡片间互不影响
+    editReviewInput.addEventListener('pointerdown', () => {
+      _reviewManualDragStartH = editReviewInput.offsetHeight;
+    });
+    window.addEventListener('pointerup', () => {
+      if (_reviewManualDragStartH === null) return;
+      const startH = _reviewManualDragStartH;
+      _reviewManualDragStartH = null;
+      editReviewInput.style.width = '';
+      if (!document.getElementById('editModal')?.classList.contains('active')) return;
+      const newH = editReviewInput.offsetHeight;
+      const changedByDrag = Math.abs(newH - startH) > 2 &&
+        (_lastAutoReviewHeight === null || Math.abs(newH - _lastAutoReviewHeight) > 2);
+      if (changedByDrag && currentReviewEntryId) {
+        setReviewBoxHeight(currentReviewEntryId, newH);
+        _lastAutoReviewHeight = newH;
+        document.getElementById('editModalBody')?.__macScrollbar?.update();
+      }
+    });
+  }
   document.getElementById('pasteBtn').addEventListener('click', () => {
     if (clipboardEntry) {
       pasteEntry();
@@ -2372,6 +2401,8 @@ function updateLangTexts() {
   });
   // 统计面板
   updateGlobalStatsSidebar();
+  // 编辑弹窗乐评字数统计
+  if (typeof updateReviewWordCount === 'function') updateReviewWordCount();
   // 侧边栏
   renderSidebar();
 }
@@ -2869,7 +2900,7 @@ init();
         document.getElementById('searchInput').focus();
         break;
       case 'about':
-        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.7.2");
+        showAlert("Xan's Music Ratings\nDesktop Edition\nv1.7.3");
         break;
     }
   });
